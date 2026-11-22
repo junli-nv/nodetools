@@ -25,6 +25,8 @@ nodetools temp --group compute --summary
 
 ```
 nodetools <cap> <selector> [options]
+nodetools list [selector] [--long]
+nodetools ping <selector> [--ping-timeout S]
 nodetools inventory init [--from hosts.list] [-o inventory.ini]
 nodetools inventory show [-i inventory.ini]
 ```
@@ -32,6 +34,19 @@ nodetools inventory show [-i inventory.ini]
 * `cap` is one of `fan`, `psu`, `temp`, `all` (fan+psu+temp) or `oem`.
 * `selector` is a hostlist expression (`node[01-18]`), an inventory group name,
   or one or more hostnames. Combine with `--group G` and/or `--all`.
+* `list` prints `host: role` (all hosts if no selector); `--long` adds the BMC
+  address. A `# N hosts: ...` count line goes to stderr.
+* `ping` ICMP-checks each selected host's BMC and prints
+  `host: BMC pingable|unreachable` (or `No BMC IP found`).
+
+### List, then check only the reachable nodes
+
+```sh
+./nodetools list                       # what nodes exist
+reachable=$(./nodetools ping vdc1-pro2-t10-gpu-cp-[01-18] \
+            | awk -F: '/pingable/{print $1}' | paste -sd, -)
+./nodetools all "$reachable" --errors-only
+```
 
 ### Options
 

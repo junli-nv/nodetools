@@ -1,9 +1,10 @@
 """Entry point wiring: parse args, load inventory, run capabilities."""
 
+import concurrent.futures
 import os
 import sys
 
-from . import selection
+from . import reach, selection
 from .arguments import CAP_COMMANDS, parse_args
 from .config import CAPS, DEFAULT_INVENTORY, DEFAULT_JOBS, DEFAULT_TIMEOUT, VERSION
 from .errors import NodetoolsError
@@ -73,6 +74,59 @@ def _cmd_inventory(args):
     return 2
 
 
+def _select(args, inv, default_all=False):
+    selectors = getattr(args, "selector", [])
+    groups = getattr(args, "group", [])
+    all_ = getattr(args, "all", False)
+    if default_all and not (selectors or groups):
+        all_ = True
+    return selection.select(
+        inv, selectors=selectors, groups=groups, all_=all_, expand=False
+    )
+
+
+def _cmd_list(args):
+    inv = Inventory.from_file(_inventory_path(args.inventory))
+    hosts = _select(args, inv, default_all=True)
+    if not hosts:
+        print("nodetools: no hosts selected", file=sys.stderr)
+        return 1
+    for host in hosts:
+        if args.long:
+            print("{}: {} {}".format(host.name, host.role, host.address or "-"))
+        else:
+            print("{}: {}".format(host.name, host.role))
+    counts = {}
+    for host in hosts:
+        counts[host.role] = counts.get(host.role, 0) + 1
+    summary = " ".join("{}={}".format(k, counts[k]) for k in sorted(counts))
+    print("# {} hosts: {}".format(len(hosts), summary), file=sys.stderr)
+    return 0
+
+
+def _cmd_ping(args):
+    if not (args.selector or args.group or args.all):
+        print("usage: nodetools ping <selector>", file=sys.stderr)
+        return 2
+    inv = Inventory.from_file(_inventory_path(args.inventory))
+    hosts = _select(args, inv)
+    if not hosts:
+        print("nodetools: no hosts selected", file=sys.stderr)
+        return 1
+    jobs = max(1, args.jobs or int(inv.default("jobs", DEFAULT_JOBS)))
+
+    def probe(host):
+        if not host.address:
+            return "{}: No BMC IP found".format(host.name)
+        state = "pingable" if reach.ping(host.address, timeout=args.ping_timeout) else "unreachable"
+        return "{}: BMC {}".format(host.name, state)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+        for line in pool.map(probe, hosts):
+            print(line)
+    return 0
+
+
 def _cmd_capability(args):
     path = _inventory_path(args.inventory)
     inv = Inventory.from_file(path)
@@ -114,6 +168,10 @@ def main(argv=None):
     try:
         if args.command == "inventory":
             return _cmd_inventory(args)
+        if args.command == "list":
+            return _cmd_list(args)
+        if args.command == "ping":
+            return _cmd_ping(args)
         if args.command in CAP_COMMANDS:
             return _cmd_capability(args)
         print("nodetools: unknown command {!r}".format(args.command), file=sys.stderr)

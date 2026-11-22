@@ -36,6 +36,7 @@ nodetools (入口)
        ├─ arguments.py   解析参数
        ├─ inventory.py   解析/生成 inventory
        ├─ selection.py   选择器 → 主机列表（含同行自动关联）
+       ├─ reach.py       BMC ICMP 可达性检查（list/ping 命令用）
        ├─ runtime.py     并行引擎：建 Device、探测 ODM、跑能力/控制
        │    ├─ model.py       角色/ODM 探测 + 缓存
        │    ├─ caps/*.py      能力收集器（回退阶梯）
@@ -67,6 +68,7 @@ argv
 | `hostlist.py` | 主机名范围展开 | 见第 5 节，带单测 |
 | `inventory.py` | inventory 解析 + `hosts.list` 生成器 | 语法见第 5 节 |
 | `selection.py` | 选择器解析 + 同行自动关联 | `--no-expand` 关闭关联 |
+| `reach.py` | BMC 的 ICMP 可达性检查 | `list`/`ping` 命令用；不涉及凭据 |
 | `model.py` | `Device`、`probe_redfish`、`classify`、ODM 缓存 | 探测失败回退 `unknown` |
 | `ladder.py` | "按顺序试，返回第一个非空" | 收集器的核心控制流 |
 | `transport/redfish.py` | Redfish `get/get_raw/post/patch` | `verify=False`，连接超时 3s |
@@ -138,6 +140,15 @@ jobs=18
 默认会为选中的 compute 主机自动补上**同一行**的 `-gpu-pwr-*`（psu/temp）和
 `-gpu-nvl-*`（temp）——行键 = 名字按 `-gpu-` 截断。`--no-expand` 关闭。
 
+`list` / `ping` 命令**不做**同行自动关联（`expand=False`）：列出/探测的就是你
+选中的主机本身。典型流程是先用 `ping` 过滤出可通节点，再喂给检查命令：
+
+```sh
+reachable=$(./nodetools ping vdc1-pro2-t10-gpu-cp-[01-18] \
+            | awk -F: '/pingable/{print $1}' | paste -sd, -)
+./nodetools all "$reachable" --errors-only
+```
+
 ### ODM 探测与缓存
 
 `probe_redfish` 拉取 `/redfish/v1`、`Managers/1`、`Systems/1`、`Chassis/*` 的
@@ -189,11 +200,12 @@ Vendor/Model/Manufacturer，拼成字符串后按 `model.SIGNATURES` 匹配（�
 ### 单元测试
 
 ```sh
-python3 -m pytest -q          # 当前 30 passed
+python3 -m pytest -q          # 当前 38 passed
 ```
 
 覆盖：hostlist 展开、inventory 解析/优先级/生成、选择器与同行关联、输出格式与
-`grep -v ,OK` 兼容、ODM 注册、三个能力对 `FakeRedfish` 的解析。
+`grep -v ,OK` 兼容、ODM 注册、三个能力对 `FakeRedfish` 的解析、`list`/`ping`
+命令与可达性检查（`subprocess` 打桩，不依赖网络）。
 
 ### 真机冒烟（改接口后必做）
 
@@ -234,4 +246,6 @@ python3 -m pytest -q          # 当前 30 passed
 - `Switch` 组里非 `-gpu-nvl-` 的交换机暂归 `switch` 组，尚无对应能力。
 - 控制动作（`--action`）只覆盖已确证的几条 IPMI raw / Redfish PATCH / racadm；
   新增前请回读对应 OEM 脚本确认字节。
+- `ping` 用单包 ICMP（`ping -c 1 -W <t>`），不是旧 `nodeping` 的 flood ping；
+  不需要 root，也不会有突发流量。无 BMC 地址的主机输出 `No BMC IP found`。
 - 尚未做：结果落库/告警、`--json` 输出、IB/SPX 交换机能力。

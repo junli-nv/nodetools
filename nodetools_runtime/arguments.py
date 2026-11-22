@@ -52,7 +52,28 @@ def build_parser():
     for name in CAP_COMMANDS:
         _add_common(sub.add_parser(name, help="{} capability".format(name)))
 
+    lst = sub.add_parser("list", help="list hosts from inventory")
+    _add_selection(lst)
+    lst.add_argument(
+        "--long", action="store_true", help="also show role and BMC address"
+    )
+
+    pg = sub.add_parser("ping", help="ping BMC addresses (reachability)")
+    _add_selection(pg)
+    pg.add_argument("--jobs", type=int, default=None, help="parallel workers")
+    pg.add_argument(
+        "--ping-timeout", type=float, default=1.0, help="seconds to wait per reply"
+    )
+
     return parser
+
+
+def _add_selection(parser):
+    parser.add_argument("selector", nargs="*", help="hostlist expression / group")
+    parser.add_argument("-i", "--inventory", default=None, help="inventory file")
+    parser.add_argument("--group", action="append", default=[], help="select a group")
+    parser.add_argument("--all", action="store_true", help="select every host")
+    parser.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
 
 def parse_args(argv=None):
