@@ -1,0 +1,221 @@
+"""Compal HGX systems (reference ``oem/compal/*.cpl``).
+
+Endpoints are pinned to ``Systems/Self`` / ``Managers/BMC`` / ``Chassis/Self``.
+"""
+
+import re
+import time
+
+from ..subjects import common
+from .base import Oem, _body_lines, _jq_r, firmware_name_lines
+
+_SYSTEM = "/redfish/v1/Systems/Self"
+_MANAGER = "/redfish/v1/Managers/BMC"
+_BIOS_SD = _SYSTEM + "/Bios/SD"
+_SEL = _MANAGER + "/LogServices/SEL"
+_EVENTLOG = _MANAGER + "/LogServices/EventLog"
+_DECODED = _MANAGER + "/LogServices/DecodedLog"
+_VM_MANAGER = "BMC"
+_VM_IFACE = "CD1"
+
+_BIOS_BASE = {
+    "Attributes": {
+        "S0Slt3BF3OROM": "Enabled",
+        "S1Slt8BF3OROM": "Enabled",
+        "RedfishEnable": "Enabled",
+        "NumaEnable": "Enabled",
+        "VirtualNumaEnable": "Disabled",
+    }
+}
+_BIOS_EXCLUDES = ("BootOrder", "MAPIDS", "UefiPriorities")
+_EVENT_TYPE = re.compile(r"Event.*Event_Type")
+_NVSW_RESET = {
+    "on": "On",
+    "off": "ForceOff",
+    "cycle": "PowerCycle",
+    "reseat": "FullPowerCycle",
+}
+
+
+class Compal(Oem):
+    name = "compal"
+    family = "hgx"
+    fan_chassis = ("Self", "1")
+
+    bootorder_system = "Self"
+    bios_system = "Self"
+    bootorder_quoted = False
+    bootorder_sep = ","
+    bootorder_expand = False
+
+    # -- nvswitch power (nvswpower.cpl) ---------------------------------
+    # Compal NVSwitch uses ``Systems/Self`` and adds a ``reseat`` reset type
+    # (``FullPowerCycle``); the generic handler pins ``System_0``.
+    def nvswitch_power(self, device, action):
+        base = "/redfish/v1/Systems/Self"
+        reset = _NVSW_RESET.get(action)
+        if reset is not None:
+            _, body = common.post(
+                device,
+                base + "/Actions/ComputerSystem.Reset",
+                {"ResetType": reset},
+            )
+            text = common.jq_out(body)
+            return ["{}: {}".format(device.name, text)] if text else []
+        data = common.resource(device, base, required=True)
+        return ["{}: {}".format(device.name, common.jq(data.get("PowerState")))]
+
+    # -- fan control (nodefan.cpl) --------------------------------------
+    def fan_control(self, device, action):
+        if action == "auto":
+            self._ipmi_raw(device, 0x3C, 0x73, 0x00)
+        elif action == "max":
+            self._ipmi_raw(device, 0x3C, 0x73, 0x01)
+            self._ipmi_raw(device, 0x3C, 0x75, 0x00, 100)
+            self._ipmi_raw(device, 0x3C, 0x75, 0x01, 100)
+            self._ipmi_raw(device, 0x3C, 0x75, 0x02, 100)
+        else:
+            raise NotImplementedError(action)
+        return "ok"
+
+    # -- BIOS settings (nodebios.cpl) -----------------------------------
+    def bios(self, device, action):
+        if action == "base":
+            _, body = common.patch(device, _BIOS_SD, _BIOS_BASE)
+            lines = [
+                self._label(device, line) for line in _body_lines(body, pretty=True)
+            ]
+            lines.append(
+                self._label(
+                    device,
+                    "INFO: cycle the node to make the bios settings take effect",
+                )
+            )
+            return lines
+        rows = self._bios_rows(device, _BIOS_EXCLUDES, sort=True)
+        return [self._label(device, row) for row in rows]
+
+    # -- event log (nodeeventlog.cpl) -----------------------------------
+    def eventlog(self, device, action):
+        if action == "clear":
+            lines = []
+            for log in (_SEL, _EVENTLOG):
+                text = self._clear_one(device, log + "/Actions/LogService.ClearLog")
+                if text:
+                    lines.append(self._label(device, text))
+            if device.ipmi:
+                try:
+                    out = device.ipmi.run("sel", "clear").strip()
+                except Exception:  # noqa: BLE001 - best-effort clear
+                    out = ""
+                lines.extend(self._label(device, line) for line in out.splitlines())
+            return lines
+        if action == "hmc":
+            return self._entry_lines(device, _DECODED)
+        return self._entry_lines(device, _SEL)
+
+    def _entry_lines(self, device, log):
+        rows = common.log_lines(device, log + "/Entries", sep=" ")
+        return [
+            self._label(device, _EVENT_TYPE.sub("Event_Type", row)) for row in rows
+        ]
+
+    # -- firmware inventory (nodeinventory.cpl) -------------------------
+    def firmware_inventory(self, device):
+        return [self._label(device, row) for row in firmware_name_lines(device)]
+
+    # -- NIC / MAC inventory (nodemacs.cpl) -----------------------------
+    def macs(self, device, action):
+        return self._macs_iface_pairs(device, "Self", "BMC")
+
+    # -- virtual media (nodevm.cpl) -------------------------------------
+    def vm(self, device, action, options=None):
+        action = (action or "status").strip().lower() or "status"
+        if action == "enable":
+            _, body = common.post(
+                device,
+                _MANAGER + "/Actions/Oem/AMIVirtualMedia.EnableRMedia",
+                {"RMediaState": "Enable"},
+            )
+            lines = _body_lines(body, pretty=True)
+            time.sleep(5)
+            mgr = common.resource(device, _MANAGER, required=True)
+            lines.append(_jq_r(((mgr.get("Oem") or {}).get("Ami") or {}).get("VirtualMedia", {}).get("RMediaStatus")))
+            return [self._label(device, line) for line in lines]
+        if action == "insert":
+            _, body = common.post(
+                device,
+                self._vm_insert_path(_VM_MANAGER, _VM_IFACE),
+                self._vm_cifs_payload(options),
+            )
+            return self._label_lines(device, _body_lines(body, pretty=True))
+        if action == "eject":
+            lines = []
+            coll = common.resource(device, _MANAGER + "/VirtualMedia")
+            for oid in common.member_ids(coll):
+                if "CD1" not in oid:
+                    continue
+                iface = common.resource(device, oid)
+                if iface.get("Image") in (None, "null"):
+                    continue
+                _, body = common.post(device, oid + "/Actions/VirtualMedia.EjectMedia", {})
+                lines += _body_lines(body, pretty=True)
+            return self._label_lines(device, lines)
+        if action == "stop":
+            return self._vm_stop(device)
+        mgr = common.resource(device, _MANAGER, required=True)
+        status = ((mgr.get("Oem") or {}).get("Ami") or {}).get("VirtualMedia", {}).get(
+            "RMediaStatus"
+        )
+        iface = common.resource(device, self._vm_iface_path(_VM_MANAGER, _VM_IFACE))
+        row = "RMediaStatus:{},ID:{},NAME:{},Image:{},Inserted:{},ConnectedVia:{},RedirectionStatus:{}".format(
+            _jq_r(status),
+            _jq_r(iface.get("Id")),
+            _jq_r(iface.get("ImageName")),
+            _jq_r(iface.get("Image")),
+            _jq_r(iface.get("Inserted")),
+            _jq_r(iface.get("ConnectedVia")),
+            _jq_r(iface.get("RedirectionStatus")),
+        )
+        return [self._label(device, row)]
+
+    def _vm_stop(self, device):
+        import requests
+
+        url = "https://{}/api".format(device.address)
+        session = requests.Session()
+        session.verify = False
+        try:
+            login = session.post(
+                url + "/session",
+                data={
+                    "username": device.cred("bmc_user") or "",
+                    "password": device.cred("bmc_password") or "",
+                },
+                timeout=20,
+            )
+            token = (login.json() or {}).get("CSRFToken")
+            if not token:
+                return [self._label(device, "ERROR stop-media: no CSRF token")]
+            headers = {
+                "X-CSRFTOKEN": token,
+                "X-Requested-With": "XMLHttpRequest",
+                "Origin": url.rsplit("/api", 1)[0],
+            }
+            resp = session.post(
+                url + "/settings/media/remote/stop-media",
+                json={
+                    "image_name": "ubuntu-24.04-live.iso",
+                    "image_type": 1,
+                    "image_index": 0,
+                    "image_share_type": "cifs",
+                },
+                headers=headers,
+                timeout=20,
+            )
+            text = resp.text.strip()
+        except Exception as exc:  # noqa: BLE001 - network/JSON best effort
+            return [self._label(device, "ERROR stop-media: {}".format(exc))]
+        finally:
+            session.close()
+        return self._label_lines(device, text.splitlines())

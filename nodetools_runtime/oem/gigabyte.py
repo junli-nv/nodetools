@@ -11,6 +11,7 @@ _EVENT_TYPE = re.compile(r"Event.*Event_Type")
 
 class Gigabyte(Oem):
     name = "giga"
+    family = "hgx"
     fan_chassis = ("1", "Chassis_0")
 
     bootorder_system = "1"

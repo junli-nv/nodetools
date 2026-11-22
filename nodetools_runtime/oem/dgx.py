@@ -1,14 +1,16 @@
 """NVIDIA DGX (HGX) system."""
 
 from ..subjects import common
-from .base import FIRMWARE, Oem
+from .base import FIRMWARE, Oem, _body_lines
 
 _BIOS = "/redfish/v1/Systems/DGX/LogServices/BIOS"
 _HGX = "/redfish/v1/Systems/HGX_Baseboard_0/LogServices/EventLog"
+_AC_CYCLE = "/redfish/v1/Chassis/BMC/Actions/Oem/NvidiaChassis.AuxPowerReset"
 
 
 class Dgx(Oem):
     name = "dgx"
+    family = "hgx"
     fan_chassis = ("DGX", "1")
 
     bootorder_system = "DGX"
@@ -35,6 +37,13 @@ class Dgx(Oem):
         else:
             raise NotImplementedError(action)
         return "ok"
+
+    def _reseat(self, device):
+        """func-dgx.sh ``power_ac_cycle``: ``Chassis/BMC`` AuxPowerReset with
+        ``AuxPowerCycleForce`` (the DGX variant of the GBXX aux power cycle)."""
+        device.redfish.set_deadline(None)
+        _, body = common.post(device, _AC_CYCLE, {"ResetType": "AuxPowerCycleForce"})
+        return [self._label(device, line) for line in _body_lines(body, pretty=True)]
 
     def eventlog(self, device, action):
         if action == "clear":

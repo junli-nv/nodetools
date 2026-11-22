@@ -6,6 +6,8 @@ from .base import Oem, _body_lines, _jq_r
 _SYSTEM = "/redfish/v1/Systems/1"
 _LOG = _SYSTEM + "/LogServices/Log1"
 _BIOS_SD = _SYSTEM + "/Bios/SD"
+_VM = "/redfish/v1/Managers/1/VirtualMedia"
+_VM_IFACE = "VirtualMedia1"
 _RESET = {"on": "On", "off": "ForceOff", "reset": "ForceRestart", "reseat": "ACCycle"}
 
 _BIOS_BASE = {
@@ -26,6 +28,7 @@ _MAC_FIELDS = (
 
 class Smc(Oem):
     name = "smc"
+    family = "hgx"
     fan_chassis = ("1",)
 
     bootorder_system = "1"
@@ -33,6 +36,8 @@ class Smc(Oem):
     bootorder_quoted = False
     bootorder_sep = ","
     bootorder_expand = False
+
+    vm_image = "http://192.168.0.9/isos/ubuntu-24.04-live.iso"
 
     def fan_control(self, device, action):
         if action not in ("auto", "max"):
@@ -114,3 +119,42 @@ class Smc(Oem):
         )
         lines.extend(_body_lines(reset, pretty=True))
         return [self._label(device, line) for line in lines]
+
+    # -- virtual media (nodevm.smc) -------------------------------------
+    def vm(self, device, action, options=None):
+        action = (action or "status").strip().lower() or "status"
+        if action == "mount":
+            image = getattr(options, "image", None) if options is not None else None
+            _, body = common.post(
+                device,
+                "{}/{}/Actions/VirtualMedia.InsertMedia".format(_VM, _VM_IFACE),
+                {
+                    "Image": image or self.vm_image,
+                    "WriteProtected": True,
+                    "Inserted": True,
+                    "TransferProtocolType": "HTTP",
+                },
+            )
+            return self._label_lines(device, _body_lines(body, pretty=True))
+        if action == "eject":
+            lines = []
+            coll = common.resource(device, _VM)
+            for oid in common.member_ids(coll):
+                iface = common.resource(device, oid)
+                if iface.get("Image") in (None, "null"):
+                    continue
+                _, body = common.post(device, oid + "/Actions/VirtualMedia.EjectMedia", {})
+                lines += _body_lines(body, pretty=True)
+            return self._label_lines(device, lines)
+        lines = []
+        coll = common.resource(device, _VM)
+        for oid in common.member_ids(coll):
+            iface = common.resource(device, oid)
+            lines.append(
+                "{}\t{}\t{}".format(
+                    _jq_r(iface.get("Id")),
+                    _jq_r(iface.get("ImageName")),
+                    _jq_r(iface.get("Image")),
+                )
+            )
+        return self._label_lines(device, lines)

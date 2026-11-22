@@ -7,7 +7,6 @@ shelf are NVIDIA infrastructure and always use their fixed Redfish paths.
 
 from . import common
 
-NVSW_SYSTEM = "System_0"
 PS_SYSTEM = "system"
 _RESET = {"on": "On", "off": "ForceOff", "cycle": "PowerCycle"}
 _READ = ("", "status", "check", "read")
@@ -21,7 +20,7 @@ def _normalize(action):
 def collect(device, action, options):
     action = _normalize(action)
     if device.role == "nvswitch":
-        return _nvswitch(device, action)
+        return device.odm.nvswitch_power(device, action)
     if device.role == "powershelf":
         return _powershelf(device, action)
     return device.odm.power(device, action)
@@ -33,14 +32,6 @@ def _reset_lines(device, path, action):
     )
     text = common.jq_out(body)
     return ["{}: {}".format(device.name, text)] if text else []
-
-
-def _nvswitch(device, action):
-    base = "/redfish/v1/Systems/" + NVSW_SYSTEM
-    if action in _RESET:
-        return _reset_lines(device, base + "/Actions/ComputerSystem.Reset", action)
-    data = common.resource(device, base, required=True)
-    return ["{}: {}".format(device.name, common.jq(data.get("PowerState")))]
 
 
 def _powershelf(device, action):

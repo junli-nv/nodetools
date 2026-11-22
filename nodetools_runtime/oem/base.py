@@ -10,6 +10,7 @@ working).
 
 import json
 import re
+import time
 
 from ..errors import CapUnsupported
 from ..subjects import common
@@ -22,6 +23,31 @@ HGX_BASEBOARD_ID = "HGX_Baseboard_0"
 HGX_BMC_ID = "HGX_BMC_0"
 
 FIRMWARE = "/redfish/v1/UpdateService/FirmwareInventory"
+
+# Chassis ids cycled by the auxiliary "reseat" power action (func.sh
+# ``reseat_gb200``): the NVIDIA auxiliary power reset lives on both.
+AUX_CHASSIS = ("Chassis_0", "BMC_0")
+
+# Reset types the default ``nvswpower`` handler maps (no ``reseat``: the
+# legacy NVIDIA/Netweb scripts fall through to ``status``).
+_NVSW_RESET = {"on": "On", "off": "ForceOff", "cycle": "PowerCycle"}
+
+# func.sh ``configure_bf3``: the fixed BlueField-3 attributes and the keys the
+# follow-up read echoes back, in the original ``jq`` order.
+BF3_ATTRIBUTES = {
+    "EGM": True,
+    "Socket0Pcie0MaxPayloadSize": "Auto",
+    "Socket0Pcie6DisableOptionROM": False,
+    "Socket1Pcie6DisableOptionROM": False,
+    "EnablePcieNicTopology": False,
+}
+BF3_FIELDS = (
+    "EGM",
+    "Socket0Pcie0MaxPayloadSize",
+    "Socket0Pcie6DisableOptionROM",
+    "Socket1Pcie6DisableOptionROM",
+    "EnablePcieNicTopology",
+)
 
 
 def _parse_sel(text):
@@ -86,11 +112,15 @@ class Oem:
     """Default ODM behaviour: NVIDIA GBXX reference."""
 
     name = "generic"
+    # Platform family: the base reference is the NVIDIA GBXX tray (nvl); the
+    # x86 HGX B-series ODMs override it with ``family = "hgx"``.
+    family = "nvl"
     fan_chassis = ("Chassis_0", "1", "System.Embedded.1", "DGX")
 
     system_id = SYSTEM_ID
     bmc_id = BMC_ID
     hgx_baseboard_id = HGX_BASEBOARD_ID
+    nvswitch_system = "System_0"
 
     # -- boot-family hooks (overridden per ODM) -------------------------
     # ``None`` means "use system_id".
@@ -114,6 +144,8 @@ class Oem:
 
     # -- power (nodepower) ----------------------------------------------
     def power(self, device, action):
+        if action == "reseat":
+            return self._reseat(device)
         if not device.ipmi:
             raise CapUnsupported("ipmitool unavailable for {}".format(device.name))
         try:
@@ -121,6 +153,78 @@ class Oem:
         except Exception:  # noqa: BLE001 - legacy scripts echo N/A on failure
             out = "N/A"
         return ["{}: {}".format(device.name, out or "N/A")]
+
+    # -- nvswitch power (nvswpower) -------------------------------------
+    # NVIDIA NVSwitch trays: ``Systems/System_0`` fixed path. Compal vendors
+    # override this with their own ``Systems/Self`` handler.
+    def nvswitch_power(self, device, action):
+        base = "/redfish/v1/Systems/" + self.nvswitch_system
+        if action in _NVSW_RESET:
+            _, body = common.post(
+                device,
+                base + "/Actions/ComputerSystem.Reset",
+                {"ResetType": _NVSW_RESET[action]},
+            )
+            text = common.jq_out(body)
+            return ["{}: {}".format(device.name, text)] if text else []
+        data = common.resource(device, base, required=True)
+        return ["{}: {}".format(device.name, common.jq(data.get("PowerState")))]
+
+    def _reseat(self, device):
+        """Auxiliary power cycle: func.sh ``reseat_gb200`` with a ``nodeAC``
+        IPMI fallback when the NvidiaChassis OEM action is unavailable."""
+        # Deliberately long and staged (several seconds of sleeps, and a 60s
+        # wait in the fallback): drop the per-node budget so it is not cut off.
+        device.redfish.set_deadline(None)
+        if device.ipmi:
+            device.ipmi.set_deadline(None)
+        lines = ["power off"]
+        try:
+            common.post(
+                device,
+                "/redfish/v1/Systems/{}/Actions/ComputerSystem.Reset".format(
+                    self.system_id
+                ),
+                {"ResetType": "ForceOff"},
+            )
+        except Exception:  # noqa: BLE001 - output is suppressed upstream
+            pass
+        time.sleep(3)
+        lines.append("AC power cycle")
+        cycled = False
+        for chassis in AUX_CHASSIS:
+            path = "/redfish/v1/Chassis/" + chassis
+            if not common.resource(device, path):
+                continue
+            try:
+                _, body = common.post(
+                    device,
+                    path + "/Actions/Oem/NvidiaChassis.AuxPowerReset",
+                    {"ResetType": "AuxPowerCycle"},
+                )
+            except Exception:  # noqa: BLE001 - try the other chassis id
+                continue
+            lines.extend(_body_lines(body, pretty=True))
+            cycled = True
+        if not cycled:
+            lines.extend(self._aux_ipmi_cycle(device))
+        lines.append("Ping {}".format(device.address))
+        return ["{}: {}".format(device.name, line) for line in lines]
+
+    def _aux_ipmi_cycle(self, device):
+        """nodeAC fallback: raw OEM AC cycle, then power the node back on."""
+        if not device.ipmi:
+            return ["N/A"]
+        try:
+            device.ipmi.raw(0x3C, 0xA2)
+        except Exception as exc:  # noqa: BLE001 - nodeAC echoes the raw error
+            return [str(exc)]
+        time.sleep(60)
+        try:
+            out = device.ipmi.power("on").strip()
+        except Exception:  # noqa: BLE001 - legacy scripts echo N/A
+            out = "N/A"
+        return [out or "N/A"]
 
     # -- event log (nodeeventlog) ---------------------------------------
     def eventlog(self, device, action):
@@ -257,8 +361,27 @@ class Oem:
 
     # -- BIOS settings (nodebios) ---------------------------------------
     def bios(self, device, action):
+        if action == "bf3":
+            return self._bios_bf3(device)
         rows = self._bios_rows(device, ("MAPIDS", "SETUP006"))
         return ["{}:{}".format(device.name, row) for row in rows]
+
+    def _bios_bf3(self, device):
+        """func.sh ``configure_bf3``: stage the BlueField-3 attributes on the
+        pending BIOS resource, then echo the five keys back."""
+        path = "/redfish/v1/Systems/{}/Bios/Settings".format(
+            self._sys(self.bios_system)
+        )
+        _, body = common.patch(device, path, {"Attributes": BF3_ATTRIBUTES})
+        lines = _body_lines(body)
+        time.sleep(3)
+        data = common.resource(device, path, required=True)
+        attrs = data.get("Attributes") or {}
+        payload = json.dumps(
+            {key: attrs.get(key) for key in BF3_FIELDS}, indent=2
+        )
+        lines.extend(payload.splitlines())
+        return ["{}:{}".format(device.name, line) for line in lines]
 
     # -- network boot override (nodenetboot) ----------------------------
     def netboot(self, device, action):
@@ -305,6 +428,102 @@ class Oem:
                     targets.append(json.dumps(ident))
         return targets
 
+    # -- virtual media (nodevm) -----------------------------------------
+    # GBXX/AMI reference: ``Managers/<id>/VirtualMedia/<CD*|USB*>`` with the
+    # ``AMIVirtualMedia.EnableRMedia`` OEM action (reference ``oem/gb200/nodevm``).
+    vm_image = "smb://10.143.11.129/share/ubuntu-24.04-live.iso"
+    vm_user = "smbuser"
+    vm_password = "smbuser"
+
+    def vm(self, device, action, options=None):
+        action = (action or "status").strip().lower() or "status"
+        bmc_id = self._vm_manager_id(device)
+        vmi = self._vm_interface(device, bmc_id)
+        if not vmi:
+            return [self._label(device, "No Virtual Media Interface found")]
+        lines = ["BMC_ID={}, VMI={}".format(bmc_id, vmi)]
+        if action == "enable":
+            _, body = common.post(
+                device,
+                "/redfish/v1/Managers/{}/Actions/Oem/AMIVirtualMedia.EnableRMedia".format(
+                    bmc_id
+                ),
+                {"RMediaState": "Enable"},
+            )
+            lines += _body_lines(body, pretty=True)
+        elif action == "mount":
+            _, body = common.post(
+                device, self._vm_insert_path(bmc_id, vmi), self._vm_cifs_payload(options)
+            )
+            lines += _body_lines(body, pretty=True)
+        elif action == "eject":
+            _, body = common.post(device, self._vm_eject_path(bmc_id, vmi), {})
+            lines += _body_lines(body, pretty=True)
+        else:
+            lines += self._vm_ami_status(device, bmc_id, vmi)
+        return [self._label(device, line) for line in lines]
+
+    def _vm_ami_status(self, device, bmc_id, vmi):
+        data = common.resource(
+            device, "/redfish/v1/Managers/{}".format(bmc_id), required=True
+        )
+        oem = ((data.get("Oem") or {}).get("Ami") or {}).get("VirtualMedia")
+        lines = _body_lines(oem, pretty=True) if isinstance(oem, (dict, list)) else []
+        time.sleep(1)
+        iface = common.resource(device, self._vm_iface_path(bmc_id, vmi))
+        lines.append(
+            "{}\t{}\t{}".format(
+                _jq_r(iface.get("Id")),
+                _jq_r(iface.get("ImageName")),
+                _jq_r(iface.get("Image")),
+            )
+        )
+        return lines
+
+    def _vm_manager_id(self, device):
+        data = common.resource(device, "/redfish/v1/Managers")
+        for ident in _member_leaf_ids(data, "Managers"):
+            if "HGX" not in ident:
+                return ident
+        return self.bmc_id
+
+    def _vm_interface(self, device, bmc_id):
+        data = common.resource(device, "/redfish/v1/Managers/{}/VirtualMedia".format(bmc_id))
+        ids = _member_leaf_ids(data, "VirtualMedia")
+        for ident in ids:
+            if ident.startswith("CD"):
+                return ident
+        for ident in ids:
+            if ident.startswith("USB"):
+                return ident
+        return ids[0] if ids else ""
+
+    @staticmethod
+    def _vm_iface_path(bmc_id, vmi):
+        return "/redfish/v1/Managers/{}/VirtualMedia/{}".format(bmc_id, vmi)
+
+    @staticmethod
+    def _vm_insert_path(bmc_id, vmi):
+        return "/redfish/v1/Managers/{}/VirtualMedia/{}/Actions/VirtualMedia.InsertMedia".format(
+            bmc_id, vmi
+        )
+
+    @staticmethod
+    def _vm_eject_path(bmc_id, vmi):
+        return "/redfish/v1/Managers/{}/VirtualMedia/{}/Actions/VirtualMedia.EjectMedia".format(
+            bmc_id, vmi
+        )
+
+    def _vm_cifs_payload(self, options):
+        return {
+            "Image": _opt(options, "image", self.vm_image),
+            "UserName": _opt(options, "vm_user", self.vm_user),
+            "Password": _opt(options, "vm_password", self.vm_password),
+            "TransferMethod": "Stream",
+            "TransferProtocolType": "CIFS",
+            "WriteProtected": True,
+        }
+
     # -- boot-family helpers --------------------------------------------
     def _sys(self, override):
         return override or self.system_id
@@ -313,6 +532,9 @@ class Oem:
         if spaced:
             return "{}: {}".format(device.name, line)
         return "{}:{}".format(device.name, line)
+
+    def _label_lines(self, device, lines, spaced=True):
+        return [self._label(device, line, spaced) for line in lines]
 
     def _boot_option_rows(self, device):
         rows = []
@@ -446,3 +668,17 @@ def _members_static(device, path):
         if isinstance(data, dict) and "error" not in data:
             out.append(data)
     return out
+
+
+def _member_leaf_ids(collection, parent):
+    """Last path segment of each member's ``@odata.id`` (``sed 's#/.*/##g'``)."""
+    prefix = "/redfish/v1/{}/".format(parent)
+    out = []
+    for oid in common.member_ids(collection):
+        out.append(oid[len(prefix):] if oid.startswith(prefix) else oid.rstrip("/").rsplit("/", 1)[-1])
+    return out
+
+
+def _opt(options, name, default):
+    value = getattr(options, name, None) if options is not None else None
+    return value if value else default

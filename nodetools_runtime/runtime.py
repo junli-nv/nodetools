@@ -103,7 +103,7 @@ class Runner:
             device = self._device(host)
             module = oem.get("unknown")
             if self.options.action:
-                module = oem.get(self._detect(device))
+                module = oem.get(model.odm_for(device))
                 self._control(device, module)
                 return self._result(
                     host,
@@ -128,16 +128,6 @@ class Runner:
         finally:
             if device:
                 device.close()
-
-    def _classify(self, device):
-        probe = model.probe_redfish(device.redfish)
-        device.probe = probe
-        return model.classify(probe)
-
-    def _detect(self, device):
-        if self.options.no_cache:
-            return self._classify(device)
-        return model.detect_odm(device)
 
     def stream(self, hosts):
         """Yield results as each node finishes (completion order, no sorting)."""
@@ -175,22 +165,22 @@ class InfoRunner:
         device = None
         try:
             device = build_device(host, self.options)
-            if host.role == "compute":
-                device.odm = oem.get(self._detect(device))
+            # Every role dispatches to the ODM recorded by ``scan`` so vendor
+            # overrides (e.g. Compal NVSwitch power) apply; unscanned nodes and
+            # ODMs without an override fall back to the base handler.
+            device.odm = oem.get(model.odm_for(device))
             lines = self.handler(device, self.options.action, self.options)
+            if not lines and device.transport_errors:
+                return self._result(
+                    host,
+                    error="BMC unreachable (no response from {})".format(host.address),
+                )
             return self._result(host, lines=lines)
         except Exception as exc:  # noqa: BLE001 - reported per node
             return self._result(host, error="{}: {}".format(type(exc).__name__, exc))
         finally:
             if device:
                 device.close()
-
-    def _detect(self, device):
-        if self.options.no_cache:
-            probe = model.probe_redfish(device.redfish)
-            device.probe = probe
-            return model.classify(probe)
-        return model.detect_odm(device)
 
     def stream(self, hosts):
         """Yield results as each node finishes (completion order, no sorting)."""

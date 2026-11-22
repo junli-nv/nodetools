@@ -48,9 +48,12 @@ nodetools nodefan cp[01-18]   # 或作为子命令
 ```
 
 `nodelist`/`nodeping` 不分角色、覆盖整个 inventory（`list`/`ping` 是别名）。
-角色命令用 `cli._role_hosts` 解析：点名了 noderange 则在解析后再按角色过滤（跨角色
-的主机被跳过并提示）；改用 `--all`/`--group` 时取该角色分组。**不带任何参数**运行
-（`len(argv)==1`）时 `main()` 直接打印该命令的用法并以 2 退出，不回退查询整组。
+其中**只有 `nodelist` 无需参数**：不带参数即默认列出全部，且以 0 退出。其余命令
+（含 `nodeping`）都需要参数，**不带任何参数**运行（`len(argv)==1`）时 `main()`
+打印该命令的完整帮助并以 **0** 退出——这是"给帮助"，不是报错（帮助文本打到
+stdout，stderr 为空），也不回退查询整组。角色命令用 `cli._role_hosts` 解析：点名了
+noderange 则在解析后再按角色过滤（跨角色的主机被跳过并提示）；改用
+`--all`/`--group` 时取该角色分组。
 
 ## 2. 架构总览
 
@@ -61,9 +64,10 @@ nodetools (入口)
        ├─ inventory.py   解析/生成 inventory
        ├─ selection.py   选择器 → 主机列表
        ├─ reach.py       BMC ICMP 可达性检查（list/ping 命令用）
-       ├─ scan.py        Redfish 端点扫描 + 缓存（scan 命令写，能力读）
-       ├─ runtime.py     并行引擎：建 Device、探测 ODM、跑能力/控制
-       │    ├─ model.py       角色/ODM 探测 + 缓存
+       ├─ scan.py        Redfish 端点扫描 + 缓存（唯一的缓存写入者）
+       ├─ console.py      nodeconsole：IPMI SOL（legacy 端口 + pty 交互会话）
+       ├─ runtime.py     并行引擎：建 Device、跑能力/控制（只读缓存）
+       │    ├─ model.py       角色/ODM 读取（odm_for）+ 分类（classify）
        │    ├─ caps/*.py      传感器收集器（回退阶梯）
        │    ├─ subjects/*.py  信息对象（power/eventlog/inventory，逐行输出）
        │    ├─ oem/*.py       ODM 差异（附加路径 + 控制动作 + 信息覆盖）
@@ -78,10 +82,10 @@ argv
  → Inventory.from_file(inventory.ini)         # 分组 + 变量 + 默认值
  → selection.select(...)                       # 名字/组/模式 → Host[]
  → Runner.run(hosts) / InfoRunner.run(hosts)  (ThreadPoolExecutor)
-     每台: 解析角色凭据 → 建 Redfish+Ipmi → Device（附 scan profile）
-           ├─ 传感器 --action: 探测 ODM → oem.get(odm).fan_control/psu_control
+     每台: 解析角色凭据 → 建 Redfish+Ipmi → Device（附 scan profile，若无缓存则为 None）
+           ├─ 传感器 --action: 读 profile 的 ODM → oem.get(odm).fan_control/psu_control
            ├─ 传感器否则: caps.collector_for(cap)(device) → readings[]
-           └─ 信息命令: compute 探测 ODM → subjects.handler_for(subject)(device, action)
+           └─ 信息命令: compute 读 profile 的 ODM → subjects.handler_for(subject)(device, action)
  → report.render(results)                      # 传感器 行/汇总；信息 原样逐行
 ```
 
@@ -95,8 +99,8 @@ argv
 | `inventory.py` | inventory 解析 + `hosts.list` 生成器 | 语法见第 5 节 |
 | `selection.py` | 选择器解析（组/名字/模式） | 只选你点名的机器，不做关联 |
 | `reach.py` | BMC 的 ICMP 可达性检查 | `list`/`ping` 命令用；不涉及凭据 |
-| `scan.py` | 探测各集合端点并缓存每个 chassis 的能力图 | `scan` 命令写；能力经 `rung_chassis` 读 |
-| `model.py` | `Device`、`probe_redfish`、`classify`、ODM 缓存 | 探测失败回退 `unknown` |
+| `scan.py` | 探测各集合端点，记录每个 chassis 的能力图 + 设备身份/ODM | **唯一的缓存写入者**；其余命令经 `rung_chassis`/`odm_for` 读 |
+| `model.py` | `Device`、`classify`、`odm_for`（只读 scan profile 的 ODM） | 无缓存回退 `unknown`，命令自身不探测 |
 | `ladder.py` | "按顺序试，返回第一个非空" | 收集器的核心控制流 |
 | `transport/redfish.py` | Redfish `get/get_raw/post/patch` | `verify=False`，连接超时 3s |
 | `transport/ipmi.py` | ipmitool 封装，`sdr` / `raw` | 双模式传密码，见第 5 节 |
@@ -104,9 +108,10 @@ argv
 | `caps/common.py` | Reading 构造、health/speed/num、集合/传感器枚举、`rung_chassis` | 共享工具 |
 | `caps/{fan,psu,temp}.py` | 三个传感器能力的回退阶梯 | 见第 4 节 |
 | `subjects/common.py` | 信息对象工具：`resource`/`entries`/`log_lines`/`column_t`/`jq`/`post`/`patch` | 逐行输出的共享工具 |
-| `subjects/{power,eventlog,inventory}.py` | 三个信息对象的 handler；nvsw/ps 固定 NVIDIA 路径，compute 转 ODM | 见第 4b 节 |
+| `subjects/{power,eventlog,inventory}.py` | 三个信息对象的 handler；nvsw 转 ODM 的 `nvswitch_power`、ps 走固定 NVIDIA 路径、compute 转 ODM | 见第 4b 节 |
 | `subjects/{boot,bootorder,netboot,macs,bios}.py` | 五个启动对象的 handler（仅 compute），转 `device.odm.<subject>` | 见第 4c 节 |
-| `oem/base.py` | `Oem` 基类（GBXX 参考）+ `power`/`eventlog`/`firmware_inventory`/`boot`/`bootorder`/`macs`/`bios`/`netboot` + `_ipmi_raw` | 端点缺失时 vendor 回退到这里 |
+| `console.py` | `nodeconsole`：`_argv`/`open_one`/`close_all`/`attach`（IPMI SOL，legacy 端口 + pty 交互） | 见第 4d 节 |
+| `oem/base.py` | `Oem` 基类（GBXX 参考）+ `power`/`nvswitch_power`/`eventlog`/`firmware_inventory`/`boot`/`bootorder`/`macs`/`bios`/`netboot`/`vm` + `_ipmi_raw` | 端点缺失时 vendor 回退到这里 |
 | `oem/<odm>.py` | 单个 ODM 的控制动作/专用 chassis/信息覆盖 | 读数据主要靠通用阶梯 |
 | `runtime.py` | `build_device`（附 scan profile）、`Runner`/`InfoRunner` 并行、`Scanner`、错误隔离 | 每台独立 try/except |
 | `report.py` | 传感器行/汇总（按对象选字段顺序）+ 信息逐行（`format_lines`） | 兼容 `grep -v ,OK` |
@@ -114,7 +119,7 @@ argv
 ## 4. 收集阶梯（回退顺序）
 
 每个能力都是"依次尝试，返回第一个有数据的后端"，用 `ladder.first` 实现。
-这样即使 ODM 探测错误，只要有一条通用路径通，就能读到数据。
+这样即使 ODM 判断错误，只要有一条通用路径通，就能读到数据。
 
 - **fan**：`ThermalSubsystem/Fans`（逐成员取 `.SpeedPercent.SpeedRPM|Reading`）
   → `Thermal.Fans[].Reading` → `Sensors`（名字含 `fan`）→ IPMI `sdr type Fan`。
@@ -144,15 +149,24 @@ eventlog 的 BMC/HMC 带 `[BMC]`/`[HMC]` 前缀），`report.render` 检测到�
 
 派发规则（`subjects/{power,eventlog,inventory}.py`）：
 
-- `nvsw*` / `ps*` 是 NVIDIA 专有基础设施，**固定走 NVIDIA Redfish 路径**，不按厂商派发：
+- `nvsw*` 按 **ODM** 派发 `nvswitch_power`（`runtime.InfoRunner` 现在对所有角色都读
+  scan profile 的 ODM）：基类固定 `Systems/System_0`；Compal 覆盖为 `Systems/Self`
+  且 `reseat` 用 `FullPowerCycle`。`ps*` 仍是固定 NVIDIA 路径，不按厂商派发：
   - power：`Systems/{System_0|system}/Actions/ComputerSystem.Reset`，状态读 `PowerState`；
   - eventlog：`Systems/System_0/LogServices/EventLog`（nvsw）、
     `Managers/PMC_0/LogServices/EventLog`（ps）；
   - inventory：`UpdateService/FirmwareInventory`（`Id`+`Version`）。
-- `node*`（compute）按 **ODM** 派发：`runtime.InfoRunner` 在 `role == "compute"` 时探
-  测 ODM 并 `device.odm = oem.get(...)`，再调 `device.odm.<subject>(device, action)`。
+- `node*`（compute）按 **ODM** 派发：`runtime.InfoRunner` 读 scan profile 的 ODM
+  （`model.odm_for`），`device.odm = oem.get(...)`，
+  再调 `device.odm.<subject>(device, action)`；无缓存回退基类（GBXX）。
 - `Oem` 基类就是 **NVIDIA GBXX 参考实现**（旧顶层脚本 + `func.sh`）：
   - `power`：IPMI `power <action>`，失败输出 `N/A`（对应旧脚本 `|| echo 'N/A'`）；
+    `reseat` 走 GBXX 辅助电源环（`nodereseat`/`func.sh`）；DGX 覆盖为
+    `Chassis/BMC` 的 `AuxPowerCycleForce`，Aivres 覆盖为 IPMI `raw 0x3c 0x28`，
+    SMC/Lenovo 各自实现；
+  - `nvswitch_power`：`Systems/System_0` 的 `ComputerSystem.Reset`（`on/off/cycle`，
+    其余动作含 `reseat` 落 `status`），Compal 覆盖为 `Systems/Self` +
+    `reseat=FullPowerCycle`；
   - `eventlog`：默认读 `HGX_Baseboard_0/LogServices/EventLog/Entries`（`[HMC]`），
     `bmc` 走 IPMI `sel list`（`[BMC]`），`clear` 清 `Systems/system`、BMC SEL/EventLog
     与 HGX EventLog；
@@ -170,7 +184,7 @@ eventlog 的 BMC/HMC 带 `[BMC]`/`[HMC]` 前缀），`report.render` 检测到�
 ## 4c. 启动对象（boot / bootorder / netboot / macs / bios）
 
 启动对象**只对 compute tray 有意义**：`config.INFO_SUBJECTS` 里把
-`boot/bootorder/netboot/macs/bios` 标为 `("compute",)`，因此只会生成 `node*` 前缀
+`boot/bootorder/netboot/macs/bios/vm` 标为 `("compute",)`，因此只会生成 `node*` 前缀
 的命令，`nvsw*`/`ps*` 不生成。输出规则同信息对象（逐行、已带 `<node>: `）。
 
 - **boot** — `Oem.boot`：IPMI `chassis bootdev <action>`（默认 `pxe`），任何异常
@@ -189,16 +203,48 @@ eventlog 的 BMC/HMC 带 `[BMC]`/`[HMC]` 前缀），`report.render` 检测到�
 - **netboot** — `Oem.netboot`：写一次性/连续 PXE 覆盖并改 BootOrder（**写操作**）。
   Dell（racadm）/Lenovo（`Systems/1` + `BootOptions`）/SMC（`FixedBootOrder` + Reset）
   各自实现。
+- **vm** — `Oem.vm(device, action, options)`：虚拟媒体（**写操作**）。基类对应
+  NVIDIA/AMI：动态发现非 `HGX` 的 `BMC_ID` 与首个 `CD*`/`USB*` 接口，`enable` 走
+  `AMIVirtualMedia.EnableRMedia`，`mount`/`eject` 走 `VirtualMedia.InsertMedia`/
+  `EjectMedia`；Compal/Netweb/Aivres/SMC/Dell 各自覆写端点与动作集（Dell 走
+  `racadm remoteimage`）。`options.image`/`vm_user`/`vm_password` 来自 `nodevm` 的
+  位置参数与 `--vm-user`/`--vm-password`（`arguments._add_info_opts` 对 `vm` 追加）。
 
 > 已知偏差（与旧脚本不完全逐字一致）：
 > - SMC `nodenetboot` 与 `nodebios base` 的旧脚本**没有** `<node>: ` 前缀，框架会给
 >   每行补前缀；
 > - `nodenetboot` 的旧脚本会把 PATCH 的**原始 curl body**（OpenBMC 大 JSON）打印出
 >   来，这里对 `network_boot_gb200` 的 BootOrder 包裹逻辑做了简化近似；
-> - Lenovo `nodebios base` 的 pretty JSON 用 `json.dumps(indent=2)` 近似 `jq` 的格式。
+> - Lenovo `nodebios base` 的 pretty JSON 用 `json.dumps(indent=2)` 近似 `jq` 的格式；
+> - `nodevm` 的 AMI `EnableRMedia` 在旧脚本里带 `If-None-Match: not_match` 头，当前
+>   transport 不支持自定义头（见下）；Aivres `media`/`insert`/`eject` 的原始响应
+>   用紧凑 JSON 近似旧脚本直出的 curl body。
 
-> `nodebootorder`/`nodemacs`/`nodebios` 是只读；`nodenetboot` 与 `nodebios base`/
-> `pending` 会**修改** BMC/BIOS。
+> `nodebootorder`/`nodemacs`/`nodebios`/`nodevm status` 是只读；`nodenetboot` 与
+> `nodebios base`/`pending`、`nodevm` 的 `enable`/`mount`/`insert`/`eject`/`umount`/
+> `stop` 会**修改** BMC/BIOS。
+
+## 4d. 控制台（nodeconsole）
+
+`nodeconsole` 不在 `SENSOR_COMMANDS`/`INFO_COMMANDS` 里，而是 `arguments` 里的独立
+子命令，由 `cli._cmd_console` 直接处理（在 info 命令检查之前派发）。`console.py`
+只依赖 `transport` 与 `runtime`（不碰 sensors/subjects），分两条路径：
+
+- **legacy 端口**（默认）：`open` 先 `sol deactivate`（cipher 17）再
+  `sol activate usesolkeepalive`（cipher 17，`-N 5 -R 5`），**继承终端 stdio**直接接管，
+  多选时只用第一个节点；`close` 对所选节点用 `ThreadPoolExecutor(jobs)` 并行
+  `sol deactivate`（无 cipher、无 `-N/-R`），合并 stdout+stderr 后逐行打印
+  `<node>: <line>`，空行跳过（对应旧脚本 `xargs -I {} printf`）。`_argv` 构造
+  `ipmitool -I lanplus -H ... -U/-P`（`--ipmi-env` 时 `-E` + `IPMI_PASSWORD` 环境变量）。
+- **`--console`/`--interactive`**：`attach` 用 `pty.fork()`+`execvpe` 起一个可交互
+  SOL，记录 JSON Lines（`_Log`，默认 `logs/sol_<label>_<stamp>.jsonl`，0600），
+  `_relay` 做裸终端中继并把 `Ctrl-]`（`\x1d`）当本地断开；断开后按
+  `--reconnect-attempts`/`--reconnect-delay` 重连（`--console` 默认开启重连）。
+  要求恰好一个节点且 stdin/stdout 都是 TTY，否则 rc 2。`_reap` 负责发送 `~.`
+  退出码并回收子进程。
+
+> 与旧脚本的偏差：旧 `nodeconsole` 无参 `exit 1`，框架约定无参打印用法并
+> `rc 0`（与其它命令一致）。
 
 ## 5. 关键约定
 
@@ -290,21 +336,27 @@ reachable=$(./nodeping --long vdc1-pro2-t10-gpu-cp-[01-18] \
 ./nodetemp "$reachable" --errors-only
 ```
 
-### ODM 探测与缓存
+### ODM 身份与缓存（统一：scan 写，命令只读）
 
-`probe_redfish` 拉取 `/redfish/v1`、`Managers/1`、`Systems/1`、`Chassis/*` 的
-Vendor/Model/Manufacturer，拼成字符串后按 `model.SIGNATURES` 匹配（具体厂商在前，
-`nvidia` 兜底 `gb200`）。结果缓存到 `~/.cache/nodetools/oem/<ip>`；`--no-cache` 绕过。
-**读数据不依赖 ODM**，探测只影响控制动作（`--action`）。有 scan 缓存时直接用其中的
-身份，不重复遍历 chassis。
+厂商身份的**唯一来源是 `scan`**：`scan.probe` 拉取 `/redfish/v1`、`Managers/*`、
+`Systems/*`、`Chassis/*`，用 `model.classify` 按 `model.SIGNATURES` 匹配（具体厂商
+在前，`nvidia` 兜底 `gb200`），把 `vendor`/`model`/`manufacturer`/`odm` 与 chassis
+能力图一起写进 `~/.cache/nodetools/scan/<ip>.json`。
+
+其余命令**不再自己探测**：`runtime` 在 `role == "compute"` 时只读 `model.odm_for`
+（即 scan profile 的 `odm`）。没有缓存 → `unknown` → 基类（GBXX，等同旧顶层脚本），
+传感器照常走实时回退阶梯。`--no-cache` 表示"本次不读 scan 缓存"，于是同样回退基类，
+**不会**新建任何缓存。这样既没有每条命令一次的探测开销，也避免了身份存在两处的
+不一致（旧版曾有独立的 `oem/<ip>` 缓存，已随本次统一移除）。
 
 ### 扫描缓存（scan）
 
 单个 BMC 会摊开几十个 chassis，哪个 chassis 有什么集合**因厂商而异，且不一定
 在 detail 里声明**（Wistron 的 `Sensors` 集合就不出现在 chassis detail 中）。
 因此 `scan` 直接探测各集合端点，按 chassis 记录 `Sensors`/`Fans`/`PowerSupplies`/
-`Temperatures` 的成员数，以及旧式 `Thermal`/`Power` 单例对象是否存在，存到
-`~/.cache/nodetools/scan/<ip>.json`（`SCAN_CACHE_VERSION`，改结构时递增以免误读旧档）。
+`Temperatures` 的成员数，以及旧式 `Thermal`/`Power` 单例对象是否存在，连同身份/ODM
+一并存到 `~/.cache/nodetools/scan/<ip>.json`（`SCAN_CACHE_VERSION`，改结构时递增
+以免误读旧档）。这是工具**唯一的缓存**。
 
 fan/psu/temp 通过 `common.rung_chassis(device, key)` 只遍历"能回答该阶梯"的
 chassis（无缓存则回退到实时发现，行为不变）：`Fans`/`PowerSupplies`/`Sensors`/
@@ -346,8 +398,9 @@ chassis（无缓存则回退到实时发现，行为不变）：`Fans`/`PowerSup
    声明动作、`config.INFO_READ_WORDS` 补充"读取"词。
 2. 新建 `subjects/<subject>.py`，实现 `collect(device, action, options) -> list[str]`，
    返回**完整输出行**（含 `<node>: ` 前缀）；复用 `subjects/common.py` 的工具。
-   若对象有角色专有的固定路径（如 nvsw/ps 的 NVIDIA 端点），在 `collect` 里先按
-   `device.role` 分流，compute 再转 `device.odm`。
+   若对象有角色专有的固定路径（如 ps 的 NVIDIA 端点），在 `collect` 里先按
+   `device.role` 分流，compute 转 `device.odm.<subject>`（power 的 nvsw 转
+   `device.odm.nvswitch_power`）。
 3. 在 `subjects/__init__.py` 的 `HANDLERS` 注册。
 4. `arguments.INFO_COMMANDS` 会为每个支持角色自动生成 `<prefix><subject>` 命令；
    补 `pyproject.toml [project.scripts]` 与仓库根的符号链接。
@@ -387,8 +440,10 @@ python3 -m pytest -q          # 当前 73 passed
 `grep -v ,OK` 兼容、ODM 注册、三个传感器对象对 `FakeRedfish` 的解析、信息对象
 （power/eventlog/inventory 的 IPMI 默认、nvsw/ps 固定路径、Dell/Lenovo/SMC/AMI
 覆盖、冒号后空格差异）、scan 缓存（写入/版本不符忽略/`rung_chassis` 命中与回退）、
-`nodelist`/`nodeping` 命令与可达性检查、每节点 deadline（`subprocess` 打桩，不依赖
-网络）。缓存测试用 `tmp_path` 覆盖 `SCAN_CACHE_DIR`。
+`odm_for` 只读 profile（有/无/空 odm）、`InfoRunner` 在传输失败且无输出时报
+`BMC unreachable`、`nodelist` 无参列出全部、其余命令无参打印帮助并以 0 退出（不报错）、
+可达性检查、每节点 deadline
+（`subprocess` 打桩，不依赖网络）。缓存测试用 `tmp_path` 覆盖 `SCAN_CACHE_DIR`。
 
 ### 真机冒烟（改接口后必做）
 
@@ -434,8 +489,7 @@ python3 -m pytest -q          # 当前 73 passed
   （`ping -M do -f -c 1 -W <t> -w <t>`），需要与旧脚本相同的权限（root），因此会
   像旧脚本一样产生瞬时突发流量。无 BMC 地址的主机按 `No BMC IP found` 归类
   （`--long` 时逐台显示）。
-- 尚未做：`boot`/`bootorder`/`netboot`/`macs`/`bios` 信息对象（第二批）、
-  `nodesensors`（MetricReports 遥测）、结果落库/告警、`--json` 输出、IB/SPX
-  交换机能力。
+- 尚未做：`nodesensors`（MetricReports 遥测）、结果落库/告警、`--json` 输出、IB/SPX
+  交换机能力、`nodealive`/`nodecable`/`nodeflapping`（SSH）、`nodemon.ipmi`。
 - 信息对象的 `clear`（清日志）与 `reseat` 等动作因旧脚本本身依赖外部工具
   （`onecli`、`racadm`）或返回体为空，输出细节未逐一比对；改动前回读旧脚本。

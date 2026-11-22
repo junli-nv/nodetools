@@ -23,6 +23,7 @@ class Redfish:
         self.timeout = timeout
         self.verify = verify
         self._deadline = None
+        self.transport_errors = 0
         self._session = requests.Session()
         self._session.verify = verify
         self._session.auth = (user, password) if user else None
@@ -73,6 +74,7 @@ class Redfish:
                 self.url(path), timeout=self._timeout(timeout)
             )
         except requests.RequestException:
+            self.transport_errors += 1
             return None, None
         if resp.status_code in (401, 403):
             return resp.status_code, None
@@ -90,6 +92,7 @@ class Redfish:
                 self.url(path), json=body, timeout=self._timeout(timeout)
             )
         except requests.RequestException as exc:
+            self.transport_errors += 1
             raise TransportError(str(exc)) from exc
         if resp.status_code in (401, 403):
             raise AuthError("POST {} returned {}".format(path, resp.status_code))
@@ -106,6 +109,7 @@ class Redfish:
                 self.url(path), json=body, timeout=self._timeout(timeout)
             )
         except requests.RequestException as exc:
+            self.transport_errors += 1
             raise TransportError(str(exc)) from exc
         if resp.status_code in (401, 403):
             raise AuthError("PATCH {} returned {}".format(path, resp.status_code))

@@ -93,6 +93,10 @@ nodebootorder <noderange>
 nodenetboot   <noderange> [status|mac|net]
 nodemacs      <noderange>
 nodebios      <noderange> [status|base|pending]
+nodevm        <noderange> [status|enable|mount|umount|insert|eject|stop|media|lic] [image]
+
+# console (compute only)
+nodeconsole   <noderange> [open|close]        # SOL serial console
 
 # general
 nodelist [selector] [--long]
@@ -126,8 +130,9 @@ output verbatim:
 * **power** — `nodepower` dispatches by ODM (NVIDIA GBXX default: IPMI
   `power <action>`; Dell has no override so it stays on IPMI, Lenovo/SMC use the
   `Systems/1` Redfish resource). `nvswpower`/`pspower` are NVIDIA-only
-  infrastructure and always use the Redfish reset
-  (`ComputerSystem.Reset`).
+  infrastructure, using the Redfish reset (`Systems/System_0`
+  `ComputerSystem.Reset`) by default; Compal NVSwitch uses `Systems/Self` with
+  `reseat` as `FullPowerCycle`.
 * **eventlog** — `nodeeventlog` reads `[HMC]` by default
   (`HGX_Baseboard_0` EventLog), `bmc` reads `[BMC]` (IPMI SEL), `clear` clears
   the BMC/HMC logs; each OEM overrides its own Sel/PlatformLog/BIOS collection.
@@ -135,7 +140,7 @@ output verbatim:
   `name:Id Version`, nvsw/ps line `name: Id Version`; AMI/BYD/GIGABYTE/DGX/
   Lenovo override as their scripts do).
 
-### Boot commands (boot / bootorder / netboot / macs / bios)
+### Boot commands (boot / bootorder / netboot / macs / bios / vm)
 
 These only make sense for **compute trays** (`nvsw*`/`ps*` have no such
 subject). The default NVIDIA GBXX implementation matches the legacy scripts
@@ -154,8 +159,30 @@ class when an endpoint is absent):
 * **bios** — `nodebios [status|base|pending]`: `status` reads current BIOS
   settings (vendor noise keys filtered out); `base`/`pending` are the
   Lenovo/SMC write paths.
+* **vm** — `nodevm [status|enable|mount|umount|insert|eject|stop|media|lic]
+  [image]`: virtual media (mount/eject an ISO). NVIDIA/AMI default (discovers
+  `BMC_ID`/VMI dynamically, uses `AMIVirtualMedia.EnableRMedia` +
+  `VirtualMedia.InsertMedia`); Compal/Netweb/Aivres/SMC/Dell implement their
+  own (Dell goes through `racadm remoteimage`). `image` accepts `smb://`
+  (Compal/Netweb/GBXX), `http://` (SMC/Dell) or `nfs://` (Aivres);
+  `--vm-user`/`--vm-password` override the SMB credentials.
 
-> Note: `nodenetboot` and `nodebios base/pending` **modify** the BMC/BIOS.
+> Note: `nodenetboot` and `nodebios base/pending` **modify** the BMC/BIOS;
+> `nodevm`'s `enable`/`mount`/`insert`/`eject`/`umount`/`stop` are writes too.
+
+### Console (nodeconsole)
+
+`nodeconsole <noderange> [open|close]` mirrors the legacy `nodeconsole`:
+
+* `open` (default) runs `sol deactivate` then `sol activate usesolkeepalive`
+  (cipher 17, `-N 5 -R 5`), taking over one node's SOL on the terminal; with
+  several nodes only the first is used.
+* `close` runs `sol deactivate` in parallel and prints `<node>: <line>` (nothing
+  is printed for empty output).
+* `--console` (alias `--interactive`) enables a pty session: JSON Lines log
+  (`--log-file` / `--log-dir`, default `logs/`), reconnect on drop
+  (`--reconnect-attempts`/`--reconnect-delay`), and `Ctrl-]` to detach locally.
+  It requires exactly one node and a TTY on stdin/stdout, else it exits rc 2.
 
 ### List, then check only the reachable nodes
 
@@ -180,6 +207,11 @@ reachable=$(./nodeping --long cp[01-18] \
 | `--action A` | control action (alias for the positional action) |
 | `--user` / `--password` | override the BMC credentials |
 | `--ipmi-env` | pass the IPMI password via `IPMI_PASSWORD` (`ipmitool -E`) |
+| `--console` / `--interactive` | `nodeconsole` pty session (single node) |
+| `--cipher N` | `ipmitool -C` cipher (default 17) |
+| `--log-file` / `--log-dir` / `--no-log` | session log path/dir/off |
+| `--reconnect` / `--no-reconnect` | reconnect after a drop (`--console`: on) |
+| `--reconnect-attempts` / `--reconnect-delay` | tries/interval (default 3 / 5s) |
 | `--no-cache` | ignore the cached ODM and scan maps |
 | `-x`, `--debug` | verbose logging |
 

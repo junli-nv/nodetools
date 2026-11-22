@@ -6,7 +6,8 @@ from nodetools_runtime.errors import CapUnsupported
 
 def test_known_odms_registered():
     for name in ("gb200", "dell", "lenovo", "smc", "ami", "byd",
-                 "giga", "dgx", "wistron", "inventec"):
+                 "giga", "dgx", "wistron", "inventec",
+                 "aivres", "compal", "netweb"):
         assert oem.get(name).name in ("giga", "gb200") or oem.get(name).name == name
 
 

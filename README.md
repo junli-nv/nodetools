@@ -90,6 +90,10 @@ nodebootorder <noderange>
 nodenetboot   <noderange> [status|mac|net]
 nodemacs      <noderange>
 nodebios      <noderange> [status|base|pending]
+nodevm        <noderange> [status|enable|mount|umount|insert|eject|stop|media|lic] [image]
+
+# 控制台（仅 compute）
+nodeconsole   <noderange> [open|close]        # SOL 串口控制台
 
 # 通用
 nodelist [selector] [--long]
@@ -117,15 +121,17 @@ nodetools inventory show [-i inventory.ini]
 这组命令**每一条对应一个旧脚本**，输出格式与旧脚本逐字对齐：
 
 * **power** — `nodepower` 走 ODM 策略（默认 NVIDIA GBXX：IPMI `power <action>`；
-  Dell 无覆盖即回退 IPMI，Lenovo/SMC 用 `Systems/1` 的 Redfish）。`nvswpower`/
-  `pspower` 是 NVIDIA 专有基础设施，固定走 Redfish 复位（`ComputerSystem.Reset`）。
+  Dell 无覆盖即回退 IPMI，Lenovo/SMC 用 `Systems/1` 的 Redfish）。
+  `nvswpower`/`pspower` 是 NVIDIA 专有基础设施，默认固定走 Redfish 复位
+  （`Systems/System_0` 的 `ComputerSystem.Reset`）；Compal 的 NVSwitch 走
+  `Systems/Self` 且 `reseat` 为 `FullPowerCycle`。
 * **eventlog** — `nodeeventlog` 默认读 `[HMC]`（`HGX_Baseboard_0` EventLog），
   `bmc` 读 `[BMC]`（IPMI SEL），`clear` 清 BMC/HMC 日志；各 OEM 覆盖各自的 Sol/
   PlatformLog/BIOS 集合。
 * **inventory** — 读 `UpdateService/FirmwareInventory`（compute 行 `name:Id Version`，
   nvsw/ps 行 `name: Id Version`；AMI/BYD/GIGABYTE/DGX/Lenovo 各自覆盖）。
 
-### 启动命令（boot / bootorder / netboot / macs / bios）
+### 启动命令（boot / bootorder / netboot / macs / bios / vm）
 
 这组只对 **compute tray** 有意义（`nvsw*`/`ps*` 无此对象）。默认 NVIDIA GBXX 实现
 与旧脚本逐字对齐，各 ODM 覆盖各自的端点（端点缺失时回退基类）：
@@ -139,8 +145,26 @@ nodetools inventory show [-i inventory.ini]
 * **macs** — `nodemacs`：打印 `OS <boot> <mac> <bus>` 与 BMC 网口 MAC。
 * **bios** — `nodebios [status|base|pending]`：`status` 读当前 BIOS 设置（过滤掉
   厂商噪声键）；`base`/`pending` 是 Lenovo/SMC 的写入路径。
+* **vm** — `nodevm [status|enable|mount|umount|insert|eject|stop|media|lic] [image]`：
+  虚拟媒体（挂载/弹出 ISO）。默认 NVIDIA/AMI（动态发现 `BMC_ID`/VMI，走
+  `AMIVirtualMedia.EnableRMedia` + `VirtualMedia.InsertMedia`）；Compal/Netweb/
+  Aivres/SMC/Dell 各自实现（Dell 走 `racadm remoteimage`）。`image` 支持 `smb://`
+  （Compal/Netweb/GBXX）、`http://`（SMC/Dell）、`nfs://`（Aivres），`--vm-user`/
+  `--vm-password` 覆盖 SMB 凭据。
 
-> 注意：`nodenetboot` 与 `nodebios base/pending` 会**修改** BMC/BIOS，属于写操作。
+> 注意：`nodenetboot` 与 `nodebios base/pending` 会**修改** BMC/BIOS，属于写操作；
+> `nodevm` 的 `enable`/`mount`/`insert`/`eject`/`umount`/`stop` 也是写操作。
+
+### 控制台（nodeconsole）
+
+`nodeconsole <noderange> [open|close]` 逐字复刻旧 `nodeconsole`：
+
+* `open`（默认）先 `sol deactivate` 再 `sol activate usesolkeepalive`
+  （cipher 17，`-N 5 -R 5`），终端里直接接管一个节点的 SOL；多选时只用第一个。
+* `close` 对所选节点并行 `sol deactivate`，逐行输出 `<node>: <line>`（无输出不打印）。
+* `--console`（别名 `--interactive`）启用 pty 交互会话：JSON Lines 记录（`--log-file`
+  / `--log-dir`，默认 `logs/`）、断线重连（`--reconnect-attempts`/`--reconnect-delay`）、
+  `Ctrl-]` 本地断开。要求恰好一个节点且 stdin/stdout 为 TTY，否则以 rc 2 退出。
 
 ### 先 list，再只检查可达节点
 
@@ -165,6 +189,11 @@ reachable=$(./nodeping --long cp[01-18] \
 | `--action A` | 控制动作（位置参数的别名） |
 | `--user` / `--password` | 覆盖 BMC 凭据 |
 | `--ipmi-env` | 经 `IPMI_PASSWORD` 传 IPMI 密码（`ipmitool -E`） |
+| `--console` / `--interactive` | `nodeconsole` 的 pty 交互会话（单节点） |
+| `--cipher N` | `ipmitool -C` cipher（默认 17） |
+| `--log-file` / `--log-dir` / `--no-log` | 交互会话日志路径/目录/关闭 |
+| `--reconnect` / `--no-reconnect` | 断线后是否重连（`--console` 默认重连） |
+| `--reconnect-attempts` / `--reconnect-delay` | 重连次数/间隔（默认 3 / 5s） |
 | `--no-cache` | 忽略 ODM 与 scan 缓存 |
 | `-x`, `--debug` | 详细日志 |
 

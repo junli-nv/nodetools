@@ -23,6 +23,7 @@ INFO_SUBJECTS = {
     "netboot": ("compute",),
     "macs": ("compute",),
     "bios": ("compute",),
+    "vm": ("compute",),
 }
 
 # Accepted actions per subject (first entry is the read/default form); used for
@@ -35,7 +36,8 @@ INFO_ACTIONS = {
     "bootorder": (),
     "netboot": ("status", "mac", "net"),
     "macs": (),
-    "bios": ("status", "base", "pending"),
+    "bios": ("status", "base", "pending", "bf3"),
+    "vm": ("status", "enable", "mount", "umount", "insert", "eject", "stop", "media", "lic"),
 }
 # Action words that mean "just read" for the info commands (the legacy scripts
 # default the action to ``status`` when it is empty).
@@ -61,11 +63,12 @@ CACHE_DIR = os.path.join(
     os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")),
     "nodetools",
 )
-ODM_CACHE_DIR = os.path.join(CACHE_DIR, "oem")
 
-# Per-BMC Redfish interface map produced by `nodetools scan` and reused by the
-# capability commands. Bump SCAN_CACHE_VERSION whenever the schema changes so
-# stale files are ignored instead of misread.
+# The one cache: the per-BMC Redfish interface map produced by `nodetools scan`
+# and reused by every other command (which only read it, never write it). It
+# also carries the ODM identity, so dispatch is a cache lookup, not a probe.
+# Bump SCAN_CACHE_VERSION whenever the schema changes so stale files are
+# ignored instead of misread.
 SCAN_CACHE_DIR = os.path.join(CACHE_DIR, "scan")
 SCAN_CACHE_VERSION = 2
 

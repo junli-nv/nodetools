@@ -5,7 +5,7 @@ output lines (already prefixed with the node name), so the report layer just
 prints them.
 """
 
-from . import bios, boot, bootorder, eventlog, inventory, macs, netboot, power
+from . import bios, boot, bootorder, eventlog, inventory, macs, netboot, power, vm
 
 HANDLERS = {
     "power": power.collect,
@@ -16,6 +16,7 @@ HANDLERS = {
     "netboot": netboot.collect,
     "macs": macs.collect,
     "bios": bios.collect,
+    "vm": vm.collect,
 }
 
 

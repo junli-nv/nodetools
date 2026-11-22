@@ -20,12 +20,30 @@ def _inv(tmp_path):
     return str(path)
 
 
-def test_bare_command_prints_usage(capsys):
-    for command in ("list", "ping", "scan", "nodepower", "nodefan", "nodeboot"):
+def test_bare_command_prints_help_not_error(capsys):
+    for command in ("scan", "nodepower", "nodefan", "nodeboot", "ping"):
         rc = cli.main([command])
         captured = capsys.readouterr()
-        assert rc == 2, command
+        assert rc == 0, command
         assert "usage:" in captured.out, command
+        assert captured.err == "", command
+
+
+def test_bare_list_defaults_to_all(tmp_path, capsys, monkeypatch):
+    monkeypatch.setenv("NODETOOLS_INVENTORY", _inv(tmp_path))
+    rc = cli.main(["list"])
+    out = capsys.readouterr()
+    assert rc == 0
+    assert "   PhysicalNode: vdc1-t10-gpu-cp-[01-02]" in out.out
+    assert "     PowerShelf: vdc1-t10-gpu-pwr-01" in out.out
+
+
+def test_bare_ping_prints_help_not_error(capsys):
+    rc = cli.main(["ping"])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "usage:" in captured.out
+    assert captured.err == ""
 
 
 def test_list_all_aggregated(tmp_path, capsys):

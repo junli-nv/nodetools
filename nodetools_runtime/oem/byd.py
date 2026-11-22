@@ -5,6 +5,7 @@ from .base import Oem
 
 class Byd(Oem):
     name = "byd"
+    family = "hgx"
     fan_chassis = ("1", "Chassis_0")
 
     bootorder_system = "Self"

@@ -5,6 +5,7 @@ from .base import Oem
 
 class Gb200(Oem):
     name = "gb200"
+    family = "nvl"
     fan_chassis = ("Chassis_0", "BMC_0")
 
     def fan_control(self, device, action):

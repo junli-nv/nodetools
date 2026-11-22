@@ -23,12 +23,18 @@ from .config import (
     ROLE_ORDER,
     VERSION,
 )
+from . import console
 from .errors import NodetoolsError
 from .inventory import Inventory, generate_from_hostslist
 from .report import render
 from .runtime import InfoRunner, Runner, Scanner
 
 _READ_WORDS = ("", "status", "check", "read")
+
+# The only command that needs no argument: ``nodelist`` takes no action, so a
+# bare call lists everything. Every other command requires arguments, and a bare
+# call prints its help (exit 0) rather than an error.
+_DEFAULT_ALL_COMMANDS = ("nodelist",)
 
 
 def _inventory_path(explicit):
@@ -46,12 +52,23 @@ class Options:
         self.node_timeout = None
         self.summary = False
         self.action = None
+        self.image = getattr(args, "image", None)
+        self.vm_user = getattr(args, "vm_user", None)
+        self.vm_password = getattr(args, "vm_password", None)
         self.user = getattr(args, "user", None)
         self.password = getattr(args, "password", None)
         self.ipmi_env = getattr(args, "ipmi_env", False)
         self.no_cache = getattr(args, "no_cache", False)
         self.clear = getattr(args, "clear", False)
         self.debug = getattr(args, "debug", False)
+        self.console = getattr(args, "console", False)
+        self.cipher = getattr(args, "cipher", None)
+        self.reconnect = getattr(args, "reconnect", None)
+        self.reconnect_attempts = getattr(args, "reconnect_attempts", None)
+        self.reconnect_delay = getattr(args, "reconnect_delay", None)
+        self.log_file = getattr(args, "log_file", None)
+        self.log_dir = getattr(args, "log_dir", "logs")
+        self.no_log = getattr(args, "no_log", False)
 
 
 def _apply_defaults(options, inv, args):
@@ -270,6 +287,33 @@ def _cmd_info(args):
     return exit_code
 
 
+def _cmd_console(args):
+    inv = Inventory.from_file(_inventory_path(args.inventory))
+    options = Options(args)
+    _apply_defaults(options, inv, args)
+    hosts = _role_hosts(args, inv, "compute")
+    if not hosts:
+        print("nodetools: no compute hosts selected", file=sys.stderr)
+        return 1
+    if options.console:
+        if len(hosts) != 1:
+            print(
+                "nodetools: --console requires exactly one node", file=sys.stderr
+            )
+            return 2
+        if options.reconnect is None:
+            options.reconnect = True
+        return console.attach(hosts[0], options)
+    if args.action == "close":
+        return console.close_all(hosts, options)
+    if len(hosts) > 1:
+        print(
+            "nodetools: open supports one node; using {}".format(hosts[0].name),
+            file=sys.stderr,
+        )
+    return console.open_one(hosts[0], options)
+
+
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
@@ -284,12 +328,13 @@ def main(argv=None):
         parse_args(["--help"])
         return 2
     command = normalize_command(args.command)
-    if len(argv) == 1:
+    if len(argv) == 1 and command not in _DEFAULT_ALL_COMMANDS:
+        # Bare call: show this command's help and exit 0 (help, not an error).
         try:
             parse_args([args.command, "--help"])
         except SystemExit:
             pass
-        return 2
+        return 0
     try:
         if command == "inventory":
             return _cmd_inventory(args)
@@ -299,6 +344,8 @@ def main(argv=None):
             return _cmd_ping(args)
         if command == "scan":
             return _cmd_scan(args)
+        if command == "nodeconsole":
+            return _cmd_console(args)
         if command in INFO_COMMANDS:
             return _cmd_info(args)
         if command in SENSOR_COMMANDS:

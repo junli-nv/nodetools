@@ -1,8 +1,13 @@
-"""Device model: identity probing, ODM classification and caching."""
+"""Device model: identity (ODM) lookup, classification and transport errors.
 
-import os
+Vendor identity is never probed by a command. ``nodetools scan`` walks a BMC
+once and records the ODM in its scan map; every other command reads that map
+(:func:`odm_for`), so dispatch costs a cache lookup, not a live walk. The only
+identity work here is :func:`classify`, which ``scan`` uses to turn a probe
+into an ODM string.
+"""
 
-from .config import CACHE_DIR, ODM_CACHE_DIR, ROLE_GROUPS
+from .config import ROLE_GROUPS
 
 # Marker substrings -> ODM. More specific vendors first so that generic
 # "nvidia" strings on a GB200 tray do not shadow an ODM reading.
@@ -15,6 +20,9 @@ SIGNATURES = (
     ("wistron", ("wistron", "wiwynn")),
     ("inventec", ("inventec",)),
     ("byd", ("byd",)),
+    ("aivres", ("aivres",)),
+    ("compal", ("compal",)),
+    ("netweb", ("netweb",)),
     ("dgx", ("dgx",)),
     ("gb200", ("gb200", "gb300", "nvidia")),
 )
@@ -32,7 +40,9 @@ class Device:
         self.redfish = redfish_factory(host) if redfish_factory else None
         self.ipmi = ipmi_factory(host) if ipmi_factory else None
         self.odm = None
-        self.probe = {}
+        # Cached scan map for this BMC (``nodetools scan``), attached by
+        # ``runtime.build_device``; ``None`` when there is no cache.
+        self.profile = None
 
     def cred(self, *keys):
         for key in keys:
@@ -40,6 +50,14 @@ class Device:
             if value:
                 return value
         return None
+
+    @property
+    def transport_errors(self):
+        """Number of connection-level failures seen by either transport."""
+        total = 0
+        for transport in (self.redfish, self.ipmi):
+            total += getattr(transport, "transport_errors", 0)
+        return total
 
     def close(self):
         if self.redfish:
@@ -60,56 +78,8 @@ def _collect_strings(obj, acc):
             _collect_strings(item, acc)
 
 
-def _member_ids(redfish, path):
-    """Member @odata.id values of a collection, discovered dynamically."""
-    data = redfish.get(path)
-    ids = []
-    if isinstance(data, dict) and isinstance(data.get("Members"), list):
-        for member in data["Members"]:
-            oid = member.get("@odata.id") if isinstance(member, dict) else None
-            if oid:
-                ids.append(oid)
-    return ids
-
-
-def probe_redfish(redfish):
-    """Gather vendor/model/manufacturer/chassis ids from a BMC."""
-    info = {"vendor": None, "model": None, "manufacturer": None,
-            "chassis": [], "raw": []}
-
-    root = redfish.get("/redfish/v1")
-    if root:
-        info["vendor"] = root.get("Vendor") or root.get("Oem", {}).get(
-            "Vendor"
-        )
-        info["raw"].append(root)
-
-    # Enumerate the Managers/Systems collections instead of assuming an id, so
-    # vendors that name them differently (BMC_0, hostname, ...) still resolve.
-    for collection in ("/redfish/v1/Managers", "/redfish/v1/Systems"):
-        for oid in _member_ids(redfish, collection):
-            data = redfish.get(oid)
-            if data:
-                info["model"] = info["model"] or data.get("Model")
-                info["manufacturer"] = (
-                    info["manufacturer"] or data.get("Manufacturer")
-                )
-                info["raw"].append(data)
-
-    for oid in _member_ids(redfish, "/redfish/v1/Chassis"):
-        ident = oid.rstrip("/").rsplit("/", 1)[-1]
-        info["chassis"].append(ident)
-        detail = redfish.get(oid)
-        if detail:
-            info["model"] = info["model"] or detail.get("Model")
-            info["manufacturer"] = (
-                info["manufacturer"] or detail.get("Manufacturer")
-            )
-            info["raw"].append(detail)
-    return info
-
-
 def classify(probe):
+    """Turn a scan probe (or scan profile) into an ODM name."""
     haystack = []
     _collect_strings(probe, haystack)
     for name, markers in SIGNATURES:
@@ -119,48 +89,19 @@ def classify(probe):
     return "unknown"
 
 
-def _cache_path(address):
-    safe = address.replace("/", "_").replace(":", "_")
-    return os.path.join(ODM_CACHE_DIR, safe)
+def odm_for(device):
+    """ODM recorded by ``nodetools scan`` for this BMC, else ``unknown``.
 
-
-def load_cached_odm(address):
-    path = _cache_path(address)
-    if address and os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as handle:
-            return handle.read().strip() or None
-    return None
-
-
-def store_cached_odm(address, odm):
-    if not address:
-        return
-    os.makedirs(ODM_CACHE_DIR, exist_ok=True)
-    tmp = _cache_path(address) + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as handle:
-        handle.write(odm)
-    os.replace(tmp, _cache_path(address))
-
-
-def detect_odm(device, use_cache=True):
-    if use_cache:
-        cached = load_cached_odm(device.address)
-        if cached:
-            return cached
-        # A cached scan map already carries the identity, so reuse it instead
-        # of walking every chassis again.
-        profile = getattr(device, "profile", None)
-        if isinstance(profile, dict):
-            device.probe = profile
-            odm = profile.get("odm")
-            if odm:
-                store_cached_odm(device.address, odm)
-                return odm
-    probe = probe_redfish(device.redfish)
-    device.probe = probe
-    odm = classify(probe)
-    store_cached_odm(device.address, odm)
-    return odm
+    A plain cache lookup: commands never walk the BMC to identify a vendor.
+    An unscanned node falls back to the base (GBXX/NVIDIA) handler, which is
+    the reference the legacy top-level scripts used.
+    """
+    profile = getattr(device, "profile", None)
+    if isinstance(profile, dict):
+        odm = profile.get("odm")
+        if odm:
+            return odm
+    return "unknown"
 
 
 def role_for_groups(groups):

@@ -5,6 +5,7 @@ from .base import Oem
 
 class Wistron(Oem):
     name = "wistron"
+    family = "nvl"
     fan_chassis = ("Chassis_0",)
 
     def fan_control(self, device, action):

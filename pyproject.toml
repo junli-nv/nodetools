@@ -39,6 +39,8 @@ nodebootorder = "nodetools_runtime.cli:main"
 nodenetboot = "nodetools_runtime.cli:main"
 nodemacs = "nodetools_runtime.cli:main"
 nodebios = "nodetools_runtime.cli:main"
+nodevm = "nodetools_runtime.cli:main"
+nodeconsole = "nodetools_runtime.cli:main"
 
 [tool.setuptools]
 packages = ["nodetools_runtime", "nodetools_runtime.transport", "nodetools_runtime.caps", "nodetools_runtime.oem", "nodetools_runtime.subjects"]

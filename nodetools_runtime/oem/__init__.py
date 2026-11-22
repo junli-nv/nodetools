@@ -1,15 +1,18 @@
 """ODM module registry."""
 
 from ..errors import CapUnsupported
+from .aivres import Aivres
 from .ami import Ami
 from .base import Oem
 from .byd import Byd
+from .compal import Compal
 from .dell import Dell
 from .dgx import Dgx
 from .gb200 import Gb200
 from .gigabyte import Gigabyte
 from .inventec import Inventec
 from .lenovo import Lenovo
+from .netweb import Netweb
 from .smc import Smc
 from .wistron import Wistron
 
@@ -24,6 +27,9 @@ _MODULES = {
     "dgx": Dgx(),
     "wistron": Wistron(),
     "inventec": Inventec(),
+    "aivres": Aivres(),
+    "compal": Compal(),
+    "netweb": Netweb(),
 }
 
 _GENERIC = Oem()

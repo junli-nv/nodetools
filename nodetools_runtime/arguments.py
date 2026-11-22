@@ -46,7 +46,9 @@ COMMAND_ALIASES = {"list": "nodelist", "ping": "nodeping"}
 
 # programs (argv[0]) that dispatch straight to a command
 NODE_PROGRAMS = (
-    tuple(SENSOR_COMMANDS) + tuple(INFO_COMMANDS) + ("nodelist", "nodeping")
+    tuple(SENSOR_COMMANDS)
+    + tuple(INFO_COMMANDS)
+    + ("nodelist", "nodeping", "nodeconsole")
 )
 
 
@@ -114,6 +116,17 @@ def _add_info_opts(parser, subject):
     actions = [a for a in INFO_ACTIONS.get(subject, ()) if a != "status"]
     help_text = "read (default) | " + " | ".join(actions) if actions else "read-only"
     parser.add_argument("action", nargs="?", default=None, help=help_text)
+    if subject == "vm":
+        parser.add_argument(
+            "image",
+            nargs="?",
+            default=None,
+            help="ISO location, e.g. smb://host/share/x.iso, nfs://host/dir/x.iso",
+        )
+        parser.add_argument("--vm-user", default=None, help="virtual-media username")
+        parser.add_argument(
+            "--vm-password", default=None, help="virtual-media password"
+        )
     _add_inventory_opt(parser)
     parser.add_argument("--group", action="append", default=[], help="select a group")
     parser.add_argument("--all", action="store_true", help="select every host")
@@ -177,6 +190,70 @@ def build_parser():
     for name, (role, subject) in INFO_COMMANDS.items():
         info = sub.add_parser(name, help="{} {}".format(role, subject))
         _add_info_opts(info, subject)
+
+    cs = sub.add_parser(
+        "nodeconsole",
+        help="compute SOL console (open/close, or --console for an attached session)",
+    )
+    cs.add_argument(
+        "noderange",
+        nargs="?",
+        help="nodelist expression (defaults to every compute host)",
+    )
+    cs.add_argument(
+        "action",
+        nargs="?",
+        default="open",
+        choices=["open", "close"],
+        help="open (attach one node, default) | close (deactivate many)",
+    )
+    _add_inventory_opt(cs)
+    cs.add_argument("--group", action="append", default=[], help="select a group")
+    cs.add_argument("--all", action="store_true", help="select every host")
+    cs.add_argument("--jobs", type=int, default=None, help="parallel workers")
+    cs.add_argument("--timeout", type=float, default=None, help="per-request timeout")
+    cs.add_argument("--user", default=None, help="override BMC username")
+    cs.add_argument("--password", default=None, help="override BMC password")
+    cs.add_argument(
+        "--ipmi-env",
+        action="store_true",
+        help="pass the IPMI password via IPMI_PASSWORD (ipmitool -E)",
+    )
+    cs.add_argument("--no-cache", action="store_true", help="skip caches")
+    cs.add_argument(
+        "--console",
+        "--interactive",
+        dest="console",
+        action="store_true",
+        help="attached SOL session with logging/reconnect (one node)",
+    )
+    cs.add_argument("--cipher", type=int, default=17, help="ipmitool -C cipher suite")
+    cs.add_argument("--log-file", default=None, help="console log path (JSON Lines)")
+    cs.add_argument("--log-dir", default="logs", help="auto-log directory")
+    cs.add_argument("--no-log", action="store_true", help="do not write a console log")
+    cs.add_argument(
+        "--reconnect",
+        dest="reconnect",
+        action="store_true",
+        default=None,
+        help="reconnect after the SOL session drops (default for --console)",
+    )
+    cs.add_argument(
+        "--no-reconnect",
+        dest="reconnect",
+        action="store_false",
+        help="do not reconnect after a drop",
+    )
+    cs.add_argument(
+        "--reconnect-attempts", type=int, default=3, help="reconnect tries (default 3)"
+    )
+    cs.add_argument(
+        "--reconnect-delay",
+        type=float,
+        default=5.0,
+        help="seconds between reconnect tries (default 5)",
+    )
+    cs.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
     sc = sub.add_parser(
         "scan", help="probe and cache each BMC's Redfish map (re-run to refresh)"

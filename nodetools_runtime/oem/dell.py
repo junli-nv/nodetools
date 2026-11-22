@@ -33,6 +33,7 @@ _NET_PXE = (
 
 class Dell(Oem):
     name = "dell"
+    family = "hgx"
     fan_chassis = ("System.Embedded.1",)
 
     bootorder_system = "System.Embedded.1"
@@ -40,6 +41,15 @@ class Dell(Oem):
     bootorder_quoted = False
     bootorder_sep = ","
     bootorder_expand = False
+
+    vm_image = "http://10.6.131.63/isos/ubuntu-24.04-live.iso"
+    _LICENSE_TOKENS = (
+        "License #",
+        "Status",
+        "License Description",
+        "License Type",
+        "Expiration",
+    )
 
     def fan_control(self, device, action):
         racadm = Racadm(device.address, device.cred("bmc_user"), device.cred("bmc_password"))
@@ -123,3 +133,26 @@ class Dell(Oem):
             if token in line:
                 return line.replace("\r", "")
         return ""
+
+    # -- virtual media (nodevm.dell / racadm remoteimage) ----------------
+    def vm(self, device, action, options=None):
+        action = (action or "status").strip().lower() or "status"
+        if action == "lic":
+            out = self._racadm(device, "license", "view")
+            rows = []
+            for line in out.splitlines():
+                if any(token in line for token in self._LICENSE_TOKENS):
+                    rows.append(line.replace("\t", "").replace("\r", ""))
+            return self._label_lines(device, rows)
+        if action == "enable":
+            out = self._racadm(device, "set", "iDRAC.VirtualMedia.Enable", "1")
+        elif action == "mount":
+            image = getattr(options, "image", None) if options is not None else None
+            out = self._racadm(device, "remoteimage", "-c", "-l", image or self.vm_image)
+        elif action == "umount":
+            out = self._racadm(device, "remoteimage", "-d")
+        else:
+            out = self._racadm(device, "remoteimage", "-s")
+        return self._label_lines(
+            device, [line for line in out.splitlines() if line.strip()]
+        )

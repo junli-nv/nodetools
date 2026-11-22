@@ -61,12 +61,14 @@ nodetools nodefan cp[01-18]   # or as a subcommand
 ```
 
 `nodelist`/`nodeping` are role-agnostic and cover the whole inventory
-(`list`/`ping` are aliases). Role commands resolve via `cli._role_hosts`: when a
-noderange is named, resolution happens first and is then filtered by role
-(cross-role hosts are skipped with a notice); use `--all`/`--group` to select the
-whole role group. Running a command with **no arguments** (`len(argv)==1`) makes
-`main()` print that command's usage and exit 2 instead of defaulting to the whole
-group.
+(`list`/`ping` are aliases). **Only `nodelist` needs no argument**: a bare call
+lists everything and exits 0. Every other command (including `nodeping`)
+requires arguments; a bare call (`len(argv)==1`) makes `main()` print that
+command's full help to stdout and exit **0** — this is help, not an error (no
+stderr output, no nonzero code), and it does not fall back to the whole group.
+Role commands resolve via `cli._role_hosts`: when a noderange is named,
+resolution happens first and is then filtered by role (cross-role hosts are
+skipped with a notice); use `--all`/`--group` to select the whole role group.
 
 ## 2. Architecture overview
 
@@ -77,9 +79,10 @@ nodetools (launcher)
        ├─ inventory.py   parse/generate inventory
        ├─ selection.py   selectors → host list
        ├─ reach.py       BMC ICMP reachability (list/ping)
-       ├─ scan.py        Redfish endpoint scan + cache (scan writes, caps read)
-       ├─ runtime.py     parallel engine: build Device, probe ODM, run caps/control
-       │    ├─ model.py       role/ODM detection + cache
+       ├─ scan.py        Redfish endpoint scan + cache (the only cache writer)
+       ├─ console.py      nodeconsole: IPMI SOL (legacy port + pty session)
+       ├─ runtime.py     parallel engine: build Device, run caps/control (read-only)
+       │    ├─ model.py       role/ODM lookup (odm_for) + classify
        │    ├─ caps/*.py      sensor collectors (fallback ladders)
        │    ├─ subjects/*.py  info subjects (power/eventlog/inventory, line output)
        │    ├─ oem/*.py       ODM differences (extra paths + control + info overrides)
@@ -94,10 +97,10 @@ argv
  → Inventory.from_file(inventory.ini)         # groups + vars + defaults
  → selection.select(...)                       # name/group/pattern → Host[]
  → Runner.run(hosts) / InfoRunner.run(hosts)  (ThreadPoolExecutor)
-     per host: resolve role creds → build Redfish+Ipmi → Device (+ scan profile)
-           ├─ sensor --action: probe ODM → oem.get(odm).fan_control/psu_control
+     per host: resolve role creds → build Redfish+Ipmi → Device (+ scan profile, None if uncached)
+           ├─ sensor --action: read ODM from profile → oem.get(odm).fan_control/psu_control
            ├─ sensor otherwise: caps.collector_for(cap)(device) → readings[]
-           └─ info: compute probes ODM → subjects.handler_for(subject)(device, action)
+           └─ info: compute reads ODM from profile → subjects.handler_for(subject)(device, action)
  → report.render(results)                      # sensor  lines/summary; info  verbatim lines
 ```
 
@@ -111,8 +114,8 @@ argv
 | `inventory.py` | inventory parsing + `hosts.list` generator | syntax in §5 |
 | `selection.py` | selector parsing (group/name/pattern) | selects only what you name |
 | `reach.py` | BMC ICMP reachability | used by `list`/`ping`; no credentials |
-| `scan.py` | probe collection endpoints, cache per-chassis capability map | written by `scan`; read via `rung_chassis` |
-| `model.py` | `Device`, `probe_redfish`, `classify`, ODM cache | falls back to `unknown` |
+| `scan.py` | probe collection endpoints, record per-chassis capability map + device identity/ODM | **the only cache writer**; others read via `rung_chassis`/`odm_for` |
+| `model.py` | `Device`, `classify`, `odm_for` (reads the scan profile's ODM) | `unknown` when uncached; commands never probe |
 | `ladder.py` | "try in order, return the first non-empty" | core control flow of collectors |
 | `transport/redfish.py` | Redfish `get/get_raw/post/patch` | `verify=False`, 3s connect timeout |
 | `transport/ipmi.py` | ipmitool wrapper, `sdr` / `raw` | two password modes, see §5 |
@@ -120,9 +123,10 @@ argv
 | `caps/common.py` | Reading construction, health/speed/num, collection/sensor enumeration, `rung_chassis` | shared helpers |
 | `caps/{fan,psu,temp}.py` | fallback ladders for the three sensor caps | see §4 |
 | `subjects/common.py` | info helpers: `resource`/`entries`/`log_lines`/`column_t`/`jq`/`post`/`patch` | shared line-output helpers |
-| `subjects/{power,eventlog,inventory}.py` | handlers for the three info subjects; nvsw/ps use fixed NVIDIA paths, compute dispatches to ODM | see §4b |
+| `subjects/{power,eventlog,inventory}.py` | handlers for the three info subjects; nvsw dispatches to the ODM `nvswitch_power`, ps uses fixed NVIDIA paths, compute dispatches to ODM | see §4b |
 | `subjects/{boot,bootorder,netboot,macs,bios}.py` | handlers for the five boot subjects (compute only), dispatching to `device.odm.<subject>` | see §4c |
-| `oem/base.py` | `Oem` base (GBXX reference) + `power`/`eventlog`/`firmware_inventory`/`boot`/`bootorder`/`macs`/`bios`/`netboot` + `_ipmi_raw` | vendors fall back here when an endpoint is absent |
+| `console.py` | `nodeconsole`: `_argv`/`open_one`/`close_all`/`attach` (IPMI SOL: legacy port + pty session) | see §4d |
+| `oem/base.py` | `Oem` base (GBXX reference) + `power`/`nvswitch_power`/`eventlog`/`firmware_inventory`/`boot`/`bootorder`/`macs`/`bios`/`netboot`/`vm` + `_ipmi_raw` | vendors fall back here when an endpoint is absent |
 | `oem/<odm>.py` | per-ODM control actions / extra chassis / info overrides | reading mostly uses the generic ladder |
 | `runtime.py` | `build_device` (+ scan profile), parallel `Runner`/`InfoRunner`, `Scanner`, error isolation | per-host try/except |
 | `report.py` | sensor lines/summary (field order per subject) + info lines (`format_lines`) | keeps `grep -v ,OK` working |
@@ -130,7 +134,7 @@ argv
 ## 4. Collection ladders (fallback order)
 
 Each capability "tries in turn and returns the first backend that has data",
-implemented with `ladder.first`. So even if ODM detection is wrong, any working
+implemented with `ladder.first`. So even if the ODM is wrong, any working
 generic path still yields data.
 
 - **fan**: `ThermalSubsystem/Fans` (per member `.SpeedPercent.SpeedRPM|Reading`)
@@ -166,20 +170,29 @@ is to match the legacy scripts verbatim so existing pipes like `grep -v ,OK` and
 
 Dispatch rules (`subjects/{power,eventlog,inventory}.py`):
 
-- `nvsw*` / `ps*` are NVIDIA-only infrastructure and **always use the NVIDIA
-  Redfish paths**, never dispatch by vendor:
+- `nvsw*` dispatches by **ODM** to `nvswitch_power` (`runtime.InfoRunner` now reads
+  the scan-profile ODM for every role): the base class pins `Systems/System_0`;
+  Compal overrides it to `Systems/Self` with `reseat` as `FullPowerCycle`. `ps*`
+  stays on fixed NVIDIA paths, never dispatch by vendor:
   - power: `Systems/{System_0|system}/Actions/ComputerSystem.Reset`, state read
     from `PowerState`;
   - eventlog: `Systems/System_0/LogServices/EventLog` (nvsw),
     `Managers/PMC_0/LogServices/EventLog` (ps);
   - inventory: `UpdateService/FirmwareInventory` (`Id` + `Version`).
-- `node*` (compute) dispatches by **ODM**: `runtime.InfoRunner` probes the ODM
-  when `role == "compute"`, sets `device.odm = oem.get(...)`, then calls
-  `device.odm.<subject>(device, action)`.
+- `node*` (compute) dispatches by **ODM**: `runtime.InfoRunner` reads the ODM from
+  the scan profile (`model.odm_for`), sets `device.odm = oem.get(...)`, then calls
+  `device.odm.<subject>(device, action)`; uncached nodes fall back to the base
+  (GBXX) class.
 - The `Oem` base class is the **NVIDIA GBXX reference implementation** (legacy
   top-level scripts + `func.sh`):
   - `power`: IPMI `power <action>`, printing `N/A` on failure (matching the
-    legacy `|| echo 'N/A'`);
+    legacy `|| echo 'N/A'`); `reseat` uses the GBXX auxiliary power cycle
+    (`nodereseat`/`func.sh`), while DGX overrides it to `Chassis/BMC`
+    `AuxPowerCycleForce`, Aivres to IPMI `raw 0x3c 0x28`, and SMC/Lenovo
+    implement their own;
+  - `nvswitch_power`: `Systems/System_0` `ComputerSystem.Reset` (`on/off/cycle`;
+    any other action, including `reseat`, falls through to `status`); Compal
+    overrides it to `Systems/Self` with `reseat=FullPowerCycle`;
   - `eventlog`: reads
     `HGX_Baseboard_0/LogServices/EventLog/Entries` by default (`[HMC]`), `bmc`
     uses IPMI `sel list` (`[BMC]`), `clear` clears `Systems/system`, the BMC
@@ -198,10 +211,10 @@ alignment); do not guess. `subjects/common.py`'s `column_t` approximates
 `column -t`, and `jq`/`jq_out` approximate `jq` (mind the quoting difference
 between `jq -r` and `jq`, e.g. the quoted `PowerState` in SMC/NVSwitch).
 
-## 4c. Boot subjects (boot / bootorder / netboot / macs / bios)
+## 4c. Boot subjects (boot / bootorder / netboot / macs / bios / vm)
 
 Boot subjects **only make sense for compute trays**: `config.INFO_SUBJECTS`
-marks `boot/bootorder/netboot/macs/bios` as `("compute",)`, so only `node*`
+marks `boot/bootorder/netboot/macs/bios/vm` as `("compute",)`, so only `node*`
 commands are generated and `nvsw*`/`ps*` produce none. Output rules match the
 info subjects (line-oriented, already prefixed with `<node>: `).
 
@@ -224,6 +237,14 @@ info subjects (line-oriented, already prefixed with `<node>: `).
 - **netboot** — `Oem.netboot`: writes a one-shot/continuous PXE override and
   rewrites BootOrder (**a write**). Dell (racadm) / Lenovo (`Systems/1` +
   `BootOptions`) / SMC (`FixedBootOrder` + Reset) each implement their own.
+- **vm** — `Oem.vm(device, action, options)`: virtual media (**a write**). The
+  base class is NVIDIA/AMI: it discovers the non-`HGX` `BMC_ID` and the first
+  `CD*`/`USB*` interface, `enable` goes through `AMIVirtualMedia.EnableRMedia`,
+  and `mount`/`eject` through `VirtualMedia.InsertMedia`/`EjectMedia`;
+  Compal/Netweb/Aivres/SMC/Dell override their endpoints and action sets (Dell
+  goes through `racadm remoteimage`). `options.image`/`vm_user`/`vm_password`
+  come from `nodevm`'s positional `image` plus `--vm-user`/`--vm-password`
+  (`arguments._add_info_opts` extends the `vm` subject).
 
 > Known deviations from the legacy scripts:
 > - SMC `nodenetboot` and `nodebios base` had **no** `<node>: ` prefix; the
@@ -232,10 +253,41 @@ info subjects (line-oriented, already prefixed with `<node>: `).
 >   (a large OpenBMC JSON blob); here the `network_boot_gb200` BootOrder-wrapping
 >   logic is simplified/approximate;
 > - Lenovo `nodebios base` pretty-prints with `json.dumps(indent=2)`,
->   approximating `jq`'s formatting.
+>   approximating `jq`'s formatting;
+> - `nodevm`'s AMI `EnableRMedia` carries an `If-None-Match: not_match` header in
+>   the legacy script, which the current transport cannot send (custom headers
+>   are unsupported); Aivres `media`/`insert`/`eject` raw responses use compact
+>   JSON instead of the legacy script's verbatim curl body.
 
-> `nodebootorder`/`nodemacs`/`nodebios` are read-only; `nodenetboot` and
-> `nodebios base`/`pending` **modify** the BMC/BIOS.
+> `nodebootorder`/`nodemacs`/`nodebios`/`nodevm status` are read-only;
+> `nodenetboot`, `nodebios base`/`pending` and `nodevm`'s
+> `enable`/`mount`/`insert`/`eject`/`umount`/`stop` **modify** the BMC/BIOS.
+
+## 4d. Console (nodeconsole)
+
+`nodeconsole` is not part of `SENSOR_COMMANDS`/`INFO_COMMANDS`; it is a dedicated
+subcommand in `arguments`, handled directly by `cli._cmd_console` (dispatched
+before the info-command check). `console.py` depends only on `transport` and
+`runtime` (never touching sensors/subjects) and has two paths:
+
+- **legacy port** (default): `open` runs `sol deactivate` (cipher 17) then
+  `sol activate usesolkeepalive` (cipher 17, `-N 5 -R 5`), **inheriting the
+  terminal stdio** to take over; with several nodes only the first is used.
+  `close` runs `sol deactivate` (no cipher, no `-N/-R`) in parallel via
+  `ThreadPoolExecutor(jobs)`, merges stdout+stderr and prints `<node>: <line>`,
+  skipping empty lines (matching the legacy `xargs -I {} printf`). `_argv` builds
+  `ipmitool -I lanplus -H ... -U/-P` (`-E` + `IPMI_PASSWORD` with `--ipmi-env`).
+- **`--console`/`--interactive`**: `attach` uses `pty.fork()`+`execvpe` to run an
+  interactive SOL, records JSON Lines (`_Log`, default
+  `logs/sol_<label>_<stamp>.jsonl`, 0600), and `_relay` does raw-terminal relay
+  treating `Ctrl-]` (`\x1d`) as a local detach; after a drop it reconnects per
+  `--reconnect-attempts`/`--reconnect-delay` (reconnect is on by default for
+  `--console`). It requires exactly one node and a TTY on stdin/stdout, else rc 2.
+  `_reap` sends the `~.` exit sequence and reaps the child.
+
+> Deviation from the legacy script: the old `nodeconsole` exits 1 with no args;
+> the framework convention prints usage and returns `rc 0` (as with other
+> commands).
 
 ## 5. Key conventions
 
@@ -343,15 +395,21 @@ reachable=$(./nodeping --long vdc1-pro2-t10-gpu-cp-[01-18] \
 ./nodetemp "$reachable" --errors-only
 ```
 
-### ODM detection and cache
+### ODM identity and cache (unified: scan writes, commands only read)
 
-`probe_redfish` pulls Vendor/Model/Manufacturer from `/redfish/v1`,
-`Managers/1`, `Systems/1`, `Chassis/*`, joins them into a string, and matches
+The **only source of vendor identity is `scan`**: `scan.probe` pulls
+`/redfish/v1`, `Managers/*`, `Systems/*`, `Chassis/*`, runs `model.classify`
 against `model.SIGNATURES` (specific vendors first, `nvidia` falling back to
-`gb200`). The result is cached at `~/.cache/nodetools/oem/<ip>`; `--no-cache`
-bypasses it. **Reading data does not depend on the ODM**; detection only affects
-control actions (`--action`). When a scan cache exists, its identity is used
-directly without re-walking chassis.
+`gb200`), and stores `vendor`/`model`/`manufacturer`/`odm` together with the
+chassis capability map in `~/.cache/nodetools/scan/<ip>.json`.
+
+No other command probes: `runtime`, when `role == "compute"`, only reads
+`model.odm_for` (the scan profile's `odm`). With no cache it is `unknown` → base
+(GBXX, the same reference the legacy top-level scripts used) and sensors still
+walk the live ladders. `--no-cache` means "do not read the scan cache this run",
+so it likewise falls back to base and **never** creates a cache. This removes
+the per-command detection cost and the two-cache inconsistency (the old
+standalone `oem/<ip>` cache is gone with this unification).
 
 ### Scan cache (scan)
 
@@ -360,9 +418,9 @@ collections is **vendor-specific and not always declared in the detail**
 (Wistron's `Sensors` collection never appears in its chassis detail). So `scan`
 probes the collection endpoints directly and records, per chassis, the member
 counts of `Sensors`/`Fans`/`PowerSupplies`/`Temperatures` and whether the legacy
-`Thermal`/`Power` singleton objects exist, writing to
+`Thermal`/`Power` singleton objects exist — plus the identity/ODM — writing to
 `~/.cache/nodetools/scan/<ip>.json` (`SCAN_CACHE_VERSION`; bump it on structural
-change to avoid misreading old files).
+change to avoid misreading old files). This is the tool's **only cache**.
 
 fan/psu/temp walk only the chassis that can answer their ladder via
 `common.rung_chassis(device, key)` (falling back to live discovery when there is
@@ -407,8 +465,9 @@ inside fields become `_`, so `grep -v ,OK` works. `--summary` prints
 2. Create `subjects/<subject>.py` implementing
    `collect(device, action, options) -> list[str]`, returning **complete output
    lines** (with the `<node>: ` prefix); reuse `subjects/common.py`. If the
-   subject has role-specific fixed paths (like the nvsw/ps NVIDIA endpoints),
-   branch on `device.role` first and dispatch compute to `device.odm`.
+   subject has role-specific fixed paths (like the ps NVIDIA endpoints), branch
+   on `device.role` first and dispatch compute to `device.odm.<subject>` (power's
+   nvsw goes to `device.odm.nvswitch_power`).
 3. Register it in `subjects/__init__.py`'s `HANDLERS`.
 4. `arguments.INFO_COMMANDS` auto-generates `<prefix><subject>` per supported
    role; add `pyproject.toml [project.scripts]` entries and repo-root symlinks.
@@ -455,9 +514,11 @@ selectors, output format and `grep -v ,OK` compatibility, ODM registration, the
 three sensor subjects against `FakeRedfish`, the info subjects (power/eventlog/
 inventory IPMI default, nvsw/ps fixed paths, Dell/Lenovo/SMC/AMI overrides, the
 space-after-colon difference), scan cache (write / version-mismatch ignored /
-`rung_chassis` hit and fallback), `nodelist`/`nodeping` and reachability checks,
-and the per-node deadline (`subprocess` stubbed, no network). Cache tests
-override `SCAN_CACHE_DIR` with `tmp_path`.
+`rung_chassis` hit and fallback), `odm_for` reading the profile (present/absent/
+empty odm), `InfoRunner` reporting `BMC unreachable` on a silent transport
+failure, `nodelist`/`nodeping` no-arg default-all and reachability checks, and
+the per-node deadline (`subprocess` stubbed, no network). Cache tests override
+`SCAN_CACHE_DIR` with `tmp_path`.
 
 ### Real-hardware smoke test (required after an interface change)
 
@@ -510,9 +571,9 @@ state; test on a single, known-reversible machine first, never the whole batch.
   script did (root), and thus the same momentary burst as the legacy script.
   Hosts without a BMC address are grouped as `No BMC IP found` (per-host under
   `--long`).
-- Not yet done: the `boot`/`bootorder`/`netboot`/`macs`/`bios` info subjects
-  (batch 2), `nodesensors` (MetricReports telemetry), result persistence/alerting,
-  `--json` output, IB/SPX switch capabilities.
+- Not yet done: `nodesensors` (MetricReports telemetry), result
+  persistence/alerting, `--json` output, IB/SPX switch capabilities,
+  `nodealive`/`nodecable`/`nodeflapping` (SSH), `nodemon.ipmi`.
 - Info subjects' `clear` (log clearing) and `reseat` etc. depend on external
   tools (`onecli`, `racadm`) or return empty bodies in the legacy scripts, so
   their output details are not compared one by one; re-read the legacy script

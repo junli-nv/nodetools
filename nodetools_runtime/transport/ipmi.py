@@ -45,6 +45,7 @@ class Ipmi:
         self.tool = tool or find_ipmitool()
         self.use_env = env_mode_default() if use_env is None else use_env
         self._deadline = None
+        self.transport_errors = 0
 
     def set_deadline(self, deadline):
         """Absolute time.monotonic() value past which no new command is run."""
@@ -87,10 +88,13 @@ class Ipmi:
                 env=env,
             )
         except subprocess.TimeoutExpired as exc:
+            self.transport_errors += 1
             raise TransportError("ipmitool timed out: {}".format(exc)) from exc
         except OSError as exc:
+            self.transport_errors += 1
             raise TransportError("ipmitool failed to start: {}".format(exc)) from exc
         if proc.returncode != 0:
+            self.transport_errors += 1
             raise TransportError(
                 "ipmitool {} exited {}".format(
                     " ".join(command), proc.returncode

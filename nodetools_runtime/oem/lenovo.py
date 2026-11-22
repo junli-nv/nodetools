@@ -22,6 +22,7 @@ _BIOS_EXCLUDES = ("BootOrder", "MACAddress", "NvidiaNetworkAdapter")
 
 class Lenovo(Oem):
     name = "lenovo"
+    family = "hgx"
     fan_chassis = ("1",)
 
     bootorder_system = "1"
