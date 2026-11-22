@@ -105,6 +105,10 @@ control actions.
 
 ## Development
 
+See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for the architecture, module
+responsibilities, the collection-ladder design, and step-by-step guides for
+adding a capability, an ODM, or a transport.
+
 ```sh
 python3 -m pytest
 ```
