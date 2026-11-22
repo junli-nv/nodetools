@@ -9,10 +9,37 @@ from .base import Oem
 _SEL = "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Sel"
 _SQUEEZE = re.compile(r"\s+")
 
+_SYSTEM = "/redfish/v1/Systems/System.Embedded.1"
+_IFACE = _SYSTEM + "/EthernetInterfaces/"
+_NET_PXE = (
+    ("set", "BIOS.NetworkSettings.NumberOfPxeDevices", "4"),
+    ("set", "BIOS.NetworkSettings.PxeDev1EnDis", "Enabled"),
+    ("set", "BIOS.NetworkSettings.PxeDev2EnDis", "Enabled"),
+    ("set", "BIOS.NetworkSettings.PxeDev3EnDis", "Disabled"),
+    ("set", "BIOS.NetworkSettings.PxeDev4EnDis", "Disabled"),
+    ("set", "BIOS.PxeDev1Settings.PxeDev1Interface", "NIC.Slot.6-1-1"),
+    ("set", "BIOS.PxeDev2Settings.PxeDev2Interface", "NIC.Slot.6-2-1"),
+    ("set", "BIOS.NetworkSettings.HttpDev1EnDis", "Disabled"),
+    ("set", "BIOS.NetworkSettings.HttpDev2EnDis", "Disabled"),
+    ("set", "BIOS.NetworkSettings.HttpDev3EnDis", "Disabled"),
+    ("set", "BIOS.NetworkSettings.HttpDev4EnDis", "Disabled"),
+    ("jobqueue", "create", "BIOS.Setup.1-1", "-r", "pwrcycle", "-s", "TIME_NOW", "-e", "TIME_NA"),
+    ("set", "iDRAC.ServerBoot.FirstBootDevice", "PXE"),
+    ("set", "iDRAC.ServerBoot.BootOnce", "Disabled"),
+    ("serveraction", "powerup"),
+    ("jobqueue", "view"),
+)
+
 
 class Dell(Oem):
     name = "dell"
     fan_chassis = ("System.Embedded.1",)
+
+    bootorder_system = "System.Embedded.1"
+    bootorder_fields = ("Id", "DisplayName")
+    bootorder_quoted = False
+    bootorder_sep = ","
+    bootorder_expand = False
 
     def fan_control(self, device, action):
         racadm = Racadm(device.address, device.cred("bmc_user"), device.cred("bmc_password"))
@@ -39,3 +66,60 @@ class Dell(Oem):
             )
             lines.append(_SQUEEZE.sub(" ", row).strip())
         return ["{}: {}".format(device.name, line) for line in lines]
+
+    # -- boot-family overrides ------------------------------------------
+    def _racadm(self, device, *args):
+        racadm = Racadm(
+            device.address, device.cred("bmc_user"), device.cred("bmc_password")
+        )
+        return racadm.run(*args)
+
+    def macs(self, device, action):
+        rows = self._iface_rows(
+            device, _IFACE, ("Id", "MACAddress", "UefiDevicePath")
+        )
+        return sorted(self._label(device, row) for row in rows)
+
+    def bios(self, device, action):
+        out = self._racadm(device, "get", "bios.SysProfileSettings")
+        return [
+            self._label(device, line) for line in out.splitlines() if line.strip()
+        ]
+
+    def netboot(self, device, action):
+        if action == "mac":
+            rows = self._iface_rows(
+                device, _IFACE, ("Id", "MACAddress", "UefiDevicePath")
+            )
+            return [self._label(device, row) for row in rows]
+        if action == "net":
+            lines = []
+            for command in _NET_PXE:
+                out = self._racadm(device, *command)
+                lines.extend(
+                    self._label(device, line)
+                    for line in out.splitlines()
+                    if line.strip()
+                )
+            return lines
+        lines = []
+        for index in range(1, 5):
+            endis = self._racadm_field(
+                device,
+                "BIOS.NetworkSettings.PxeDev{}EnDis".format(index),
+                "PxeDev{}EnDis".format(index),
+            )
+            iface = self._racadm_field(
+                device,
+                "BIOS.PxeDev{}Settings.PxeDev{}Interface".format(index, index),
+                "PxeDev{}Interface".format(index),
+            )
+            lines.append(self._label(device, "{}\t{}".format(endis, iface)))
+        return lines
+
+    def _racadm_field(self, device, key, token):
+        out = self._racadm(device, "get", key)
+        for line in out.splitlines():
+            if token in line:
+                return line.replace("\r", "")
+        return ""

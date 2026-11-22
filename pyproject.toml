@@ -34,6 +34,11 @@ nvswinventory = "nodetools_runtime.cli:main"
 pspower = "nodetools_runtime.cli:main"
 pseventlog = "nodetools_runtime.cli:main"
 psinventory = "nodetools_runtime.cli:main"
+nodeboot = "nodetools_runtime.cli:main"
+nodebootorder = "nodetools_runtime.cli:main"
+nodenetboot = "nodetools_runtime.cli:main"
+nodemacs = "nodetools_runtime.cli:main"
+nodebios = "nodetools_runtime.cli:main"
 
 [tool.setuptools]
 packages = ["nodetools_runtime", "nodetools_runtime.transport", "nodetools_runtime.caps", "nodetools_runtime.oem", "nodetools_runtime.subjects"]

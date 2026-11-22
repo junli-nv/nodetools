@@ -106,6 +106,10 @@ def post(device, path, body=None):
     return device.redfish.post(path, body if body is not None else {})
 
 
+def patch(device, path, body):
+    return device.redfish.patch(path, body)
+
+
 def body_text(body):
     """Raw text of a POST response for scripts that pipe straight to ``echo``."""
     if isinstance(body, str):

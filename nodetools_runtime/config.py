@@ -16,6 +16,13 @@ INFO_SUBJECTS = {
     "power": ("compute", "nvswitch", "powershelf"),
     "eventlog": ("compute", "nvswitch", "powershelf"),
     "inventory": ("compute", "nvswitch", "powershelf"),
+    # Boot-family subjects are compute-only: the legacy ``node*`` scripts have
+    # no NVSwitch / power-shelf counterpart.
+    "boot": ("compute",),
+    "bootorder": ("compute",),
+    "netboot": ("compute",),
+    "macs": ("compute",),
+    "bios": ("compute",),
 }
 
 # Accepted actions per subject (first entry is the read/default form); used for
@@ -24,6 +31,11 @@ INFO_ACTIONS = {
     "power": ("status", "on", "off", "cycle", "reset", "reseat"),
     "eventlog": ("status", "bmc", "hmc", "clear"),
     "inventory": (),
+    "boot": ("pxe", "disk", "bios"),
+    "bootorder": (),
+    "netboot": ("status", "mac", "net"),
+    "macs": (),
+    "bios": ("status", "base", "pending"),
 }
 # Action words that mean "just read" for the info commands (the legacy scripts
 # default the action to ``status`` when it is empty).

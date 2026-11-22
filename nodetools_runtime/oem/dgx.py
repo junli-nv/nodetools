@@ -11,6 +11,21 @@ class Dgx(Oem):
     name = "dgx"
     fan_chassis = ("DGX", "1")
 
+    bootorder_system = "DGX"
+    bios_system = "DGX"
+    bootorder_quoted = False
+    bootorder_sep = ","
+    bootorder_expand = False
+
+    _BIOS_EXCLUDES = ("BootOrder", "MAPIDS", "RFServiceIp", "UefiPriorities")
+
+    def macs(self, device, action):
+        return self._macs_iface_pairs(device, "DGX", "BMC", "PermanentMACAddress")
+
+    def bios(self, device, action):
+        rows = self._bios_rows(device, self._BIOS_EXCLUDES, sort=True)
+        return [self._label(device, row) for row in rows]
+
     def fan_control(self, device, action):
         if action == "auto":
             self._ipmi_raw(device, 0x3C, 0x73, 0)

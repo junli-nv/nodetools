@@ -64,10 +64,9 @@ def _apply_defaults(options, inv, args):
     options.node_timeout = float(
         inv.default("node_timeout", DEFAULT_NODE_TIMEOUT)
     )
+    summary = getattr(args, "summary", None)
     options.summary = (
-        args.summary
-        if args.summary is not None
-        else inv.default_bool("summary", DEFAULT_SUMMARY)
+        summary if summary is not None else inv.default_bool("summary", DEFAULT_SUMMARY)
     )
 
 
@@ -285,6 +284,12 @@ def main(argv=None):
         parse_args(["--help"])
         return 2
     command = normalize_command(args.command)
+    if len(argv) == 1:
+        try:
+            parse_args([args.command, "--help"])
+        except SystemExit:
+            pass
+        return 2
     try:
         if command == "inventory":
             return _cmd_inventory(args)

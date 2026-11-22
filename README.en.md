@@ -7,13 +7,41 @@ IPMI. It replaces the per-OEM `node*`/`nvsw*`/`ps*` shell scripts with one
 `node*`-style command family, where the prefix names the role (compute tray,
 NVSwitch, power shelf) and the suffix names the subject.
 
-Two subject groups are implemented:
+Three subject groups are implemented:
 
 - sensors: **fan / psu / temp** (one set per role);
-- info: **power / eventlog / inventory** (one set per role).
+- info: **power / eventlog / inventory** (one set per role);
+- boot: **boot / bootorder / netboot / macs / bios** (compute only, see below).
 
 The tool's own output is always English (fields, status and log lines are never
 translated); only the documentation is bilingual.
+
+## Quick start
+
+`scan` is **not required**: `nodelist`/`nodeping` and every `node*`/`nvsw*`/`ps*`
+command run without it. `scan` only speeds up `fan`/`psu`/`temp` by caching each
+BMC's Redfish map; without it those commands fall back to live discovery, and
+`power`/`eventlog`/`inventory` never read the map.
+
+Recommended order (step 0 once; step 2 optional):
+
+```sh
+# 0) generate the inventory (once). Each hosts.list line is `DeviceType Hostname BMC_IP`
+./nodetools inventory init --from hosts.list -o inventory.ini
+
+# 1) see what exists and which BMCs are reachable (no scan needed)
+./nodelist                      # aggregated node list by role
+./nodeping --long               # per-node BMC reachability
+
+# 2) optional: scan once to cache each BMC's Redfish map (speeds up fan/psu/temp)
+./nodetools scan --all
+
+# 3) start using it
+./nodetemp  cp[01-18] --summary # one summary line per node
+./nodepower cp01                # power state (read)
+./nodeeventlog cp01             # HMC event log
+./nodetools nodefan cp01 max    # also works as `nodetools <command>`
+```
 
 ## Install / run
 
@@ -59,6 +87,13 @@ pspower      <noderange> [status|on|off|cycle|reset|reseat]
 pseventlog   <noderange> [status|clear]
 psinventory  <noderange>
 
+# boot (compute only)
+nodeboot      <noderange> [pxe|disk|bios]
+nodebootorder <noderange>
+nodenetboot   <noderange> [status|mac|net]
+nodemacs      <noderange>
+nodebios      <noderange> [status|base|pending]
+
 # general
 nodelist [selector] [--long]
 nodeping [selector] [--long] [--ping-timeout S]
@@ -70,9 +105,13 @@ nodetools inventory show [-i inventory.ini]
 Any command also works as `nodetools <command> ...`, and the legacy short
 names `list`/`ping` are aliases for `nodelist`/`nodeping`.
 
+Running a command with **no arguments** (e.g. `./nodepower`) prints that
+command's usage and exits non-zero instead of falling back to the whole role
+group; select the whole role explicitly with `--all` (or `--group G`).
+
 * `noderange` is a hostlist expression (`cp[01-18]`), an inventory group name,
-  or a hostname. It is narrowed to the role named by the prefix; with no
-  noderange the whole role group is used. Combine with `--group G` / `--all`.
+  or a hostname. It is narrowed to the role named by the prefix. Use
+  `--group G` / `--all` instead (both also narrow to the command's role).
 * `action` defaults to a read (`status`/`check`); `auto`/`max` (fan) and
   `on`/`off`/`cycle` (psu) issue a control action. `power` additionally accepts
   `reset`/`reseat`.
@@ -95,6 +134,28 @@ output verbatim:
 * **inventory** — reads `UpdateService/FirmwareInventory` (compute line
   `name:Id Version`, nvsw/ps line `name: Id Version`; AMI/BYD/GIGABYTE/DGX/
   Lenovo override as their scripts do).
+
+### Boot commands (boot / bootorder / netboot / macs / bios)
+
+These only make sense for **compute trays** (`nvsw*`/`ps*` have no such
+subject). The default NVIDIA GBXX implementation matches the legacy scripts
+verbatim and each ODM overrides its own endpoints (falling back to the base
+class when an endpoint is absent):
+
+* **boot** — `nodeboot [pxe|disk|bios]`: IPMI `chassis bootdev <action>`
+  (default `pxe`). No ODM variant.
+* **bootorder** — `nodebootorder`: reads `BootOptions` and
+  `Systems/<id>`'s `Boot/BootOrder`, printing `Id`/`DisplayName`/
+  `UefiDevicePath` per entry.
+* **netboot** — `nodenetboot [status|mac|net]`: configure a one-shot or
+  continuous PXE boot override (GBXX default writes Continuous/UEFI/Pxe and
+  rewrites BootOrder). Dell/Lenovo/SMC have their own implementations.
+* **macs** — `nodemacs`: prints `OS <boot> <mac> <bus>` plus the BMC NIC MACs.
+* **bios** — `nodebios [status|base|pending]`: `status` reads current BIOS
+  settings (vendor noise keys filtered out); `base`/`pending` are the
+  Lenovo/SMC write paths.
+
+> Note: `nodenetboot` and `nodebios base/pending` **modify** the BMC/BIOS.
 
 ### List, then check only the reachable nodes
 

@@ -6,12 +6,40 @@
 分叉的 `node*`/`nvsw*`/`ps*` shell 脚本收敛成一套 `node*` 风格命令族：**前缀定角色**
 （compute tray / NVSwitch / power shelf），**后缀定对象**。
 
-当前已实现两组对象：
+当前已实现三组对象：
 
 - 传感器：**fan / psu / temp**（三种角色各一套）；
-- 信息：**power / eventlog / inventory**（三种角色各一套）。
+- 信息：**power / eventlog / inventory**（三种角色各一套）；
+- 启动：**boot / bootorder / netboot / macs / bios**（仅 compute，见下文）。
 
 命令本身的输出固定为英文（字段、状态、日志行都不翻译）；只有文档提供中英双语。
+
+## 快速开始
+
+`scan` **不是必须的**：`nodelist`/`nodeping` 以及所有 `node*`/`nvsw*`/`ps*` 命令
+都能直接运行。`scan` 只是**给 `fan`/`psu`/`temp` 提速**（把每个 BMC 的 Redfish
+映射缓存下来），缺省时这些命令回退到实时发现；`power`/`eventlog`/`inventory`
+根本不读该映射。
+
+推荐顺序（第 0 步一次性，第 2 步可选）：
+
+```sh
+# 0) 生成 inventory（一次性）。hosts.list 每行是 `DeviceType Hostname BMC_IP`
+./nodetools inventory init --from hosts.list -o inventory.ini
+
+# 1) 先看有什么、哪些 BMC 可达（无需先 scan）
+./nodelist                      # 按角色聚合的节点列表
+./nodeping --long               # 逐节点 BMC 可达性
+
+# 2) 可选：扫描一次并缓存每个 BMC 的 Redfish 映射（fan/psu/temp 提速）
+./nodetools scan --all
+
+# 3) 开始用
+./nodetemp  cp[01-18] --summary # 每个节点一行汇总
+./nodepower cp01                # 电源状态（读取）
+./nodeeventlog cp01             # HMC 事件日志
+./nodetools nodefan cp01 max    # 也可写成 `nodetools <command>`
+```
 
 ## 安装 / 运行
 
@@ -56,6 +84,13 @@ pspower      <noderange> [status|on|off|cycle|reset|reseat]
 pseventlog   <noderange> [status|clear]
 psinventory  <noderange>
 
+# 启动（仅 compute）
+nodeboot      <noderange> [pxe|disk|bios]
+nodebootorder <noderange>
+nodenetboot   <noderange> [status|mac|net]
+nodemacs      <noderange>
+nodebios      <noderange> [status|base|pending]
+
 # 通用
 nodelist [selector] [--long]
 nodeping [selector] [--long] [--ping-timeout S]
@@ -67,9 +102,12 @@ nodetools inventory show [-i inventory.ini]
 任何命令也可写成 `nodetools <command> ...`；旧短名 `list`/`ping` 是
 `nodelist`/`nodeping` 的别名。
 
+**不带任何参数运行某个命令（如 `./nodepower`）会打印该命令的用法并以非 0 退出**，
+而不是回退查询整个角色分组。要查询整个角色请显式加 `--all`（或 `--group G`）。
+
 * `noderange` 是 hostlist 表达式（`cp[01-18]`）、inventory 组名或主机名。它会被
-  收窄到前缀所对应的角色；不给 noderange 时用整个角色分组。可配合 `--group G` /
-  `--all`。
+  收窄到前缀所对应的角色。也可改用 `--group G` / `--all`（`--all` 也会收窄到该
+  命令的角色）。
 * `action` 默认是读取（`status`/`check`）；`auto`/`max`（fan）与 `on`/`off`/`cycle`
   （psu）会下发控制动作。`power` 额外支持 `reset`/`reseat`。
 * 传感器输出为逗号分隔字段；信息命令原样逐行输出 `<node>: <line>`（见下文）。
@@ -86,6 +124,23 @@ nodetools inventory show [-i inventory.ini]
   PlatformLog/BIOS 集合。
 * **inventory** — 读 `UpdateService/FirmwareInventory`（compute 行 `name:Id Version`，
   nvsw/ps 行 `name: Id Version`；AMI/BYD/GIGABYTE/DGX/Lenovo 各自覆盖）。
+
+### 启动命令（boot / bootorder / netboot / macs / bios）
+
+这组只对 **compute tray** 有意义（`nvsw*`/`ps*` 无此对象）。默认 NVIDIA GBXX 实现
+与旧脚本逐字对齐，各 ODM 覆盖各自的端点（端点缺失时回退基类）：
+
+* **boot** — `nodeboot [pxe|disk|bios]`：IPMI `chassis bootdev <action>`（默认
+  `pxe`）。无 ODM 变体。
+* **bootorder** — `nodebootorder`：读 `BootOptions` 与 `Systems/<id>` 的
+  `Boot/BootOrder`，逐项打印 `Id`/`DisplayName`/`UefiDevicePath`。
+* **netboot** — `nodenetboot [status|mac|net]`：配置一次性/连续 PXE 启动覆盖
+  （GBXX 默认写 Continuous/UEFI/Pxe 并改 BootOrder）。Dell/Lenovo/SMC 各自实现。
+* **macs** — `nodemacs`：打印 `OS <boot> <mac> <bus>` 与 BMC 网口 MAC。
+* **bios** — `nodebios [status|base|pending]`：`status` 读当前 BIOS 设置（过滤掉
+  厂商噪声键）；`base`/`pending` 是 Lenovo/SMC 的写入路径。
+
+> 注意：`nodenetboot` 与 `nodebios base/pending` 会**修改** BMC/BIOS，属于写操作。
 
 ### 先 list，再只检查可达节点
 

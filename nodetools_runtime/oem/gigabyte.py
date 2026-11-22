@@ -13,6 +13,29 @@ class Gigabyte(Oem):
     name = "giga"
     fan_chassis = ("1", "Chassis_0")
 
+    bootorder_system = "1"
+    bios_system = "1"
+    bootorder_quoted = False
+    bootorder_sep = ","
+    bootorder_expand = False
+
+    _BIOS_EXCLUDES = (
+        "BootOption",
+        "SETUP",
+        "MapIDlist",
+        "LAN",
+        "IPaddress",
+        "IPMaskaddress",
+        "AMIVirtual",
+    )
+
+    def macs(self, device, action):
+        return self._macs_iface_pairs(device, "1", "1")
+
+    def bios(self, device, action):
+        rows = self._bios_rows(device, self._BIOS_EXCLUDES, sort=True)
+        return [self._label(device, row) for row in rows]
+
     def fan_control(self, device, action):
         if action == "auto":
             self._ipmi_raw(device, 0x2E, 0x10, 0x00)

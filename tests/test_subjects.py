@@ -1,13 +1,24 @@
 from nodetools_runtime import model, oem
 from nodetools_runtime.inventory import Host
-from nodetools_runtime.subjects import eventlog, inventory, power
+from nodetools_runtime.subjects import (
+    bios,
+    boot,
+    bootorder,
+    eventlog,
+    inventory,
+    macs,
+    netboot,
+    power,
+)
 
 
 class FakeRedfish:
-    def __init__(self, data=None, post=None):
+    def __init__(self, data=None, post=None, patch=None):
         self.data = data or {}
         self.posts = {}
         self.post_results = post or {}
+        self.patches = {}
+        self.patch_results = patch or {}
 
     def get(self, path, timeout=None):
         return self.data.get(path)
@@ -15,6 +26,10 @@ class FakeRedfish:
     def post(self, path, body, timeout=None):
         self.posts[path] = body
         return self.post_results.get(path, (200, {}))
+
+    def patch(self, path, body, timeout=None):
+        self.patches[path] = body
+        return self.patch_results.get(path, (200, {}))
 
     def close(self):
         pass
@@ -208,3 +223,189 @@ def test_inventory_ami_name_style():
         _device(redfish=FakeRedfish(data), odm=Ami()), None, None
     )
     assert lines == ["cp-01: CPLD 3.1"]
+
+
+# -- boot ------------------------------------------------------------------
+def test_boot_compute_runs_chassis_bootdev():
+    from nodetools_runtime.oem.base import Oem
+
+    ipmi = FakeIpmi()
+    ipmi._sel = "Boot device set to PXE"
+    device = _device(ipmi=ipmi, odm=Oem())
+    assert boot.collect(device, "pxe", None) == ["cp-01: Boot device set to PXE"]
+    assert ("run", "chassis", "bootdev", "pxe") in ipmi.calls
+
+
+def test_boot_compute_defaults_to_pxe():
+    ipmi = FakeIpmi()
+    ipmi._sel = "ok"
+    boot.collect(_device(ipmi=ipmi), None, None)
+    assert ("run", "chassis", "bootdev", "pxe") in ipmi.calls
+
+
+# -- bootorder -------------------------------------------------------------
+def test_bootorder_base_quoted_and_expanded():
+    base = "/redfish/v1/Systems/system/BootOptions?$expand=."
+    data = {
+        base: {
+            "Members": [
+                {"Id": "Boot0001", "DisplayName": "UEFI PXE",
+                 "UefiDevicePath": "PciRoot(0x16)/MAC(A088C2123456,0x1)"},
+                {"Id": "Boot0002", "DisplayName": "UEFI Shell",
+                 "UefiDevicePath": "VenHw(abcd)"},
+            ]
+        },
+        "/redfish/v1/Systems/system?$select=Boot/BootOrder": {
+            "Boot": {"BootOrder": ["Boot0002", "Boot0001"]}
+        },
+    }
+    lines = bootorder.collect(_device(redfish=FakeRedfish(data)), None, None)
+    assert lines == [
+        'cp-01: "Boot0002"\t"UEFI Shell"\t"VenHw(abcd)"',
+        'cp-01: "Boot0001"\t"UEFI PXE"\t"PciRoot(0x16)/MAC(A088C2123456,0x1)"',
+    ]
+
+
+def test_bootorder_ami_comma_unquoted():
+    from nodetools_runtime.oem.ami import Ami
+
+    base = "/redfish/v1/Systems/1/BootOptions"
+    data = {
+        base: {"Members": [{"@odata.id": base + "/1"}]},
+        base + "/1": {"Id": "Boot0001", "DisplayName": "PXE", "UefiDevicePath": "p"},
+        "/redfish/v1/Systems/1?$select=Boot/BootOrder": {
+            "Boot": {"BootOrder": ["Boot0001"]}
+        },
+    }
+    device = _device(redfish=FakeRedfish(data), odm=Ami())
+    assert bootorder.collect(device, None, None) == ["cp-01: Boot0001,PXE,p"]
+
+
+def test_bootorder_dell_two_fields():
+    from nodetools_runtime.oem.dell import Dell
+
+    base = "/redfish/v1/Systems/System.Embedded.1/BootOptions"
+    data = {
+        base: {"Members": [{"@odata.id": base + "/1"}]},
+        base + "/1": {"Id": "Boot0001", "DisplayName": "NIC PXE",
+                      "UefiDevicePath": "p"},
+        "/redfish/v1/Systems/System.Embedded.1?$select=Boot/BootOrder": {
+            "Boot": {"BootOrder": ["Boot0001"]}
+        },
+    }
+    device = _device(redfish=FakeRedfish(data), odm=Dell())
+    assert bootorder.collect(device, None, None) == ["cp-01: Boot0001,NIC PXE"]
+
+
+# -- macs ------------------------------------------------------------------
+def test_macs_base_os_and_bmc():
+    expand = "/redfish/v1/Systems/system/BootOptions?$expand=."
+    bmc = "/redfish/v1/Managers/BMC_0/EthernetInterfaces"
+    data = {
+        expand: {
+            "Members": [
+                {"Id": "Boot0001", "DisplayName": "UEFI PXE IPv4",
+                 "UefiDevicePath":
+                     "PciRoot(0x16)/Pci(1|0)/MAC(A088C2123456,0x1)"},
+            ]
+        },
+        bmc: {"Members": [{"@odata.id": bmc + "/eth0"}]},
+        bmc + "/eth0": {"Id": "eth0", "MACAddress": "AA:BB:CC:DD:EE:FF"},
+    }
+    lines = macs.collect(_device(redfish=FakeRedfish(data)), None, None)
+    assert lines == [
+        "cp-01:OS Boot0001 A0:88:C2:12:34:56 PciRoot(0x16)/Pci(1|0)",
+        'cp-01:BMC "eth0"\t"AA:BB:CC:DD:EE:FF"',
+    ]
+
+
+# -- bios ------------------------------------------------------------------
+def test_bios_base_filters_and_formats():
+    path = "/redfish/v1/Systems/system/Bios"
+    data = {
+        path: {
+            "Attributes": {
+                "BootOrder": "x",
+                "SETUP006": "y",
+                "MAPIDS": "z",
+                "HyperThreading": True,
+                "SomeNum": 4.0,
+                "Empty": None,
+            }
+        }
+    }
+    lines = bios.collect(_device(redfish=FakeRedfish(data)), "status", None)
+    assert lines == [
+        "cp-01:BootOrder=x",
+        "cp-01:HyperThreading=true",
+        "cp-01:SomeNum=4",
+        "cp-01:Empty=null",
+    ]
+
+
+def test_bios_lenovo_base_patches_pending():
+    from nodetools_runtime.oem.lenovo import Lenovo
+
+    pending = "/redfish/v1/Systems/1/Bios/Pending"
+    rf = FakeRedfish(patch={pending: (200, {"ok": True})})
+    lines = bios.collect(_device(redfish=rf, odm=Lenovo()), "base", None)
+    assert lines == ["cp-01: {", 'cp-01:   "ok": true', "cp-01: }"]
+    attributes = rf.patches[pending]["Attributes"]
+    assert attributes["SystemSettings_WorkloadProfile"] == "HighPerformanceComputing"
+
+
+# -- netboot ---------------------------------------------------------------
+def test_netboot_base_continuous_pxe():
+    system = "/redfish/v1/Systems/system"
+    expand = system + "/BootOptions?$expand=."
+    data = {
+        system: {
+            "Boot": {
+                "BootSourceOverrideEnabled": "Continuous",
+                "BootSourceOverrideMode": "UEFI",
+                "BootSourceOverrideTarget": "Pxe",
+            }
+        },
+        system + "?$select=Boot/BootOrder": {
+            "Boot": {"BootOrder": ["Boot0002", "Boot0001"]}
+        },
+        expand: {
+            "Members": [
+                {"Id": "Boot0001", "DisplayName": "PXE",
+                 "UefiDevicePath": "PciRoot(0x16)/NIC"},
+                {"Id": "Boot0002", "DisplayName": "Shell",
+                 "UefiDevicePath": "VenHw"},
+            ]
+        },
+    }
+    rf = FakeRedfish(data=data, patch={system: (200, {"Status": "ok"})})
+    lines = netboot.collect(_device(redfish=rf), None, None)
+    assert lines == [
+        "cp-01:Enable continuous PXE boot override option",
+        'cp-01:{"Status": "ok"}',
+        "cp-01:Continuous,UEFI,Pxe",
+        'cp-01:OLD_BOOT_ORDER="Boot0002","Boot0001"',
+        "cp-01:New BootOrder:",
+        "cp-01:Boot0002,Boot0001",
+        "cp-01:INFO: reboot node to take effect",
+    ]
+    assert rf.patches[system] == {"Boot": {"BootOrder": ['"Boot0001"', '"Boot0002"']}}
+
+
+def test_netboot_smc_reorders_network_first():
+    from nodetools_runtime.oem.smc import Smc
+
+    order_path = "/redfish/v1/Systems/1/Oem/Supermicro/FixedBootOrder"
+    reset_path = "/redfish/v1/Systems/1/Actions/ComputerSystem.Reset"
+    data = {order_path: {"FixedBootOrder": ["UEFI Shell", "UEFI Network", "Disk"]}}
+    rf = FakeRedfish(
+        data=data,
+        patch={order_path: (200, {"ok": 1})},
+        post={reset_path: (200, {"ResetType": "GracefulRestart"})},
+    )
+    lines = netboot.collect(_device(redfish=rf, odm=Smc()), None, None)
+    assert rf.patches[order_path] == {
+        "FixedBootOrder": ["UEFI Network", "UEFI Shell", "Disk"]
+    }
+    assert rf.posts[reset_path] == {"ResetType": "GracefulRestart"}
+    assert all(line.startswith("cp-01:") for line in lines)

@@ -20,6 +20,14 @@ def _inv(tmp_path):
     return str(path)
 
 
+def test_bare_command_prints_usage(capsys):
+    for command in ("list", "ping", "scan", "nodepower", "nodefan", "nodeboot"):
+        rc = cli.main([command])
+        captured = capsys.readouterr()
+        assert rc == 2, command
+        assert "usage:" in captured.out, command
+
+
 def test_list_all_aggregated(tmp_path, capsys):
     rc = cli.main(["list", "-i", _inv(tmp_path)])
     out = capsys.readouterr()

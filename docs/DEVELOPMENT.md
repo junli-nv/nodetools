@@ -15,9 +15,10 @@ nodetools 把它们收敛成一个 **按角色分前缀** 的命令族，命名�
 - 读取路径做成 **回退阶梯**，一套实现覆盖所有 ODM；
 - 设备、凭据、角色、ODM 都从 inventory + 运行时探测得到，不再写死在脚本里。
 
-已实现两组对象：**fan / psu / temp**（传感器，三种角色各一套）与
-**power / eventlog / inventory**（信息，三种角色各一套），结构预留了继续加对象
-（BMC 信息、按键/复位、IB/SPX 交换机等）。
+已实现三组对象：**fan / psu / temp**（传感器，三种角色各一套）、
+**power / eventlog / inventory**（信息，三种角色各一套）与
+**boot / bootorder / netboot / macs / bios**（启动，仅 compute），结构预留了继续加
+对象（BMC 信息、按键/复位、IB/SPX 交换机等）。
 
 > 命令本身输出固定英文；文档才分中英双语。
 
@@ -47,8 +48,9 @@ nodetools nodefan cp[01-18]   # 或作为子命令
 ```
 
 `nodelist`/`nodeping` 不分角色、覆盖整个 inventory（`list`/`ping` 是别名）。
-角色命令用 `cli._role_hosts` 解析：无 noderange 时默认取该角色分组，点名了
-则在解析后再按角色过滤（跨角色的主机被跳过并提示）。
+角色命令用 `cli._role_hosts` 解析：点名了 noderange 则在解析后再按角色过滤（跨角色
+的主机被跳过并提示）；改用 `--all`/`--group` 时取该角色分组。**不带任何参数**运行
+（`len(argv)==1`）时 `main()` 直接打印该命令的用法并以 2 退出，不回退查询整组。
 
 ## 2. 架构总览
 
@@ -101,9 +103,10 @@ argv
 | `transport/racadm.py` | Dell racadm | 不可用时 `available()` 返回 False |
 | `caps/common.py` | Reading 构造、health/speed/num、集合/传感器枚举、`rung_chassis` | 共享工具 |
 | `caps/{fan,psu,temp}.py` | 三个传感器能力的回退阶梯 | 见第 4 节 |
-| `subjects/common.py` | 信息对象工具：`resource`/`entries`/`log_lines`/`column_t`/`jq`/`post` | 逐行输出的共享工具 |
+| `subjects/common.py` | 信息对象工具：`resource`/`entries`/`log_lines`/`column_t`/`jq`/`post`/`patch` | 逐行输出的共享工具 |
 | `subjects/{power,eventlog,inventory}.py` | 三个信息对象的 handler；nvsw/ps 固定 NVIDIA 路径，compute 转 ODM | 见第 4b 节 |
-| `oem/base.py` | `Oem` 基类（GBXX 参考）+ `power`/`eventlog`/`firmware_inventory` + `_ipmi_raw` | 端点缺失时 vendor 回退到这里 |
+| `subjects/{boot,bootorder,netboot,macs,bios}.py` | 五个启动对象的 handler（仅 compute），转 `device.odm.<subject>` | 见第 4c 节 |
+| `oem/base.py` | `Oem` 基类（GBXX 参考）+ `power`/`eventlog`/`firmware_inventory`/`boot`/`bootorder`/`macs`/`bios`/`netboot` + `_ipmi_raw` | 端点缺失时 vendor 回退到这里 |
 | `oem/<odm>.py` | 单个 ODM 的控制动作/专用 chassis/信息覆盖 | 读数据主要靠通用阶梯 |
 | `runtime.py` | `build_device`（附 scan profile）、`Runner`/`InfoRunner` 并行、`Scanner`、错误隔离 | 每台独立 try/except |
 | `report.py` | 传感器行/汇总（按对象选字段顺序）+ 信息逐行（`format_lines`） | 兼容 `grep -v ,OK` |
@@ -163,6 +166,39 @@ eventlog 的 BMC/HMC 带 `[BMC]`/`[HMC]` 前缀），`report.render` 检测到�
 `column -t` 对齐），不要凭字段名猜。`subjects/common.py` 的 `column_t` 近似
 `column -t`，`jq`/`jq_out` 近似 `jq`（注意 `jq -r` 与 `jq` 的引号差异，见 SMC/NVSwitch
 的 `PowerState` 带引号）。
+
+## 4c. 启动对象（boot / bootorder / netboot / macs / bios）
+
+启动对象**只对 compute tray 有意义**：`config.INFO_SUBJECTS` 里把
+`boot/bootorder/netboot/macs/bios` 标为 `("compute",)`，因此只会生成 `node*` 前缀
+的命令，`nvsw*`/`ps*` 不生成。输出规则同信息对象（逐行、已带 `<node>: `）。
+
+- **boot** — `Oem.boot`：IPMI `chassis bootdev <action>`（默认 `pxe`），任何异常
+  都返回空行。无 ODM 变体。
+- **bootorder** — `Oem.bootorder`：`BootOptions?$expand` 取 `Id`/`DisplayName`/
+  `UefiDevicePath`，再用 `Systems/<id>` 的 `Boot/BootOrder` 逐项匹配（先按去掉
+  `Boot` 前缀的数字 `grep -w`，再退回整串）。基类字段带 JSON 引号（对应 `jq` 不加
+  `-r`）；ODM 用 `bootorder_quoted=False` / `bootorder_sep=","` / `bootorder_expand`
+  改为裸字段。
+- **macs** — `Oem.macs`：从 BootOptions 的 `UefiDevicePath` 里挑出 PXE 项，按旧脚本
+  `sed`/`awk` 的字段序取 MAC 与 bus（注意：旧管道实际把 **IPv4 字段**当 macA，因此
+  输出里的 "mac" 只有在 `UefiDevicePath` 中 MAC 位于 IPv4 之前时才是真正的 MAC），
+  再补 `Managers/<bmc>/EthernetInterfaces` 的 BMC MAC。
+- **bios** — `Oem.bios`：`Systems/<id>/Bios` 的 `Attributes` 逐键 `key=value`，
+  按厂商 grep 掉噪声键。`base`/`pending` 只在 Lenovo/SMC 有写入路径。
+- **netboot** — `Oem.netboot`：写一次性/连续 PXE 覆盖并改 BootOrder（**写操作**）。
+  Dell（racadm）/Lenovo（`Systems/1` + `BootOptions`）/SMC（`FixedBootOrder` + Reset）
+  各自实现。
+
+> 已知偏差（与旧脚本不完全逐字一致）：
+> - SMC `nodenetboot` 与 `nodebios base` 的旧脚本**没有** `<node>: ` 前缀，框架会给
+>   每行补前缀；
+> - `nodenetboot` 的旧脚本会把 PATCH 的**原始 curl body**（OpenBMC 大 JSON）打印出
+>   来，这里对 `network_boot_gb200` 的 BootOrder 包裹逻辑做了简化近似；
+> - Lenovo `nodebios base` 的 pretty JSON 用 `json.dumps(indent=2)` 近似 `jq` 的格式。
+
+> `nodebootorder`/`nodemacs`/`nodebios` 是只读；`nodenetboot` 与 `nodebios base`/
+> `pending` 会**修改** BMC/BIOS。
 
 ## 5. 关键约定
 

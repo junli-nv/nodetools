@@ -7,6 +7,21 @@ class Byd(Oem):
     name = "byd"
     fan_chassis = ("1", "Chassis_0")
 
+    bootorder_system = "Self"
+    bios_system = "Self"
+    bootorder_quoted = False
+    bootorder_sep = ","
+    bootorder_expand = False
+
+    _BIOS_EXCLUDES = ("SETUP006", "SETUP", "MAPIDS", "FBO")
+
+    def macs(self, device, action):
+        return self._macs_iface_pairs(device, "Self", "Self")
+
+    def bios(self, device, action):
+        rows = self._bios_rows(device, self._BIOS_EXCLUDES, sort=True)
+        return [self._label(device, row) for row in rows]
+
     def fan_control(self, device, action):
         if action == "auto":
             self._ipmi_raw(device, 0x3C, 0x06)

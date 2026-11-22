@@ -23,8 +23,9 @@ them into one **role-prefixed** command family, keeping the legacy naming:
 - Devices, credentials, roles and ODM all come from the inventory plus runtime
   probing, never hardcoded in scripts.
 
-Two subject groups are implemented: **fan / psu / temp** (sensors, one set per
-role) and **power / eventlog / inventory** (info, one set per role). The
+Three subject groups are implemented: **fan / psu / temp** (sensors, one set per
+role), **power / eventlog / inventory** (info, one set per role) and
+**boot / bootorder / netboot / macs / bios** (boot, compute only). The
 structure leaves room for more subjects (BMC info, button/reset, IB/SPX
 switches, …).
 
@@ -60,9 +61,12 @@ nodetools nodefan cp[01-18]   # or as a subcommand
 ```
 
 `nodelist`/`nodeping` are role-agnostic and cover the whole inventory
-(`list`/`ping` are aliases). Role commands resolve via `cli._role_hosts`: with no
-noderange the whole role group is used; when named, resolution happens first and
-is then filtered by role (cross-role hosts are skipped with a notice).
+(`list`/`ping` are aliases). Role commands resolve via `cli._role_hosts`: when a
+noderange is named, resolution happens first and is then filtered by role
+(cross-role hosts are skipped with a notice); use `--all`/`--group` to select the
+whole role group. Running a command with **no arguments** (`len(argv)==1`) makes
+`main()` print that command's usage and exit 2 instead of defaulting to the whole
+group.
 
 ## 2. Architecture overview
 
@@ -115,9 +119,10 @@ argv
 | `transport/racadm.py` | Dell racadm | `available()` returns False when missing |
 | `caps/common.py` | Reading construction, health/speed/num, collection/sensor enumeration, `rung_chassis` | shared helpers |
 | `caps/{fan,psu,temp}.py` | fallback ladders for the three sensor caps | see §4 |
-| `subjects/common.py` | info helpers: `resource`/`entries`/`log_lines`/`column_t`/`jq`/`post` | shared line-output helpers |
+| `subjects/common.py` | info helpers: `resource`/`entries`/`log_lines`/`column_t`/`jq`/`post`/`patch` | shared line-output helpers |
 | `subjects/{power,eventlog,inventory}.py` | handlers for the three info subjects; nvsw/ps use fixed NVIDIA paths, compute dispatches to ODM | see §4b |
-| `oem/base.py` | `Oem` base (GBXX reference) + `power`/`eventlog`/`firmware_inventory` + `_ipmi_raw` | vendors fall back here when an endpoint is absent |
+| `subjects/{boot,bootorder,netboot,macs,bios}.py` | handlers for the five boot subjects (compute only), dispatching to `device.odm.<subject>` | see §4c |
+| `oem/base.py` | `Oem` base (GBXX reference) + `power`/`eventlog`/`firmware_inventory`/`boot`/`bootorder`/`macs`/`bios`/`netboot` + `_ipmi_raw` | vendors fall back here when an endpoint is absent |
 | `oem/<odm>.py` | per-ODM control actions / extra chassis / info overrides | reading mostly uses the generic ladder |
 | `runtime.py` | `build_device` (+ scan profile), parallel `Runner`/`InfoRunner`, `Scanner`, error isolation | per-host try/except |
 | `report.py` | sensor lines/summary (field order per subject) + info lines (`format_lines`) | keeps `grep -v ,OK` working |
@@ -192,6 +197,45 @@ confirm the endpoint, fields and separator (space / comma / tab / `column -t`
 alignment); do not guess. `subjects/common.py`'s `column_t` approximates
 `column -t`, and `jq`/`jq_out` approximate `jq` (mind the quoting difference
 between `jq -r` and `jq`, e.g. the quoted `PowerState` in SMC/NVSwitch).
+
+## 4c. Boot subjects (boot / bootorder / netboot / macs / bios)
+
+Boot subjects **only make sense for compute trays**: `config.INFO_SUBJECTS`
+marks `boot/bootorder/netboot/macs/bios` as `("compute",)`, so only `node*`
+commands are generated and `nvsw*`/`ps*` produce none. Output rules match the
+info subjects (line-oriented, already prefixed with `<node>: `).
+
+- **boot** — `Oem.boot`: IPMI `chassis bootdev <action>` (default `pxe`); any
+  exception yields empty lines. No ODM variant.
+- **bootorder** — `Oem.bootorder`: `BootOptions?$expand` for `Id`/`DisplayName`/
+  `UefiDevicePath`, then match each entry of `Systems/<id>`'s `Boot/BootOrder`
+  (first `grep -w` on the number with the `Boot` prefix stripped, then on the
+  whole string). The base class keeps JSON quoting (matching `jq` without
+  `-r`); ODMs set `bootorder_quoted=False` / `bootorder_sep=","` /
+  `bootorder_expand` to get bare fields.
+- **macs** — `Oem.macs`: pick the PXE entries out of the BootOptions
+  `UefiDevicePath` and take MAC/bus using the legacy `sed`/`awk` field order
+  (note: the legacy pipeline actually treats the **IPv4 field** as macA, so the
+  "mac" in the output is only a real MAC when the `UefiDevicePath` lists MAC
+  before IPv4); then add the `Managers/<bmc>/EthernetInterfaces` BMC MACs.
+- **bios** — `Oem.bios`: `Systems/<id>/Bios` `Attributes` as `key=value` per
+  key, grepping out vendor noise keys. `base`/`pending` are write paths only on
+  Lenovo/SMC.
+- **netboot** — `Oem.netboot`: writes a one-shot/continuous PXE override and
+  rewrites BootOrder (**a write**). Dell (racadm) / Lenovo (`Systems/1` +
+  `BootOptions`) / SMC (`FixedBootOrder` + Reset) each implement their own.
+
+> Known deviations from the legacy scripts:
+> - SMC `nodenetboot` and `nodebios base` had **no** `<node>: ` prefix; the
+>   framework prefixes every line;
+> - `nodenetboot`'s legacy script prints the **raw curl body** of the PATCH
+>   (a large OpenBMC JSON blob); here the `network_boot_gb200` BootOrder-wrapping
+>   logic is simplified/approximate;
+> - Lenovo `nodebios base` pretty-prints with `json.dumps(indent=2)`,
+>   approximating `jq`'s formatting.
+
+> `nodebootorder`/`nodemacs`/`nodebios` are read-only; `nodenetboot` and
+> `nodebios base`/`pending` **modify** the BMC/BIOS.
 
 ## 5. Key conventions
 
