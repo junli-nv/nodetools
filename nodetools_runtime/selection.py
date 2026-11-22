@@ -4,10 +4,6 @@ from . import hostlist
 from .inventory import Host
 
 
-def _row_key(name):
-    return name.split("-gpu-")[0] if "-gpu-" in name else name
-
-
 def _resolve(inv, names, out, seen):
     for name in names:
         if name in seen:
@@ -19,28 +15,7 @@ def _resolve(inv, names, out, seen):
         out.append(host)
 
 
-def _auto_expand(inv, hosts, enabled):
-    """Add same-row powershelf/nvswitch hosts for selected compute hosts."""
-    if not enabled:
-        return hosts
-    rows = set()
-    for host in hosts:
-        if host.role == "compute":
-            rows.add(_row_key(host.name))
-    if not rows:
-        return hosts
-    extra = []
-    for name in inv.order:
-        host = inv.get(name)
-        if host.role in ("powershelf", "nvswitch") and _row_key(name) in rows:
-            extra.append(name)
-    out, seen = [], set(h.name for h in hosts)
-    out.extend(hosts)
-    _resolve(inv, extra, out, seen)
-    return out
-
-
-def select(inv, selectors=(), groups=(), all_=False, expand=True):
+def select(inv, selectors=(), groups=(), all_=False):
     """Resolve the requested hosts, preserving a stable order."""
     names = []
     if all_:
@@ -48,7 +23,7 @@ def select(inv, selectors=(), groups=(), all_=False, expand=True):
     for group in groups:
         names.extend(inv.members(group))
     for selector in selectors:
-        for token in selector.replace(" ", "").split(","):
+        for token in hostlist.split_top(selector):
             if not token:
                 continue
             if token in inv.groups:
@@ -60,4 +35,4 @@ def select(inv, selectors=(), groups=(), all_=False, expand=True):
 
     out, seen = [], set()
     _resolve(inv, names, out, seen)
-    return _auto_expand(inv, out, expand)
+    return out

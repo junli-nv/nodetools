@@ -13,9 +13,13 @@ Numeric ranges preserve the width of the low bound (zero padding), matching the
 behaviour of the legacy python3-hostlist helper for the patterns used here.
 """
 
+import itertools
 import re
 
+from .errors import HostlistError
+
 _BRACKET = re.compile(r"[\[\{]")
+_FIELD = re.compile(r"^(.*?)([0-9]+)?([^0-9]*)$")
 _RANGE = re.compile(r"^(?P<low>-?\d+)-(?P<high>-?\d+)$")
 _BRACE_RANGE = re.compile(r"^(?P<low>-?\d+)\.\.(?P<high>-?\d+)$")
 
@@ -116,3 +120,95 @@ def expand(expr):
                 seen.add(name)
                 out.append(name)
     return out
+
+
+def split_top(expr):
+    """Split an expression on commas that are outside brackets (public)."""
+    return [t.strip() for t in _split_top(expr) if t.strip()]
+
+
+def _format_ranges(ranges):
+    chunks = []
+    for low, high, width in ranges:
+        if low == high:
+            chunks.append("%0*d" % (width, low))
+        else:
+            chunks.append("%0*d-%0*d" % (width, low, width, high))
+    return "[" + ",".join(chunks) + "]"
+
+
+def _compact_pass(pairs):
+    """One collection round: fold the rightmost numeric field of ``left``."""
+    remaining = set(left + right for left, right in pairs)
+    entries = []
+    for left, right in pairs:
+        match = _FIELD.match(left)
+        prefix, num, suffix = match.group(1), match.group(2), match.group(3)
+        suffix = suffix + right
+        if num is None:
+            entries.append(((left + right, None), None, None, left + right))
+        else:
+            entries.append(((prefix, suffix), int(num), len(num), left + right))
+
+    def key(entry):
+        (prefix, suffix), num, width, host = entry
+        return (
+            prefix,
+            suffix or "",
+            -1 if num is None else num,
+            -1 if width is None else width,
+            host,
+        )
+
+    entries.sort(key=key)
+
+    out = []
+    changed = False
+    for (prefix, suffix), group in itertools.groupby(entries, key=lambda e: e[0]):
+        members = list(group)
+        if suffix is None:
+            host = members[0][3]
+            out.append(("", host))
+            remaining.discard(host)
+            continue
+        ranges = []
+        for _key, num, width, host in members:
+            if host not in remaining:
+                continue
+            low = num
+            while True:
+                candidate = "%s%0*d%s" % (prefix, width, num, suffix)
+                if candidate not in remaining:
+                    break
+                remaining.discard(candidate)
+                num += 1
+            ranges.append((low, num - 1, width))
+        changed = True
+        if len(ranges) == 1 and ranges[0][0] == ranges[0][1]:
+            number = "%0*d" % (ranges[0][2], ranges[0][0])
+        else:
+            number = _format_ranges(ranges)
+        out.append((prefix, number + suffix))
+    return out, changed
+
+
+def compact(hosts):
+    """Collapse a list of hostnames into a SLURM/scontrol-style hostlist.
+
+    ``compact(["n01", "n02", "n10"])`` -> ``"n[01-02,10]"``.
+    """
+    pairs = []
+    seen = set()
+    for host in hosts:
+        host = host.strip()
+        if not host or host in seen:
+            continue
+        if re.search(r"[\[\],]", host):
+            raise HostlistError("host contains hostlist syntax: {!r}".format(host))
+        seen.add(host)
+        pairs.append((host, ""))
+
+    changed = True
+    while changed:
+        pairs, changed = _compact_pass(pairs)
+    return ",".join(left + right for left, right in pairs)

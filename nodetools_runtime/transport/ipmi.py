@@ -11,6 +11,7 @@ Password passing honours both conventions:
 import os
 import shutil
 import subprocess
+import time
 
 from ..errors import TransportError
 
@@ -43,6 +44,16 @@ class Ipmi:
         self.timeout = timeout
         self.tool = tool or find_ipmitool()
         self.use_env = env_mode_default() if use_env is None else use_env
+        self._deadline = None
+
+    def set_deadline(self, deadline):
+        """Absolute time.monotonic() value past which no new command is run."""
+        self._deadline = deadline
+
+    def _remaining(self):
+        if self._deadline is None:
+            return None
+        return self._deadline - time.monotonic()
 
     def _argv(self, command):
         argv = [self.tool, "-I", "lanplus", "-H", self.address]
@@ -58,6 +69,12 @@ class Ipmi:
     def _run(self, command):
         if not self.tool:
             raise TransportError("ipmitool not found")
+        remaining = self._remaining()
+        if remaining is not None and remaining <= 0:
+            raise TransportError("deadline exceeded before ipmitool")
+        timeout = self.timeout
+        if remaining is not None:
+            timeout = min(timeout, max(0.1, remaining))
         env = dict(os.environ)
         if self.use_env:
             env["IPMI_PASSWORD"] = self.password or ""
@@ -66,7 +83,7 @@ class Ipmi:
                 self._argv(command),
                 capture_output=True,
                 text=True,
-                timeout=self.timeout,
+                timeout=timeout,
                 env=env,
             )
         except subprocess.TimeoutExpired as exc:

@@ -30,7 +30,7 @@ def test_all():
 
 def test_group():
     inv = Inventory.from_text(SAMPLE)
-    assert _names(select(inv, groups=["compute"], expand=False)) == [
+    assert _names(select(inv, groups=["compute"])) == [
         "vdc1-t10-gpu-cp-01",
         "vdc1-t10-gpu-cp-02",
         "vdc1-t10-gpu-cp-03",
@@ -39,27 +39,20 @@ def test_group():
 
 def test_pattern_expansion():
     inv = Inventory.from_text(SAMPLE)
-    assert _names(select(inv, selectors=["vdc1-t10-gpu-cp-[01-02]"], expand=False)) == [
+    assert _names(select(inv, selectors=["vdc1-t10-gpu-cp-[01-02]"])) == [
         "vdc1-t10-gpu-cp-01",
         "vdc1-t10-gpu-cp-02",
     ]
 
 
-def test_auto_expand_adds_same_row():
+def test_only_named_hosts():
     inv = Inventory.from_text(SAMPLE)
     got = _names(select(inv, selectors=["vdc1-t10-gpu-cp-01"]))
-    assert "vdc1-t10-gpu-pwr-01" in got
-    assert "vdc1-t10-gpu-nvl-01" in got
-
-
-def test_no_expand():
-    inv = Inventory.from_text(SAMPLE)
-    got = _names(select(inv, selectors=["vdc1-t10-gpu-cp-01"], expand=False))
     assert got == ["vdc1-t10-gpu-cp-01"]
 
 
 def test_unknown_host_kept_without_address():
     inv = Inventory.from_text(SAMPLE)
-    hosts = select(inv, selectors=["unknown-node"], expand=False)
+    hosts = select(inv, selectors=["unknown-node"])
     assert hosts[0].name == "unknown-node"
     assert hosts[0].address is None

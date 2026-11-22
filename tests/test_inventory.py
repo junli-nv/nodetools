@@ -20,7 +20,7 @@ SAMPLE = textwrap.dedent(
 
     [nodehealth:defaults]
     jobs=4
-    expand=false
+    summary=false
     """
 )
 
@@ -49,7 +49,24 @@ def test_variable_precedence():
 def test_defaults():
     inv = Inventory.from_text(SAMPLE)
     assert inv.default("jobs") == "4"
-    assert inv.default_bool("expand", True) is False
+    assert inv.default_bool("summary", True) is False
+
+
+def test_hash_comments_are_ignored():
+    text = textwrap.dedent(
+        """
+        # whole-line comment
+        ; semicolon comment
+        [compute]
+        cp-01 host=10.0.0.1   # inline comment
+        # cp-99 host=10.0.0.99 (commented-out host)
+        cp-02 host=10.0.0.2
+        """
+    )
+    inv = Inventory.from_text(text)
+    assert inv.members("compute") == ["cp-01", "cp-02"]
+    assert inv.get("cp-01").address == "10.0.0.1"
+    assert inv.get("cp-99") is None
 
 
 def test_generate_from_hostslist(tmp_path):

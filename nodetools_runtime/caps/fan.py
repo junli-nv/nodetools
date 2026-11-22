@@ -7,10 +7,11 @@ from . import common
 
 def _from_thermal_subsystem(device):
     rf = device.redfish
-    out = []
-    for chassis in common.chassis_list(device, DEFAULT_CHASSIS):
+
+    def scan(cid):
+        out = []
         for detail in common.enumerate_collection(
-            rf, "/redfish/v1/Chassis/{}/ThermalSubsystem/Fans".format(chassis)
+            rf, "/redfish/v1/Chassis/{}/ThermalSubsystem/Fans".format(cid)
         ):
             out.append(
                 common.reading(
@@ -20,16 +21,18 @@ def _from_thermal_subsystem(device):
                     common.health_of(detail.get("Status")),
                 )
             )
-        if out:
-            return out
-    return out
+        return out
+
+    chassis = common.rung_chassis(device, "Fans", DEFAULT_CHASSIS)
+    return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 
 def _from_thermal(device):
     rf = device.redfish
-    out = []
-    for chassis in common.chassis_list(device, DEFAULT_CHASSIS):
-        thermal = rf.get("/redfish/v1/Chassis/{}/Thermal".format(chassis))
+
+    def scan(cid):
+        out = []
+        thermal = rf.get("/redfish/v1/Chassis/{}/Thermal".format(cid))
         for fan in (thermal or {}).get("Fans", []) or []:
             out.append(
                 common.reading(
@@ -39,16 +42,24 @@ def _from_thermal(device):
                     common.health_of(fan.get("Status")),
                 )
             )
-        if out:
-            return out
-    return out
+        return out
+
+    chassis = common.rung_chassis(device, "Thermal", DEFAULT_CHASSIS)
+    if not chassis:
+        return []
+    if common.profile(device) is None and common.absent(
+        device, "/redfish/v1/Chassis/{}/Thermal".format(chassis[0])
+    ):
+        return []
+    return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 
 def _from_sensors(device):
     rf = device.redfish
-    out = []
-    for chassis in common.chassis_list(device, DEFAULT_CHASSIS):
-        for sensor in common.enumerate_sensors(rf, chassis):
+
+    def scan(cid):
+        out = []
+        for sensor in common.enumerate_sensors(rf, cid):
             name = sensor.get("Name") or sensor.get("Id") or ""
             if "fan" not in name.lower():
                 continue
@@ -60,9 +71,10 @@ def _from_sensors(device):
                     common.health_of(sensor.get("Status")),
                 )
             )
-        if out:
-            return out
-    return out
+        return out
+
+    chassis = common.rung_chassis(device, "Sensors", DEFAULT_CHASSIS)
+    return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 
 def _from_ipmi(device):

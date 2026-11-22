@@ -1,5 +1,7 @@
 """Minimal Redfish client built on requests."""
 
+import time
+
 import urllib3
 
 from ..errors import AuthError, TransportError
@@ -20,13 +22,30 @@ class Redfish:
         self.user = user
         self.timeout = timeout
         self.verify = verify
+        self._deadline = None
         self._session = requests.Session()
         self._session.verify = verify
         self._session.auth = (user, password) if user else None
         self._session.headers.update({"Accept": "application/json"})
 
+    def set_deadline(self, deadline):
+        """Absolute time.monotonic() value past which no new request is made."""
+        self._deadline = deadline
+
+    def _remaining(self):
+        if self._deadline is None:
+            return None
+        return self._deadline - time.monotonic()
+
+    def _expired(self):
+        remaining = self._remaining()
+        return remaining is not None and remaining <= 0
+
     def _timeout(self, timeout=None):
         read = timeout or self.timeout
+        remaining = self._remaining()
+        if remaining is not None:
+            read = min(read, max(0.1, remaining))
         return (min(3.0, read), read)
 
     def url(self, path):
@@ -47,6 +66,8 @@ class Redfish:
 
     def get_raw(self, path, timeout=None):
         """Return (status, parsed-or-text). status is None on transport error."""
+        if self._expired():
+            return None, None
         try:
             resp = self._session.get(
                 self.url(path), timeout=self._timeout(timeout)
@@ -62,6 +83,8 @@ class Redfish:
             return resp.status_code, text
 
     def post(self, path, body, timeout=None):
+        if self._expired():
+            raise TransportError("deadline exceeded before POST {}".format(path))
         try:
             resp = self._session.post(
                 self.url(path), json=body, timeout=self._timeout(timeout)
@@ -76,6 +99,8 @@ class Redfish:
             return resp.status_code, resp.text
 
     def patch(self, path, body, timeout=None):
+        if self._expired():
+            raise TransportError("deadline exceeded before PATCH {}".format(path))
         try:
             resp = self._session.patch(
                 self.url(path), json=body, timeout=self._timeout(timeout)

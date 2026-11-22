@@ -60,6 +60,18 @@ def _collect_strings(obj, acc):
             _collect_strings(item, acc)
 
 
+def _member_ids(redfish, path):
+    """Member @odata.id values of a collection, discovered dynamically."""
+    data = redfish.get(path)
+    ids = []
+    if isinstance(data, dict) and isinstance(data.get("Members"), list):
+        for member in data["Members"]:
+            oid = member.get("@odata.id") if isinstance(member, dict) else None
+            if oid:
+                ids.append(oid)
+    return ids
+
+
 def probe_redfish(redfish):
     """Gather vendor/model/manufacturer/chassis ids from a BMC."""
     info = {"vendor": None, "model": None, "manufacturer": None,
@@ -72,30 +84,28 @@ def probe_redfish(redfish):
         )
         info["raw"].append(root)
 
-    for path in ("/redfish/v1/Managers/1", "/redfish/v1/Systems/1"):
-        data = redfish.get(path)
-        if data:
-            info["model"] = info["model"] or data.get("Model")
-            info["manufacturer"] = (
-                info["manufacturer"] or data.get("Manufacturer")
-            )
-            info["raw"].append(data)
-
-    chassis = redfish.get("/redfish/v1/Chassis")
-    if chassis and isinstance(chassis.get("Members"), list):
-        for member in chassis["Members"]:
-            oid = member.get("@odata.id")
-            if not oid:
-                continue
-            ident = oid.rstrip("/").rsplit("/", 1)[-1]
-            info["chassis"].append(ident)
-            detail = redfish.get(oid)
-            if detail:
-                info["model"] = info["model"] or detail.get("Model")
+    # Enumerate the Managers/Systems collections instead of assuming an id, so
+    # vendors that name them differently (BMC_0, hostname, ...) still resolve.
+    for collection in ("/redfish/v1/Managers", "/redfish/v1/Systems"):
+        for oid in _member_ids(redfish, collection):
+            data = redfish.get(oid)
+            if data:
+                info["model"] = info["model"] or data.get("Model")
                 info["manufacturer"] = (
-                    info["manufacturer"] or detail.get("Manufacturer")
+                    info["manufacturer"] or data.get("Manufacturer")
                 )
-                info["raw"].append(detail)
+                info["raw"].append(data)
+
+    for oid in _member_ids(redfish, "/redfish/v1/Chassis"):
+        ident = oid.rstrip("/").rsplit("/", 1)[-1]
+        info["chassis"].append(ident)
+        detail = redfish.get(oid)
+        if detail:
+            info["model"] = info["model"] or detail.get("Model")
+            info["manufacturer"] = (
+                info["manufacturer"] or detail.get("Manufacturer")
+            )
+            info["raw"].append(detail)
     return info
 
 
@@ -137,6 +147,15 @@ def detect_odm(device, use_cache=True):
         cached = load_cached_odm(device.address)
         if cached:
             return cached
+        # A cached scan map already carries the identity, so reuse it instead
+        # of walking every chassis again.
+        profile = getattr(device, "profile", None)
+        if isinstance(profile, dict):
+            device.probe = profile
+            odm = profile.get("odm")
+            if odm:
+                store_cached_odm(device.address, odm)
+                return odm
     probe = probe_redfish(device.redfish)
     device.probe = probe
     odm = classify(probe)

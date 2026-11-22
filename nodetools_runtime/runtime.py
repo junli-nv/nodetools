@@ -1,8 +1,9 @@
 """Parallel execution engine: build devices, collect or control."""
 
 import concurrent.futures
+import time
 
-from . import caps, model, oem
+from . import caps, model, oem, scan
 from .errors import NodetoolsError
 from .transport.ipmi import Ipmi
 from .transport.redfish import Redfish
@@ -30,25 +31,41 @@ def _resolve_creds(host, options):
     return user, password
 
 
+def build_device(host, options, apply_deadline=True):
+    """Construct a Device for a host and attach its cached scan map (if any).
+
+    When ``apply_deadline`` is set, the transports share one wall-clock budget
+    (``options.node_timeout``) so a slow BMC cannot stall the whole run.
+    """
+    user, password = _resolve_creds(host, options)
+    redfish = Redfish(host.address, user, password, timeout=options.timeout)
+    ipmi = Ipmi(
+        host.address,
+        user,
+        password,
+        use_env=options.ipmi_env,
+        timeout=options.timeout,
+    )
+    node_timeout = getattr(options, "node_timeout", None)
+    if apply_deadline and node_timeout:
+        deadline = time.monotonic() + float(node_timeout)
+        redfish.set_deadline(deadline)
+        ipmi.set_deadline(deadline)
+    device = model.Device(
+        host, redfish_factory=lambda h: redfish, ipmi_factory=lambda h: ipmi
+    )
+    if not getattr(options, "no_cache", False):
+        device.profile = scan.load(host.address)
+    return device
+
+
 class Runner:
     def __init__(self, capability, options):
         self.capability = capability
         self.options = options
 
     def _device(self, host):
-        user, password = _resolve_creds(host, self.options)
-        redfish = Redfish(
-            host.address, user, password, timeout=self.options.timeout
-        )
-        ipmi = Ipmi(
-            host.address,
-            user,
-            password,
-            use_env=self.options.ipmi_env,
-            timeout=self.options.timeout,
-        )
-        return model.Device(host, redfish_factory=lambda h: redfish,
-                            ipmi_factory=lambda h: ipmi)
+        return build_device(host, self.options)
 
     def _result(self, host, readings=None, error=None):
         return {
@@ -84,26 +101,6 @@ class Runner:
         device = None
         try:
             device = self._device(host)
-            if self.capability == "oem":
-                probe = model.probe_redfish(device.redfish)
-                odm = (
-                    model.detect_odm(device)
-                    if not self.options.no_cache
-                    else self._classify(device)
-                )
-                return self._result(
-                    host,
-                    readings=[
-                        {
-                            "id": odm,
-                            "name": "odm",
-                            "value": odm,
-                            "health": probe.get("vendor")
-                            or probe.get("manufacturer")
-                            or "Unknown",
-                        }
-                    ],
-                )
             module = oem.get("unknown")
             if self.options.action:
                 module = oem.get(self._detect(device))
@@ -141,6 +138,72 @@ class Runner:
         if self.options.no_cache:
             return self._classify(device)
         return model.detect_odm(device)
+
+    def run(self, hosts):
+        jobs = max(1, self.options.jobs)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+            return list(pool.map(self._one, hosts))
+
+
+class Scanner:
+    """Probe each BMC's Redfish interface map and cache it (the ``scan`` cmd)."""
+
+    def __init__(self, options):
+        self.options = options
+
+    def _result(self, host, readings=None, error=None):
+        return {
+            "name": host.name,
+            "role": host.role,
+            "address": host.address,
+            "cap": "scan",
+            "readings": readings or [],
+            "error": error,
+        }
+
+    def _one(self, host):
+        if getattr(self.options, "clear", False):
+            removed = scan.clear(host.address)
+            return self._result(
+                host,
+                readings=[
+                    {
+                        "id": "cache",
+                        "name": "cache",
+                        "value": "cleared" if removed else "absent",
+                        "health": "OK" if removed else "Unknown",
+                    }
+                ],
+            )
+        if not host.address:
+            return self._result(host, error="no BMC address (missing from inventory)")
+        device = None
+        try:
+            device = build_device(host, self.options, apply_deadline=False)
+            profile = scan.refresh(device)
+            useful = sum(
+                1
+                for rec in profile["caps"].values()
+                if any(rec.get(key) for key in scan.COUNTS)
+            )
+            return self._result(
+                host,
+                readings=[
+                    {
+                        "id": "map",
+                        "name": "chassis",
+                        "value": "{}chassis/{}data".format(
+                            len(profile["chassis"]), useful
+                        ),
+                        "health": "OK",
+                    }
+                ],
+            )
+        except Exception as exc:  # noqa: BLE001 - reported per node
+            return self._result(host, error="{}: {}".format(type(exc).__name__, exc))
+        finally:
+            if device:
+                device.close()
 
     def run(self, hosts):
         jobs = max(1, self.options.jobs)

@@ -235,7 +235,7 @@ def generate_from_hostslist(path):
         "[{}]".format(DEFAULTS_SECTION),
         "jobs=18",
         "timeout=10",
-        "expand=true",
+        "node_timeout=30",
         "summary=false",
         "",
     ]

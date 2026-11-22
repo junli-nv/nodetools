@@ -35,8 +35,9 @@ nodetools (入口)
   └─ nodetools_runtime.cli
        ├─ arguments.py   解析参数
        ├─ inventory.py   解析/生成 inventory
-       ├─ selection.py   选择器 → 主机列表（含同行自动关联）
+       ├─ selection.py   选择器 → 主机列表
        ├─ reach.py       BMC ICMP 可达性检查（list/ping 命令用）
+       ├─ scan.py        Redfish 端点扫描 + 缓存（scan 命令写，能力读）
        ├─ runtime.py     并行引擎：建 Device、探测 ODM、跑能力/控制
        │    ├─ model.py       角色/ODM 探测 + 缓存
        │    ├─ caps/*.py      能力收集器（回退阶梯）
@@ -52,8 +53,7 @@ argv
  → Inventory.from_file(inventory.ini)         # 分组 + 变量 + 默认值
  → selection.select(...)                       # 名字/组/模式 → Host[]
  → Runner.run(hosts)  (ThreadPoolExecutor)
-     每台: 解析角色凭据 → 建 Redfish+Ipmi → Device
-           ├─ cap=oem: probe_redfish + classify
+     每台: 解析角色凭据 → 建 Redfish+Ipmi → Device（附 scan profile）
            ├─ 有 --action: 探测 ODM → oem.get(odm).fan_control/psu_control
            └─ 否则: caps.collector_for(cap)(device) → readings[]
  → report.render(results)                      # 行 / 汇总
@@ -67,18 +67,19 @@ argv
 | `errors.py` | 异常层级 | `CapUnsupported` 表示"该 ODM 不支持此动作" |
 | `hostlist.py` | 主机名范围展开 | 见第 5 节，带单测 |
 | `inventory.py` | inventory 解析 + `hosts.list` 生成器 | 语法见第 5 节 |
-| `selection.py` | 选择器解析 + 同行自动关联 | `--no-expand` 关闭关联 |
+| `selection.py` | 选择器解析（组/名字/模式） | 只选你点名的机器，不做关联 |
 | `reach.py` | BMC 的 ICMP 可达性检查 | `list`/`ping` 命令用；不涉及凭据 |
+| `scan.py` | 探测各集合端点并缓存每个 chassis 的能力图 | `scan` 命令写；能力经 `rung_chassis` 读 |
 | `model.py` | `Device`、`probe_redfish`、`classify`、ODM 缓存 | 探测失败回退 `unknown` |
 | `ladder.py` | "按顺序试，返回第一个非空" | 收集器的核心控制流 |
 | `transport/redfish.py` | Redfish `get/get_raw/post/patch` | `verify=False`，连接超时 3s |
 | `transport/ipmi.py` | ipmitool 封装，`sdr` / `raw` | 双模式传密码，见第 5 节 |
 | `transport/racadm.py` | Dell racadm | 不可用时 `available()` 返回 False |
-| `caps/common.py` | Reading 构造、health/speed/num、集合/传感器枚举 | 共享工具 |
+| `caps/common.py` | Reading 构造、health/speed/num、集合/传感器枚举、`rung_chassis` | 共享工具 |
 | `caps/{fan,psu,temp}.py` | 三个能力的回退阶梯 | 见第 4 节 |
 | `oem/base.py` | `Oem` 基类 + `_ipmi_raw` | |
 | `oem/<odm>.py` | 单个 ODM 的控制动作/专用 chassis | 读数据主要靠通用阶梯 |
-| `runtime.py` | 角色凭据解析、并行、错误隔离 | 每台独立 try/except |
+| `runtime.py` | `build_device`（附 scan profile）、`Runner` 并行、`Scanner`、错误隔离 | 每台独立 try/except |
 | `report.py` | 输出行/汇总 | 兼容 `grep -v ,OK` |
 
 ## 4. 收集阶梯（回退顺序）
@@ -98,12 +99,27 @@ argv
 
 每个阶梯函数都遍历 `chassis_list(device, DEFAULT_CHASSIS)`，即"探测到的 chassis +
 `config.DEFAULT_CHASSIS`"，因此 `Chassis_0` / `1` / `System.Embedded.1` /
-`DGX` / `PDB_0` / `PowerShelf_0` 都能命中。
+`DGX` / `PDB_0` / `PowerShelf_0` 都能命中。若存在 scan 缓存，则改走
+`rung_chassis(device, key)`：只遍历"该阶梯的 key 在缓存里为非空/存在"的 chassis，
+并在缓存表明该端点整体缺失时短路，避免无谓探测（见第 5 节"扫描缓存"）。
 
 **Reading 统一结构**：`{id, name, value, health}`。health 取
 `.Status.Health or .Status.State or "Unknown"`；powershelf 特判为 `On/Off`。
 
 ## 5. 关键约定
+
+### 开发原则（务必遵守）
+
+- **注释用 `#`**：`inventory.ini`（及其模板/生成器）沿用 `#` 注释，与旧
+  `hosts.list`/INI 习惯一致。整行以 `#`（或 `;`）开头、或行内出现 `#` 之后的内容
+  一律忽略；解析与生成都要遵守，任何后续新增的清单/配置文件也照此处理。
+  不要用 `//`、`--` 或其它风格另起一套。
+- **必须并行**：所有"逐节点"操作（fan/psu/temp/控制/`ping`…）跨节点必须并行，
+  等价于旧脚本里的 `xargs -P`（默认 `jobs=18`），**不得串行**逐台执行。
+  单节点内部按阶梯顺序回退属于正常（一个节点的多后端探测本身就是有序的），
+  但节点之间不能排队。实现一律走 `runtime.py` 的 `ThreadPoolExecutor(max_workers=jobs)`。
+- **hostlist 双向往返**：既要 SLURM 风格**展开**（`expand`，喂给操作），
+  也要 SLURM 风格**合并**（`compact`，`list` 默认输出），且 `expand(compact(x)) == x`。
 
 ### inventory 语法与优先级
 
@@ -117,34 +133,48 @@ bmc_password=0penBmc
 timeout=5
 [nodehealth:defaults]
 jobs=18
+timeout=10
+node_timeout=30
 ```
 
+- **注释**：整行 `# ...` / `; ...` 与行内 `# ...` 均忽略（`#` 之后即注释）。
 - 地址键：`host=` / `bmc_ip=` / `ansible_host=` / `ip=`，或第 2 个裸 token。
 - 变量优先级：`[all:vars]` < 组 `:vars` < 行内 `key=value`。
 - 角色来自分组（`compute/nvswitch/powershelf`），缺失时按名字模式兜底。
 - 角色凭据字段：compute `bmc_*`、nvswitch `nvswitch_bmc_*`、
   powershelf `powershelf_bmc_*`（缺失回退 `bmc_*`）。
-- `[nodehealth:defaults]` 提供 jobs/timeout/expand/summary 默认值，
+- `[nodehealth:defaults]` 提供 jobs/timeout/node_timeout/summary 默认值，
   未显式传参时生效。
+- `node_timeout` 是**每台机器的总墙钟预算**（秒，默认 30）：用尽后 Redfish/IPMI
+  不再发起新请求，正在进行的请求也被夹到剩余时间，避免慢 BMC 拖死整批；
+  仅能力命令生效，`scan` 不设（本身就是长任务），且**没有对应 CLI flag**。
 - `hosts.list` 生成器按 `DeviceType` 归组：`PhysicalNode→compute`、
   `PowerShelf→powershelf`、`Switch` 名含 `-gpu-nvl-` → `nvswitch`，否则 `switch`。
 
-### hostlist 展开
+### hostlist 展开与合并
 
-自实现（不依赖外部 GPL 工具）：`node[01-03]`、`node[1-3]`、`gpu[001-003,007]`、
-`x{8..10}`、括号可嵌套、顶层逗号分隔、去重保序。范围按低位宽度补零。
+自实现（不依赖外部 GPL 工具），双向 SLURM/scontrol 风格：
 
-### 主机选择与同行自动关联
+- `expand`（展开，喂给操作）：`node[01-03]`、`node[1-3]`、`gpu[001-003,007]`、
+  `x{8..10}`、括号可嵌套、顶层逗号分隔、去重保序。范围按低位宽度补零。
+  顶层逗号切分对 `[]`/`{}` 内的逗号免疫（`n[01,03-05]` 是单个表达式）。
+- `compact`（合并，`list` 默认）：把一批主机名折叠成
+  `vdc1-pro2-n[03-10]-gpu-cp-[01-18]`，按角色分组输出，等价旧 `nodelist` 的
+  `pshbak -c`。保证 `expand(compact(x)) == x`。
+
+`nodeping` 旧流程是"先合并保存、再展开逐个 ping"；本工具同样支持把合并后的
+表达式（含括号内逗号、多区间）直接作为选择器交给 `ping` 或检查命令。
+
+### 主机选择
 
 选择器支持：组名 / 单主机名 / hostlist 模式，逗号分隔可混用。
-默认会为选中的 compute 主机自动补上**同一行**的 `-gpu-pwr-*`（psu/temp）和
-`-gpu-nvl-*`（temp）——行键 = 名字按 `-gpu-` 截断。`--no-expand` 关闭。
-
-`list` / `ping` 命令**不做**同行自动关联（`expand=False`）：列出/探测的就是你
-选中的主机本身。典型流程是先用 `ping` 过滤出可通节点，再喂给检查命令：
+compute / nvswitch / powershelf **各自有独立的 psu/temp/fan 传感器**，不能混在一起看，
+所以工具**不做任何自动关联**：你点名什么就查什么，不会因为选了 compute 就带出同行的
+powershelf / nvswitch。要一起看就在选择器里显式写出来（例如
+`vdc1-pro2-t10-gpu-cp-01,vdc1-pro2-t10-gpu-pwr-01,vdc1-pro2-t10-gpu-nvl-01`）。
 
 ```sh
-reachable=$(./nodetools ping vdc1-pro2-t10-gpu-cp-[01-18] \
+reachable=$(./nodetools ping --long vdc1-pro2-t10-gpu-cp-[01-18] \
             | awk -F: '/pingable/{print $1}' | paste -sd, -)
 ./nodetools all "$reachable" --errors-only
 ```
@@ -154,7 +184,22 @@ reachable=$(./nodetools ping vdc1-pro2-t10-gpu-cp-[01-18] \
 `probe_redfish` 拉取 `/redfish/v1`、`Managers/1`、`Systems/1`、`Chassis/*` 的
 Vendor/Model/Manufacturer，拼成字符串后按 `model.SIGNATURES` 匹配（具体厂商在前，
 `nvidia` 兜底 `gb200`）。结果缓存到 `~/.cache/nodetools/oem/<ip>`；`--no-cache` 绕过。
-**读数据不依赖 ODM**，探测只影响控制动作和 `oem` 能力输出。
+**读数据不依赖 ODM**，探测只影响控制动作（`--action`）。有 scan 缓存时直接用其中的
+身份，不重复遍历 chassis。
+
+### 扫描缓存（scan）
+
+单个 BMC 会摊开几十个 chassis，哪个 chassis 有什么集合**因厂商而异，且不一定
+在 detail 里声明**（Wistron 的 `Sensors` 集合就不出现在 chassis detail 中）。
+因此 `scan` 直接探测各集合端点，按 chassis 记录 `Sensors`/`Fans`/`PowerSupplies`/
+`Temperatures` 的成员数，以及旧式 `Thermal`/`Power` 单例对象是否存在，存到
+`~/.cache/nodetools/scan/<ip>.json`（`SCAN_CACHE_VERSION`，改结构时递增以免误读旧档）。
+
+fan/psu/temp 通过 `common.rung_chassis(device, key)` 只遍历"能回答该阶梯"的
+chassis（无缓存则回退到实时发现，行为不变）：`Fans`/`PowerSupplies`/`Sensors`/
+`Temperatures` 用数量 >0 判定，`Thermal`/`Power` 用存在性。实测 compute 节点
+`fan` 0.9s vs 实时 11s、`psu` 8s vs 22s、`temp` 7s vs 17s。重新 `scan` 即刷新
+（机器有变动时），`scan --clear` 删除。
 
 ### IPMI 密码双模式
 
@@ -200,12 +245,13 @@ Vendor/Model/Manufacturer，拼成字符串后按 `model.SIGNATURES` 匹配（�
 ### 单元测试
 
 ```sh
-python3 -m pytest -q          # 当前 38 passed
+python3 -m pytest -q          # 当前 55 passed
 ```
 
-覆盖：hostlist 展开、inventory 解析/优先级/生成、选择器与同行关联、输出格式与
-`grep -v ,OK` 兼容、ODM 注册、三个能力对 `FakeRedfish` 的解析、`list`/`ping`
-命令与可达性检查（`subprocess` 打桩，不依赖网络）。
+覆盖：hostlist 展开、inventory 解析/优先级/生成、选择器、输出格式与
+`grep -v ,OK` 兼容、ODM 注册、三个能力对 `FakeRedfish` 的解析、scan 缓存
+（写入/版本不符忽略/`rung_chassis` 命中与回退）、`list`/`ping` 命令与可达性检查
+（`subprocess` 打桩，不依赖网络）。缓存测试用 `tmp_path` 覆盖 `SCAN_CACHE_DIR`。
 
 ### 真机冒烟（改接口后必做）
 
@@ -214,11 +260,10 @@ python3 -m pytest -q          # 当前 38 passed
 ./nodetools inventory init --from /path/to/hosts.list -o /tmp/nt.ini
 ./nodetools inventory show -i /tmp/nt.ini | head
 
-# 单台下钻，确认 ODM 与字段
-./nodetools oem  vdc1-pro2-t10-gpu-cp-01 -i /tmp/nt.ini --no-expand -x
-./nodetools fan  vdc1-pro2-t10-gpu-cp-01 -i /tmp/nt.ini --no-expand
-./nodetools temp vdc1-pro2-t10-gpu-cp-01 -i /tmp/nt.ini --no-expand --summary
-./nodetools psu  vdc1-pro2-t10-gpu-pwr-01 -i /tmp/nt.ini --no-expand
+# 单台下钻，确认字段
+./nodetools fan  vdc1-pro2-t10-gpu-cp-01 -i /tmp/nt.ini
+./nodetools temp vdc1-pro2-t10-gpu-cp-01 -i /tmp/nt.ini --summary
+./nodetools psu  vdc1-pro2-t10-gpu-pwr-01 -i /tmp/nt.ini
 
 # 批量与只报错
 ./nodetools all vdc1-pro2-t10-gpu-cp-[01-03] -i /tmp/nt.ini --errors-only
@@ -241,11 +286,12 @@ python3 -m pytest -q          # 当前 38 passed
 
 - B200/B300（BXX 普通 HGX 机型）**本期未做**；`model` 已能识别通用厂商，后续加
   BXX 的命名/来源与对应阶梯即可。
-- powershelf ODM 目前多归为 `unknown`（Delta 电源），只影响 `oem` 输出，不影响
+- powershelf ODM 目前多归为 `unknown`（Delta 电源），只在内部影响控制动作，不影响
   读 psu。
 - `Switch` 组里非 `-gpu-nvl-` 的交换机暂归 `switch` 组，尚无对应能力。
 - 控制动作（`--action`）只覆盖已确证的几条 IPMI raw / Redfish PATCH / racadm；
   新增前请回读对应 OEM 脚本确认字节。
 - `ping` 用单包 ICMP（`ping -c 1 -W <t>`），不是旧 `nodeping` 的 flood ping；
-  不需要 root，也不会有突发流量。无 BMC 地址的主机输出 `No BMC IP found`。
+  不需要 root，也不会有突发流量。无 BMC 地址的主机默认聚合到 `no_BMC_IP` 组
+  （`--long` 时逐台显示 `No BMC IP found`）。
 - 尚未做：结果落库/告警、`--json` 输出、IB/SPX 交换机能力。

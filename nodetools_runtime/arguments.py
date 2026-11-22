@@ -4,7 +4,7 @@ import argparse
 
 from .config import CAPS, DEFAULT_INVENTORY, DEFAULT_JOBS, DEFAULT_TIMEOUT
 
-CAP_COMMANDS = tuple(CAPS) + ("all", "oem")
+CAP_COMMANDS = tuple(CAPS) + ("all",)
 
 
 def _add_common(parser):
@@ -12,9 +12,6 @@ def _add_common(parser):
     parser.add_argument("-i", "--inventory", default=None, help="inventory file")
     parser.add_argument("--group", action="append", default=[], help="select a group")
     parser.add_argument("--all", action="store_true", help="select every host")
-    parser.add_argument(
-        "--no-expand", action="store_true", default=None, help="no same-row expansion"
-    )
     parser.add_argument(
         "--summary", action="store_true", default=None, help="per-node summary"
     )
@@ -29,7 +26,7 @@ def _add_common(parser):
         action="store_true",
         help="pass the IPMI password via IPMI_PASSWORD (ipmitool -E)",
     )
-    parser.add_argument("--no-cache", action="store_true", help="skip ODM cache")
+    parser.add_argument("--no-cache", action="store_true", help="skip caches")
     parser.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
 
@@ -52,17 +49,31 @@ def build_parser():
     for name in CAP_COMMANDS:
         _add_common(sub.add_parser(name, help="{} capability".format(name)))
 
-    lst = sub.add_parser("list", help="list hosts from inventory")
+    lst = sub.add_parser("list", help="list hosts from inventory (aggregated)")
     _add_selection(lst)
     lst.add_argument(
-        "--long", action="store_true", help="also show role and BMC address"
+        "--long", action="store_true",
+        help="one line per host (role and BMC address)",
     )
 
-    pg = sub.add_parser("ping", help="ping BMC addresses (reachability)")
+    pg = sub.add_parser("ping", help="ping BMC addresses (aggregated)")
     _add_selection(pg)
     pg.add_argument("--jobs", type=int, default=None, help="parallel workers")
     pg.add_argument(
         "--ping-timeout", type=float, default=1.0, help="seconds to wait per reply"
+    )
+    pg.add_argument("--long", action="store_true", help="one line per host")
+
+    sc = sub.add_parser(
+        "scan", help="probe and cache each BMC's Redfish map (re-run to refresh)"
+    )
+    _add_selection(sc)
+    sc.add_argument("--jobs", type=int, default=None, help="parallel workers")
+    sc.add_argument("--timeout", type=float, default=None, help="per-request timeout")
+    sc.add_argument("--user", default=None, help="override BMC username")
+    sc.add_argument("--password", default=None, help="override BMC password")
+    sc.add_argument(
+        "--clear", action="store_true", help="delete cached maps instead of writing"
     )
 
     return parser

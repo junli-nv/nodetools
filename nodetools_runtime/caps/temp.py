@@ -14,9 +14,10 @@ def _is_temp(name):
 
 def _from_thermal(device):
     rf = device.redfish
-    out = []
-    for chassis in common.chassis_list(device, DEFAULT_CHASSIS):
-        thermal = rf.get("/redfish/v1/Chassis/{}/Thermal".format(chassis))
+
+    def scan(cid):
+        out = []
+        thermal = rf.get("/redfish/v1/Chassis/{}/Thermal".format(cid))
         for temp in (thermal or {}).get("Temperatures", []) or []:
             out.append(
                 common.reading(
@@ -26,17 +27,25 @@ def _from_thermal(device):
                     common.health_of(temp.get("Status")),
                 )
             )
-        if out:
-            return out
-    return out
+        return out
+
+    chassis = common.rung_chassis(device, "Thermal", DEFAULT_CHASSIS)
+    if not chassis:
+        return []
+    if common.profile(device) is None and common.absent(
+        device, "/redfish/v1/Chassis/{}/Thermal".format(chassis[0])
+    ):
+        return []
+    return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 
 def _from_thermal_metrics(device):
     rf = device.redfish
-    out = []
-    for chassis in common.chassis_list(device, DEFAULT_CHASSIS):
+
+    def scan(cid):
+        out = []
         metrics = rf.get(
-            "/redfish/v1/Chassis/{}/ThermalSubsystem/ThermalMetrics".format(chassis)
+            "/redfish/v1/Chassis/{}/ThermalSubsystem/ThermalMetrics".format(cid)
         )
         for entry in (metrics or {}).get("TemperatureReadingsCelsius", []) or []:
             source = entry.get("DataSourceUri") or entry.get("@odata.id") or ""
@@ -48,9 +57,10 @@ def _from_thermal_metrics(device):
                     "OK",
                 )
             )
-        if out:
-            return out
-    return out
+        return out
+
+    chassis = common.rung_chassis(device, "Temperatures", DEFAULT_CHASSIS)
+    return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 
 def _from_telemetry(device):
@@ -78,9 +88,10 @@ def _from_telemetry(device):
 
 def _from_sensors(device):
     rf = device.redfish
-    out = []
-    for chassis in common.chassis_list(device, DEFAULT_CHASSIS):
-        for sensor in common.enumerate_sensors(rf, chassis):
+
+    def scan(cid):
+        out = []
+        for sensor in common.enumerate_sensors(rf, cid):
             name = sensor.get("Name") or sensor.get("Id") or ""
             rtype = sensor.get("ReadingType") or ""
             if not (_is_temp(name) or "temperature" in rtype.lower()):
@@ -93,9 +104,10 @@ def _from_sensors(device):
                     common.health_of(sensor.get("Status")),
                 )
             )
-        if out:
-            return out
-    return out
+        return out
+
+    chassis = common.rung_chassis(device, "Sensors", DEFAULT_CHASSIS)
+    return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 
 def _from_ipmi(device):

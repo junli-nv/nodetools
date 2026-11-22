@@ -18,3 +18,5 @@ dist/
 # Logs / scratch
 *.log
 *.tmp
+err.txt
+*.out

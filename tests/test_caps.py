@@ -1,5 +1,5 @@
 from nodetools_runtime import model
-from nodetools_runtime.caps import fan, psu, temp
+from nodetools_runtime.caps import common, fan, psu, temp
 from nodetools_runtime.inventory import Host
 
 
@@ -11,10 +11,10 @@ class FakeRedfish:
         return self.data.get(path)
 
 
-def _device(data, role="compute"):
+def _device(data, role="compute", chassis=("Chassis_0",)):
     host = Host("cp-01", "10.0.0.1", {}, [role])
     device = model.Device(host, redfish_factory=lambda h: FakeRedfish(data))
-    device.probe = {"chassis": []}
+    device.probe = {"chassis": list(chassis)}
     return device
 
 
@@ -66,8 +66,28 @@ def test_psu_from_power_supplies():
             "Status": {"Health": "OK"},
         },
     }
-    readings = psu.collect(_device(data, role="powershelf"))
-    assert readings[0]["value"] == 1200
+    readings = psu.collect(_device(data, role="powershelf", chassis=("PowerShelf_0",)))
+    assert readings[0]["value"] == "in=1200W"
+    assert readings[0]["health"] == "OK"
+
+
+def test_psu_metrics_link_power():
+    base = "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies"
+    data = {
+        base: {"Members": [{"@odata.id": base + "/0"}]},
+        base + "/0": {
+            "MemberId": "0",
+            "Name": "PSU 0",
+            "Status": {"Health": "OK"},
+            "Metrics": {"@odata.id": base + "/0/Metrics"},
+        },
+        base + "/0/Metrics": {
+            "InputPowerWatts": {"Reading": 2628},
+            "OutputPowerWatts": {"Reading": 2524},
+        },
+    }
+    readings = psu.collect(_device(data, role="powershelf", chassis=("PowerShelf_0",)))
+    assert readings[0]["value"] == "in=2628W/out=2524W"
     assert readings[0]["health"] == "OK"
 
 
@@ -84,5 +104,119 @@ def test_psu_delta_state():
             "Status": {"State": "Enabled"},
         },
     }
-    readings = psu.collect(_device(data, role="powershelf"))
+    readings = psu.collect(_device(data, role="powershelf", chassis=("PowerShelf_0",)))
     assert readings[0]["health"] == "On"
+
+
+def test_enumerate_sensors_skips_when_not_expandable():
+    data = {
+        "/redfish/v1/Chassis/Chassis_0/Sensors": {
+            "Members": [{"@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/S1"}]
+        },
+        "/redfish/v1/Chassis/Chassis_0/Sensors/S1": {"Name": "Temp", "Reading": 1},
+    }
+    assert common.enumerate_sensors(FakeRedfish(data), "Chassis_0") == []
+
+
+def test_enumerate_sensors_uses_expand():
+    data = {
+        "/redfish/v1/Chassis/Chassis_0/Sensors?$expand=.": {
+            "Members": [{"Id": "S1", "Name": "Temp", "Reading": 42}]
+        }
+    }
+    out = common.enumerate_sensors(FakeRedfish(data), "Chassis_0")
+    assert out and out[0]["Reading"] == 42
+
+
+def test_scan_cache_roundtrip(tmp_path, monkeypatch):
+    from nodetools_runtime import scan
+
+    monkeypatch.setattr(scan, "SCAN_CACHE_DIR", str(tmp_path))
+    profile = {
+        "version": scan.SCAN_CACHE_VERSION,
+        "address": "10.0.0.1",
+        "chassis": ["Chassis_0"],
+        "caps": {"Chassis_0": {"Fans": 16}},
+    }
+    scan.store("10.0.0.1", profile)
+    assert scan.load("10.0.0.1")["caps"]["Chassis_0"]["Fans"] == 16
+    assert scan.clear("10.0.0.1") is True
+    assert scan.load("10.0.0.1") is None
+
+
+def test_scan_load_ignores_wrong_version(tmp_path, monkeypatch):
+    import json
+    import os
+
+    from nodetools_runtime import scan
+
+    monkeypatch.setattr(scan, "SCAN_CACHE_DIR", str(tmp_path))
+    with open(os.path.join(str(tmp_path), "10.0.0.1.json"), "w") as handle:
+        json.dump({"version": 999}, handle)
+    assert scan.load("10.0.0.1") is None
+
+
+def test_scan_refresh_records_caps(tmp_path, monkeypatch):
+    from nodetools_runtime import scan
+
+    monkeypatch.setattr(scan, "SCAN_CACHE_DIR", str(tmp_path))
+    base = "/redfish/v1/Chassis/Chassis_0"
+    data = {
+        "/redfish/v1": {"Vendor": "NVIDIA"},
+        "/redfish/v1/Managers": {
+            "Members": [{"@odata.id": "/redfish/v1/Managers/BMC_0"}]
+        },
+        "/redfish/v1/Managers/BMC_0": {"Model": "GB200"},
+        "/redfish/v1/Systems": {"Members": []},
+        "/redfish/v1/Chassis": {
+            "Members": [{"@odata.id": base}]
+        },
+        base + "/Sensors": {"Members@odata.count": 5},
+        base + "/ThermalSubsystem/Fans": {"Members@odata.count": 16},
+        base + "/ThermalSubsystem/ThermalMetrics": {
+            "TemperatureReadingsCelsius": [{"Reading": 1}, {"Reading": 2}]
+        },
+    }
+    profile = scan.refresh(_device(data, chassis=("Chassis_0",)))
+    assert profile["chassis"] == ["Chassis_0"]
+    rec = profile["caps"]["Chassis_0"]
+    assert rec["Fans"] == 16
+    assert rec["Sensors"] == 5
+    assert rec["Temperatures"] == 2
+    assert rec["PowerSupplies"] == 0
+    assert rec["Thermal"] is False
+    assert scan.load("10.0.0.1")["caps"]["Chassis_0"]["Fans"] == 16
+
+
+def test_rung_chassis_uses_profile():
+    device = _device({})
+    device.profile = {"caps": {"Chassis_0": {"Fans": 16}, "Nope": {"Fans": 0}}}
+    assert common.rung_chassis(device, "Fans", ("Chassis_0", "Nope")) == ["Chassis_0"]
+
+
+def test_rung_chassis_without_profile_is_live():
+    device = _device({})
+    assert common.rung_chassis(device, "Fans", ("Chassis_0",)) == ["Chassis_0"]
+
+
+def test_fan_uses_cached_profile():
+    data = {
+        "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/Fans": {
+            "Members": [
+                {"@odata.id": "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/Fans/Fan_1"}
+            ]
+        },
+        "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/Fans/Fan_1": {
+            "MemberId": "Fan_1",
+            "Name": "Front Fan 1",
+            "SpeedPercent": {"SpeedRPM": 8500},
+            "Status": {"Health": "OK"},
+        },
+    }
+    device = _device(data, chassis=("Chassis_0", "Chassis_9"))
+    device.profile = {
+        "caps": {"Chassis_0": {"Fans": 16}, "Chassis_9": {"Fans": 0}}
+    }
+    readings = fan.collect(device)
+    assert readings[0]["id"] == "Fan_1"
+

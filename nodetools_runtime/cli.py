@@ -4,13 +4,21 @@ import concurrent.futures
 import os
 import sys
 
-from . import reach, selection
+from . import hostlist, reach, selection
 from .arguments import CAP_COMMANDS, parse_args
-from .config import CAPS, DEFAULT_INVENTORY, DEFAULT_JOBS, DEFAULT_TIMEOUT, VERSION
+from .config import (
+    CAPS,
+    DEFAULT_INVENTORY,
+    DEFAULT_JOBS,
+    DEFAULT_NODE_TIMEOUT,
+    DEFAULT_SUMMARY,
+    DEFAULT_TIMEOUT,
+    VERSION,
+)
 from .errors import NodetoolsError
 from .inventory import Inventory, generate_from_hostslist
 from .report import render
-from .runtime import Runner
+from .runtime import Runner, Scanner
 
 
 def _inventory_path(explicit):
@@ -23,16 +31,17 @@ def _inventory_path(explicit):
 
 class Options:
     def __init__(self, args):
-        self.jobs = args.jobs
-        self.timeout = args.timeout
-        self.expand = True
+        self.jobs = getattr(args, "jobs", None)
+        self.timeout = getattr(args, "timeout", None)
+        self.node_timeout = None
         self.summary = False
-        self.action = args.action
-        self.user = args.user
-        self.password = args.password
-        self.ipmi_env = args.ipmi_env
-        self.no_cache = args.no_cache
-        self.debug = args.debug
+        self.action = getattr(args, "action", None)
+        self.user = getattr(args, "user", None)
+        self.password = getattr(args, "password", None)
+        self.ipmi_env = getattr(args, "ipmi_env", False)
+        self.no_cache = getattr(args, "no_cache", False)
+        self.clear = getattr(args, "clear", False)
+        self.debug = getattr(args, "debug", False)
 
 
 def _apply_defaults(options, inv, args):
@@ -42,12 +51,13 @@ def _apply_defaults(options, inv, args):
     options.timeout = args.timeout if args.timeout is not None else float(
         inv.default("timeout", DEFAULT_TIMEOUT)
     )
-    expand_default = inv.default_bool("expand", True)
-    options.expand = (
-        not args.no_expand if args.no_expand is not None else expand_default
+    options.node_timeout = float(
+        inv.default("node_timeout", DEFAULT_NODE_TIMEOUT)
     )
     options.summary = (
-        args.summary if args.summary is not None else inv.default_bool("summary", False)
+        args.summary
+        if args.summary is not None
+        else inv.default_bool("summary", DEFAULT_SUMMARY)
     )
 
 
@@ -81,7 +91,7 @@ def _select(args, inv, default_all=False):
     if default_all and not (selectors or groups):
         all_ = True
     return selection.select(
-        inv, selectors=selectors, groups=groups, all_=all_, expand=False
+        inv, selectors=selectors, groups=groups, all_=all_
     )
 
 
@@ -91,14 +101,18 @@ def _cmd_list(args):
     if not hosts:
         print("nodetools: no hosts selected", file=sys.stderr)
         return 1
-    for host in hosts:
-        if args.long:
-            print("{}: {} {}".format(host.name, host.role, host.address or "-"))
-        else:
-            print("{}: {}".format(host.name, host.role))
     counts = {}
     for host in hosts:
         counts[host.role] = counts.get(host.role, 0) + 1
+    if args.long:
+        for host in hosts:
+            print("{}: {} {}".format(host.name, host.role, host.address or "-"))
+    else:
+        by_role = {}
+        for host in hosts:
+            by_role.setdefault(host.role, []).append(host.name)
+        for role in sorted(by_role):
+            print("{}: {}".format(role, hostlist.compact(by_role[role])))
     summary = " ".join("{}={}".format(k, counts[k]) for k in sorted(counts))
     print("# {} hosts: {}".format(len(hosts), summary), file=sys.stderr)
     return 0
@@ -117,14 +131,52 @@ def _cmd_ping(args):
 
     def probe(host):
         if not host.address:
-            return "{}: No BMC IP found".format(host.name)
+            return host, "no BMC IP"
         state = "pingable" if reach.ping(host.address, timeout=args.ping_timeout) else "unreachable"
-        return "{}: BMC {}".format(host.name, state)
+        return host, state
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
-        for line in pool.map(probe, hosts):
-            print(line)
+        results = list(pool.map(probe, hosts))
+
+    if args.long:
+        for host, state in results:
+            print("{}: BMC {}".format(host.name, state))
+        return 0
+    groups = {}
+    for host, state in results:
+        groups.setdefault(state, []).append(host.name)
+    for state in sorted(groups):
+        print("{}: {}".format(state, hostlist.compact(groups[state])))
+    summary = " ".join(
+        "{}={}".format(state.replace(" ", "_"), len(groups[state]))
+        for state in sorted(groups)
+    )
+    print("# {} hosts: {}".format(len(results), summary), file=sys.stderr)
     return 0
+
+
+def _cmd_scan(args):
+    if not (args.selector or args.group or args.all):
+        print("usage: nodetools scan <selector> [--clear]", file=sys.stderr)
+        return 2
+    inv = Inventory.from_file(_inventory_path(args.inventory))
+    options = Options(args)
+    options.jobs = (
+        args.jobs if args.jobs is not None else int(inv.default("jobs", DEFAULT_JOBS))
+    )
+    options.timeout = (
+        args.timeout
+        if args.timeout is not None
+        else float(inv.default("timeout", DEFAULT_TIMEOUT))
+    )
+    hosts = _select(args, inv)
+    if not hosts:
+        print("nodetools: no hosts selected", file=sys.stderr)
+        return 1
+    results = Scanner(options).run(hosts)
+    for line in render(results, summary=False, errors_only=False):
+        print(line)
+    return 0 if not any(result.get("error") for result in results) else 1
 
 
 def _cmd_capability(args):
@@ -138,7 +190,6 @@ def _cmd_capability(args):
         selectors=args.selector,
         groups=args.group,
         all_=args.all,
-        expand=options.expand,
     )
     if not hosts:
         print("nodetools: no hosts selected", file=sys.stderr)
@@ -172,6 +223,8 @@ def main(argv=None):
             return _cmd_list(args)
         if args.command == "ping":
             return _cmd_ping(args)
+        if args.command == "scan":
+            return _cmd_scan(args)
         if args.command in CAP_COMMANDS:
             return _cmd_capability(args)
         print("nodetools: unknown command {!r}".format(args.command), file=sys.stderr)

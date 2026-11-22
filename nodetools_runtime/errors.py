@@ -9,6 +9,10 @@ class InventoryError(NodetoolsError):
     """Raised for malformed inventory input."""
 
 
+class HostlistError(NodetoolsError):
+    """Raised for malformed hostlist expressions."""
+
+
 class TransportError(NodetoolsError):
     """Raised when a Redfish/IPMI/CLI call cannot be performed."""
 
