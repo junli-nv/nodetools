@@ -1,0 +1,20 @@
+# Real inventory (contains per-site BMC addresses/credentials)
+inventory.ini
+hosts.list
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Test / tooling
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# Logs / scratch
+*.log
+*.tmp
