@@ -1,11 +1,12 @@
-"""Capability collectors: fan, psu, temp."""
+"""Capability collectors: fan, psu, temp, inlet."""
 
-from . import fan, psu, temp
+from . import fan, inlet, psu, temp
 
 COLLECTORS = {
     "fan": fan.collect,
     "psu": psu.collect,
     "temp": temp.collect,
+    "inlet": inlet.collect,
 }
 
 

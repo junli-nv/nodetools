@@ -9,7 +9,7 @@ NVSwitch, power shelf) and the suffix names the subject.
 
 Three subject groups are implemented:
 
-- sensors: **fan / psu / temp** (one set per role);
+- sensors: **fan / psu / temp** (one set per role), plus **inlet** (air-intake check, compute only);
 - info: **power / eventlog / inventory** (one set per role);
 - boot: **boot / bootorder / netboot / macs / bios** (compute only, see below).
 
@@ -70,6 +70,7 @@ GBXX uses all three prefixes; BXX only needs `node*`.
 nodefan  <noderange> [status|check|auto|max]
 nodepsu  <noderange> [status|on|off|cycle]
 nodetemp <noderange>
+nodeinlet <noderange> [--target C] [--tolerance D]
 nvswfan  <noderange> [status|check|auto|max]
 nvswpsu  <noderange> [status|on|off|cycle]
 nvswtemp <noderange>
@@ -89,7 +90,7 @@ pseventlog   <noderange> [status|clear]
 psinventory  <noderange>
 
 # boot (compute only)
-nodeboot      <noderange> [pxe|disk|bios]
+nodeboot      <noderange> [pxe|disk|bios|cdrom]
 nodebootorder <noderange>
 nodenetboot   <noderange> [status|mac|net]
 nodemacs      <noderange>
@@ -122,6 +123,16 @@ group; select the whole role explicitly with `--all` (or `--group G`).
   `reset`/`reseat`.
 * Sensor output is comma-separated fields; info commands print verbatim
   `<node>: <line>` lines (see below).
+* `nodeinlet` (compute only) reports the chassis air intake (on GB200 the
+  `Chassis_0_Front_IO_Temp_0` sensor; other ODMs use `Inlet_Temp`/`Ambient_Temp`
+  and so on), excluding internal inlets such as processor modules and the PDB.
+  Each reading is judged against the expected inlet temperature (`OK`/`HIGH`/
+  `LOW`; default target 25 C, tolerance +/-5, i.e. 20-30 C is OK, tunable with
+  `--target` / `--tolerance`). The intake sensor lives on a single chassis, so
+  `nodeinlet` probes chassis in priority order and stops at the first hit (no
+  full chassis walk, no scan template) -- roughly one Redfish request per node.
+  NVSwitch trays and power shelves expose no chassis air-intake
+  sensor over BMC, so no `nvswinlet`/`psinlet` is generated.
 
 ### Info commands (power / eventlog / inventory)
 
@@ -148,7 +159,7 @@ subject). The default NVIDIA GBXX implementation matches the legacy scripts
 verbatim and each ODM overrides its own endpoints (falling back to the base
 class when an endpoint is absent):
 
-* **boot** — `nodeboot [pxe|disk|bios]`: IPMI `chassis bootdev <action>`
+* **boot** — `nodeboot [pxe|disk|bios|cdrom]`: IPMI `chassis bootdev <action>`
   (default `pxe`). No ODM variant.
 * **bootorder** — `nodebootorder`: reads `BootOptions` and
   `Systems/<id>`'s `Boot/BootOrder`, printing `Id`/`DisplayName`/
@@ -206,6 +217,7 @@ reachable=$(./nodeping --long cp[01-18] \
 | `--jobs N` | parallel workers (default 18) |
 | `--timeout S` | per-request timeout (default 10) |
 | `--action A` | control action (alias for the positional action) |
+| `--target C` / `--tolerance D` | `nodeinlet` expected inlet temperature (default 25) and allowed band (default 5, i.e. 20-30 C) |
 | `--user` / `--password` | override the BMC credentials |
 | `--ipmi-env` | pass the IPMI password via `IPMI_PASSWORD` (`ipmitool -E`) |
 | `--console` / `--interactive` | `nodeconsole` pty session (single node) |

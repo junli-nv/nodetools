@@ -32,7 +32,7 @@ INFO_ACTIONS = {
     "power": ("status", "on", "off", "cycle", "reset", "reseat"),
     "eventlog": ("status", "bmc", "hmc", "clear"),
     "inventory": (),
-    "boot": ("pxe", "disk", "bios"),
+    "boot": ("pxe", "disk", "bios", "cdrom"),
     "bootorder": (),
     "netboot": ("status", "mac", "net"),
     "macs": (),
@@ -51,6 +51,13 @@ DEFAULT_SUMMARY = False
 # No CLI flag on purpose (keep the interface small); set node_timeout in the
 # [nodehealth:defaults] inventory section to override.
 DEFAULT_NODE_TIMEOUT = 30.0
+
+# Air-intake ("inlet") temperature check (``nodeinlet``, compute only). The tray
+# front sensor should read roughly room ambient; readings outside
+# ``INLET_TARGET +/- INLET_TOLERANCE`` are flagged and can be tuned per run with
+# ``--target`` / ``--tolerance``.
+INLET_TARGET = 25.0
+INLET_TOLERANCE = 5.0
 
 # Default inventory file (relative to CWD) and its template.
 DEFAULT_INVENTORY = "inventory.ini"

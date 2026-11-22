@@ -16,6 +16,7 @@ _FIELDS = {
     "fan": ("id", "name", "value", "health"),
     "psu": ("id", "health", "value"),
     "temp": ("id", "health", "value"),
+    "inlet": ("id", "health", "value"),
 }
 _DEFAULT_FIELDS = ("id", "name", "value", "health")
 

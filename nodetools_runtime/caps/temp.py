@@ -39,27 +39,36 @@ def _from_thermal(device):
     return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 
-def _from_thermal_metrics(device):
+def chassis_thermal_metrics(device, cid):
+    """Temperature readings from a single chassis' ThermalMetrics endpoint.
+
+    Exposed so callers that only need one chassis (e.g. the inlet check) can
+    ask for it directly instead of walking every chassis with ``collect``.
+    """
     rf = device.redfish
+    out = []
+    metrics = rf.get(
+        "/redfish/v1/Chassis/{}/ThermalSubsystem/ThermalMetrics".format(cid)
+    )
+    for entry in (metrics or {}).get("TemperatureReadingsCelsius", []) or []:
+        source = entry.get("DataSourceUri") or entry.get("@odata.id") or ""
+        out.append(
+            common.reading(
+                source.rsplit("/", 1)[-1] if source else None,
+                entry.get("Name") or source.rsplit("/", 1)[-1],
+                common.num(entry.get("Reading")),
+                "OK",
+            )
+        )
+    return out
+
+
+def _from_thermal_metrics(device):
+    chassis = common.rung_chassis(device, "Temperatures", DEFAULT_CHASSIS)
 
     def scan(cid):
-        out = []
-        metrics = rf.get(
-            "/redfish/v1/Chassis/{}/ThermalSubsystem/ThermalMetrics".format(cid)
-        )
-        for entry in (metrics or {}).get("TemperatureReadingsCelsius", []) or []:
-            source = entry.get("DataSourceUri") or entry.get("@odata.id") or ""
-            out.append(
-                common.reading(
-                    source.rsplit("/", 1)[-1] if source else None,
-                    entry.get("Name") or source.rsplit("/", 1)[-1],
-                    common.num(entry.get("Reading")),
-                    "OK",
-                )
-            )
-        return out
+        return chassis_thermal_metrics(device, cid)
 
-    chassis = common.rung_chassis(device, "Temperatures", DEFAULT_CHASSIS)
     return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 

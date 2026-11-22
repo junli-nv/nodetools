@@ -397,6 +397,18 @@ chassis（无缓存则回退到实时发现，行为不变）：`Fans`/`PowerSup
 5. `arguments.SENSOR_COMMANDS` 会为每个前缀自动生成 `<prefix><subject>` 命令。
 6. 补 `tests/test_caps.py`：用 `FakeRedfish` 造 JSON 响应断言解析结果。
 
+若对象只对某一角色有意义（如 `inlet` 仅 compute），**不要**加进 `config.CAPS`：
+改为在 `arguments.SENSOR_COMMANDS` 里显式登记一条 `<prefix><subject>`（其余
+`COLLECTORS`/`report._FIELDS` 照常注册），这样不会给其他角色生成空命令。
+需要运行期参数时，收集器从 `device.options` 读取（`runtime.build_device` 已挂载
+本次运行的 `Options`），并在 `build_parser` 里为该 subject 单独加 flag。
+
+若对象只落在单个 chassis 上（如 `inlet`），不要用 `temp.collect` 遍历全部 chassis：
+BMC 的 `ThermalMetrics` 单次响应就慢（并发轰同一 BMC 还会成倍放大），改为按
+`config.DEFAULT_CHASSIS` 优先顺序逐个探测、首个命中即返回（如 `caps/inlet._find`）。
+不需要 scan 模板的对象可在 `runtime._PROFILELESS_CAPS` 登记，跳过身份读取。
+最好在 `tests/test_caps.py` 用计数 `FakeRedfish` 断言只发了一次请求。
+
 ### 新增一个信息对象（subject）
 
 1. 在 `config.INFO_SUBJECTS` 加 `对象→支持角色`，并按需在 `config.INFO_ACTIONS`

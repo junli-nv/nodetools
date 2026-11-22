@@ -52,6 +52,8 @@ class Options:
         self.node_timeout = None
         self.summary = False
         self.action = None
+        self.inlet_target = getattr(args, "target", None)
+        self.inlet_tolerance = getattr(args, "tolerance", None)
         self.image = getattr(args, "image", None)
         self.vm_user = getattr(args, "vm_user", None)
         self.vm_password = getattr(args, "vm_password", None)

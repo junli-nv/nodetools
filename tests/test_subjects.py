@@ -285,6 +285,13 @@ def test_boot_compute_defaults_to_pxe():
     assert ("run", "chassis", "bootdev", "pxe") in ipmi.calls
 
 
+def test_boot_compute_cdrom():
+    ipmi = FakeIpmi()
+    ipmi._sel = "Boot device set to CD-ROM"
+    boot.collect(_device(ipmi=ipmi), "cdrom", None)
+    assert ("run", "chassis", "bootdev", "cdrom") in ipmi.calls
+
+
 # -- bootorder -------------------------------------------------------------
 def test_bootorder_base_quoted_and_expanded():
     base = "/redfish/v1/Systems/system/BootOptions?$expand=."

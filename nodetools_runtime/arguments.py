@@ -34,6 +34,11 @@ SENSOR_COMMANDS = {
     for subject in SUBJECTS
 }
 
+# ``nodeinlet`` checks the compute-tray air intake only: NVSwitch trays and power
+# shelves have no chassis inlet sensor, so this subject is not fanned out over
+# the other role prefixes.
+SENSOR_COMMANDS["nodeinlet"] = ("compute", "inlet")
+
 # command name -> (role, subject) for the info subjects (power/eventlog/...).
 INFO_COMMANDS = {
     "{}{}".format(prefix, subject): (role, subject)
@@ -186,6 +191,19 @@ def build_parser():
             name, help="{} {} readings/control".format(role, subject)
         )
         _add_sensor_opts(sensor)
+        if subject == "inlet":
+            sensor.add_argument(
+                "--target",
+                type=float,
+                default=None,
+                help="expected inlet temperature in Celsius (default 25)",
+            )
+            sensor.add_argument(
+                "--tolerance",
+                type=float,
+                default=None,
+                help="allowed +/- band around the target (default 5)",
+            )
 
     for name, (role, subject) in INFO_COMMANDS.items():
         info = sub.add_parser(name, help="{} {}".format(role, subject))

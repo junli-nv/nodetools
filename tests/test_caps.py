@@ -1,5 +1,5 @@
 from nodetools_runtime import model
-from nodetools_runtime.caps import common, fan, psu, temp
+from nodetools_runtime.caps import common, fan, inlet, psu, temp
 from nodetools_runtime.inventory import Host
 
 
@@ -255,3 +255,96 @@ def test_fan_uses_cached_profile():
     readings = fan.collect(device)
     assert readings[0]["id"] == "Fan_1"
 
+
+
+def test_inlet_keeps_front_io_only():
+    base = "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/ThermalMetrics"
+    data = {
+        base: {
+            "TemperatureReadingsCelsius": [
+                {"@odata.id": base + "/Chassis_0_Front_IO_Temp_0", "Reading": 24.5},
+                {"@odata.id": base + "/HGX_ProcessorModule_0_Inlet_Temp_0", "Reading": 33.0},
+                {"@odata.id": base + "/PDB_0_Inlet_Temp_0", "Reading": 34.0},
+            ]
+        }
+    }
+    readings = inlet.collect(_device(data))
+    assert [r["id"] for r in readings] == ["Chassis_0_Front_IO_Temp_0"]
+    assert readings[0]["health"] == "OK"
+
+
+def test_inlet_flags_high_and_low():
+    base = "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/ThermalMetrics"
+    data = {
+        base: {
+            "TemperatureReadingsCelsius": [
+                {"@odata.id": base + "/hot", "Name": "Inlet_Temp", "Reading": 45.0},
+                {"@odata.id": base + "/cold", "Name": "Ambient_Temp", "Reading": 8.0},
+            ]
+        }
+    }
+    verdicts = {r["id"]: r["health"] for r in inlet.collect(_device(data))}
+    assert verdicts == {"hot": "HIGH", "cold": "LOW"}
+
+
+def test_inlet_target_override():
+    from types import SimpleNamespace
+
+    base = "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/ThermalMetrics"
+    data = {
+        base: {
+            "TemperatureReadingsCelsius": [
+                {"@odata.id": base + "/INLET", "Reading": 30.0}
+            ]
+        }
+    }
+    device = _device(data)
+    device.options = SimpleNamespace(inlet_target=30.0, inlet_tolerance=1.0)
+    assert inlet.collect(device)[0]["health"] == "OK"
+
+
+def test_inlet_reads_a_single_chassis():
+    base = "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/ThermalMetrics"
+    data = {
+        base: {
+            "TemperatureReadingsCelsius": [
+                {"@odata.id": base + "/Chassis_0_Front_IO_Temp_0", "Reading": 23.0}
+            ]
+        }
+    }
+
+    class Counting(FakeRedfish):
+        def __init__(self, data):
+            super().__init__(data)
+            self.paths = []
+
+        def get(self, path, timeout=None):
+            self.paths.append(path)
+            return super().get(path)
+
+    redfish = Counting(data)
+    host = Host("cp-01", "10.0.0.1", {}, ["compute"])
+    device = model.Device(host, redfish_factory=lambda h: redfish)
+    device.probe = {"chassis": ["Chassis_0", "Chassis_9"]}
+    inlet.collect(device)
+    assert redfish.paths == [base]
+
+
+def test_inlet_probes_chassis_until_found():
+    d0 = "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/ThermalMetrics"
+    d9 = "/redfish/v1/Chassis/Chassis_9/ThermalSubsystem/ThermalMetrics"
+    data = {
+        d0: {
+            "TemperatureReadingsCelsius": [
+                {"@odata.id": d0 + "/HGX_GPU_0_Temp_0", "Reading": 40.0}
+            ]
+        },
+        d9: {
+            "TemperatureReadingsCelsius": [
+                {"@odata.id": d9 + "/Inlet_Temp", "Reading": 22.0}
+            ]
+        },
+    }
+    readings = inlet.collect(_device(data, chassis=("Chassis_0", "Chassis_9")))
+    assert [r["id"] for r in readings] == ["Inlet_Temp"]
+    assert readings[0]["health"] == "OK"

@@ -8,7 +8,7 @@
 
 当前已实现三组对象：
 
-- 传感器：**fan / psu / temp**（三种角色各一套）；
+- 传感器：**fan / psu / temp**（三种角色各一套），另加 **inlet**（入风口温度检查，仅 compute）；
 - 信息：**power / eventlog / inventory**（三种角色各一套）；
 - 启动：**boot / bootorder / netboot / macs / bios**（仅 compute，见下文）。
 
@@ -67,6 +67,7 @@ nodetemp --group compute --summary
 nodefan  <noderange> [status|check|auto|max]
 nodepsu  <noderange> [status|on|off|cycle]
 nodetemp <noderange>
+nodeinlet <noderange> [--target C] [--tolerance D]
 nvswfan  <noderange> [status|check|auto|max]
 nvswpsu  <noderange> [status|on|off|cycle]
 nvswtemp <noderange>
@@ -86,7 +87,7 @@ pseventlog   <noderange> [status|clear]
 psinventory  <noderange>
 
 # 启动（仅 compute）
-nodeboot      <noderange> [pxe|disk|bios]
+nodeboot      <noderange> [pxe|disk|bios|cdrom]
 nodebootorder <noderange>
 nodenetboot   <noderange> [status|mac|net]
 nodemacs      <noderange>
@@ -116,6 +117,13 @@ nodetools inventory show [-i inventory.ini]
 * `action` 默认是读取（`status`/`check`）；`auto`/`max`（fan）与 `on`/`off`/`cycle`
   （psu）会下发控制动作。`power` 额外支持 `reset`/`reseat`。
 * 传感器输出为逗号分隔字段；信息命令原样逐行输出 `<node>: <line>`（见下文）。
+* `nodeinlet`（仅 compute）取机箱进风温度（GB200 为 `Chassis_0_Front_IO_Temp_0`，
+  其他 ODM 为 `Inlet_Temp`/`Ambient_Temp` 等），排除处理器模块/PDB 等内部进风点；
+  读数按目标值判定 `OK`/`HIGH`/`LOW`（默认目标 25℃、容差 ±5，即 20–30℃ 为 OK，
+  可用 `--target` / `--tolerance` 调整）。进风传感器只在一个 chassis 上，`nodeinlet`
+  直接按优先顺序探测 chassis 并在首个命中处停止（不再遍历全部 chassis，也不读 scan
+  模板），单个节点约一次 Redfish 请求。NVSwitch tray 与 power shelf 的 BMC 不暴露机箱进风传感器，
+  故不生成 `nvswinlet`/`psinlet`。
 
 ### 信息命令（power / eventlog / inventory）
 
@@ -137,7 +145,7 @@ nodetools inventory show [-i inventory.ini]
 这组只对 **compute tray** 有意义（`nvsw*`/`ps*` 无此对象）。默认 NVIDIA GBXX 实现
 与旧脚本逐字对齐，各 ODM 覆盖各自的端点（端点缺失时回退基类）：
 
-* **boot** — `nodeboot [pxe|disk|bios]`：IPMI `chassis bootdev <action>`（默认
+* **boot** — `nodeboot [pxe|disk|bios|cdrom]`：IPMI `chassis bootdev <action>`（默认
   `pxe`）。无 ODM 变体。
 * **bootorder** — `nodebootorder`：读 `BootOptions` 与 `Systems/<id>` 的
   `Boot/BootOrder`，逐项打印 `Id`/`DisplayName`/`UefiDevicePath`。
@@ -188,6 +196,7 @@ reachable=$(./nodeping --long cp[01-18] \
 | `--jobs N` | 并行 worker 数（默认 18） |
 | `--timeout S` | 单请求超时（默认 10） |
 | `--action A` | 控制动作（位置参数的别名） |
+| `--target C` / `--tolerance D` | `nodeinlet` 的期望进风温度（默认 25）与允许偏差（默认 5，即 20–30℃） |
 | `--user` / `--password` | 覆盖 BMC 凭据 |
 | `--ipmi-env` | 经 `IPMI_PASSWORD` 传 IPMI 密码（`ipmitool -E`） |
 | `--console` / `--interactive` | `nodeconsole` 的 pty 交互会话（单节点） |

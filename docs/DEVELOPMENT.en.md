@@ -467,6 +467,21 @@ inside fields become `_`, so `grep -v ,OK` works. `--summary` prints
 5. `arguments.SENSOR_COMMANDS` auto-generates `<prefix><subject>` per prefix.
 6. Add `tests/test_caps.py` cases: build JSON responses with `FakeRedfish`.
 
+If a subject only makes sense for one role (e.g. `inlet`, compute only), do **not**
+add it to `config.CAPS`; instead register one explicit `<prefix><subject>` entry in
+`arguments.SENSOR_COMMANDS` (still register `COLLECTORS`/`report._FIELDS` as usual)
+so no empty commands are generated for the other roles. When a collector needs a
+run-time parameter, read it from `device.options` (`runtime.build_device` attaches the
+run's `Options`) and add the flag for that subject in `build_parser`.
+
+If the value lives on a single chassis (e.g. `inlet`), do not walk every chassis
+with `temp.collect`: a `ThermalMetrics` response is slow for the BMC and fanning
+out over one BMC multiplies the latency. Instead probe chassis in
+`config.DEFAULT_CHASSIS` priority order and return at the first hit (see
+`caps/inlet._find`). Subjects that need no scan template can be listed in
+`runtime._PROFILELESS_CAPS` to skip the identity read. Prefer a test in
+`tests/test_caps.py` that uses a counting `FakeRedfish` to assert a single request.
+
 ### Add an info subject
 
 1. Add `subject → supported roles` to `config.INFO_SUBJECTS`, and declare actions

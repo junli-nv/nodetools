@@ -18,6 +18,11 @@ _CRED_KEYS = {
 _FAN_ACTIONS = ("auto", "max")
 _PSU_ACTIONS = ("on", "off", "cycle")
 
+# Capabilities whose fast path never consults the cached scan template. The
+# inlet check reads one chassis directly, so skipping the template skips the
+# identity read (a few extra BMC round-trips per node).
+_PROFILELESS_CAPS = ("inlet",)
+
 
 def _resolve_creds(host, options):
     role = host.role
@@ -57,6 +62,9 @@ def build_device(host, options, apply_deadline=True, load_profile=True):
     device = model.Device(
         host, redfish_factory=lambda h: redfish, ipmi_factory=lambda h: ipmi
     )
+    # Expose run options to collectors that need a parameter (e.g. the inlet
+    # target/tolerance in ``caps.inlet``); most collectors ignore this.
+    device.options = options
     if load_profile and not getattr(options, "no_cache", False):
         device.profile = scan.load(device)
     return device
@@ -68,7 +76,11 @@ class Runner:
         self.options = options
 
     def _device(self, host):
-        return build_device(host, self.options)
+        return build_device(
+            host,
+            self.options,
+            load_profile=self.capability not in _PROFILELESS_CAPS,
+        )
 
     def _result(self, host, readings=None, error=None):
         return {
