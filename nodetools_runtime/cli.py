@@ -62,6 +62,7 @@ class Options:
         self.ipmi_env = getattr(args, "ipmi_env", False)
         self.no_cache = getattr(args, "no_cache", False)
         self.clear = getattr(args, "clear", False)
+        self.one_per_type = getattr(args, "one_per_type", False)
         self.debug = getattr(args, "debug", False)
         self.console = getattr(args, "console", False)
         self.cipher = getattr(args, "cipher", None)

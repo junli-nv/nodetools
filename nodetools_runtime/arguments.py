@@ -284,6 +284,12 @@ def build_parser():
     sc.add_argument(
         "--clear", action="store_true", help="delete cached maps instead of writing"
     )
+    sc.add_argument(
+        "--one-per-type",
+        dest="one_per_type",
+        action="store_true",
+        help="scan one representative per machine type, skip the identical rest",
+    )
     return parser
 
 

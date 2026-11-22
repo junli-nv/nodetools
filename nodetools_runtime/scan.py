@@ -40,13 +40,18 @@ def _slug(value):
     return re.sub(r"[^a-z0-9]+", "-", str(value or "").lower()).strip("-")
 
 
-def identity_key(vendor, manufacturer, model):
-    """Cache key for a machine type (vendor + manufacturer + model).
+def identity_key(vendor, manufacturer, model, bios=None, bmc_fw=None):
+    """Cache key for a machine type.
 
-    Empty fields are skipped; ``None`` when nothing identifies the machine, so
-    the caller caches nothing (rather than falling back to a per-address file).
+    Keyed by vendor + manufacturer + system model, plus the BIOS and BMC
+    firmware revisions when the BMC reports them. The firmware fields come from
+    the same requests the identity read already makes, so they cost nothing and
+    keep two units of the same model but different firmware from sharing a
+    template. Empty fields are skipped; ``None`` when nothing identifies the
+    machine, so the caller caches nothing (rather than falling back to a
+    per-address file).
     """
-    parts = [_slug(value) for value in (vendor, manufacturer, model)]
+    parts = [_slug(value) for value in (vendor, manufacturer, model, bios, bmc_fw)]
     parts = [part for part in parts if part]
     return "__".join(parts) if parts else None
 
@@ -59,7 +64,11 @@ def key_for(identity):
     getting a private per-address file.
     """
     return identity_key(
-        identity.get("vendor"), identity.get("manufacturer"), identity.get("model")
+        identity.get("vendor"),
+        identity.get("manufacturer"),
+        identity.get("model"),
+        identity.get("bios"),
+        identity.get("bmc_fw"),
     )
 
 
@@ -74,22 +83,35 @@ def read_identity(redfish):
     This is the few requests a command needs to find the shared template; it is
     not the expensive part of a scan.
     """
-    identity = {"vendor": None, "manufacturer": None, "model": None}
+    identity = {
+        "vendor": None,
+        "manufacturer": None,
+        "model": None,
+        "bios": None,
+        "bmc_fw": None,
+    }
     root = redfish.get("/redfish/v1")
     if isinstance(root, dict):
         identity["vendor"] = root.get("Vendor") or (root.get("Oem") or {}).get(
             "Vendor"
         )
-    for collection in ("/redfish/v1/Managers", "/redfish/v1/Systems"):
-        members = common.member_ids(redfish.get(collection))
-        if not members:
-            continue
+    # The manager reports the BMC's own firmware/model; the system reports the
+    # real server model and BIOS. Seed from the manager, then let the system
+    # override manufacturer/model and supply the BIOS revision.
+    members = common.member_ids(redfish.get("/redfish/v1/Managers"))
+    if members:
         data = redfish.get(members[0])
         if isinstance(data, dict):
-            identity["model"] = identity["model"] or data.get("Model")
-            identity["manufacturer"] = identity["manufacturer"] or data.get(
-                "Manufacturer"
-            )
+            identity["bmc_fw"] = data.get("FirmwareVersion")
+            identity["model"] = data.get("Model")
+            identity["manufacturer"] = data.get("Manufacturer")
+    members = common.member_ids(redfish.get("/redfish/v1/Systems"))
+    if members:
+        data = redfish.get(members[0])
+        if isinstance(data, dict):
+            identity["model"] = data.get("Model") or identity["model"]
+            identity["manufacturer"] = data.get("Manufacturer") or identity["manufacturer"]
+            identity["bios"] = data.get("BiosVersion") or data.get("Version")
     return identity
 
 

@@ -79,7 +79,7 @@ CACHE_DIR = os.path.join(
 # Bump SCAN_CACHE_VERSION whenever the schema changes so stale files are
 # ignored instead of misread.
 SCAN_CACHE_DIR = os.path.join(CACHE_DIR, "scan")
-SCAN_CACHE_VERSION = 3
+SCAN_CACHE_VERSION = 4
 
 # Roles and the inventory group that maps to each one.
 ROLE_GROUPS = {

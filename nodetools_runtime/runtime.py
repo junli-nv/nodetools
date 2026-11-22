@@ -271,8 +271,80 @@ class Scanner:
             if device:
                 device.close()
 
+    def _identify(self, host):
+        """Read one node's machine identity only (no chassis walk)."""
+        if not host.address:
+            return host, None, "no BMC address (missing from inventory)"
+        device = None
+        try:
+            device = build_device(
+                host, self.options, apply_deadline=False, load_profile=False
+            )
+            identity = scan.read_identity(device.redfish)
+            return host, identity, None
+        except Exception as exc:  # noqa: BLE001 - reported per node
+            return host, None, "{}: {}".format(type(exc).__name__, exc)
+        finally:
+            if device:
+                device.close()
+
+    def _stream_one_per_type(self, hosts):
+        """Scan one representative per machine type and skip the identical rest.
+
+        Phase 1 reads each node's identity (the few requests a normal dispatch
+        costs) and groups nodes by their scan key; phase 2 fully scans one node
+        per distinct type. The other members of a group are reported as skipped,
+        so a homogeneous fleet is walked once instead of once per node. The
+        representative's identity is echoed so the type and its firmware are
+        visible in the output.
+        """
+        jobs = max(1, self.options.jobs)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+            identified = list(pool.map(self._identify, hosts))
+        groups = {}
+        for host, identity, error in identified:
+            if error:
+                yield self._result(host, error=error)
+                continue
+            key = scan.key_for(identity)
+            # An unidentified machine cannot be deduped; scan each one on its
+            # own so a whole class is not silently collapsed into one node.
+            groups.setdefault(key or "address:" + host.name, []).append((key, host))
+        reps = []
+        for members in groups.values():
+            members.sort(key=lambda item: item[1].name)
+            reps.append(members)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+            scanned = list(pool.map(lambda members: self._one(members[0][1]), reps))
+        for members, result in zip(reps, scanned):
+            key, rep_host = members[0]
+            result.setdefault("readings", []).append(
+                {
+                    "id": "type",
+                    "name": "identity",
+                    "value": key or rep_host.address,
+                    "health": "OK" if key else "Unknown",
+                }
+            )
+            yield result
+            for _key, host in members[1:]:
+                yield self._result(
+                    host,
+                    readings=[
+                        {
+                            "id": "map",
+                            "name": "chassis",
+                            "value": "skipped (same type as {})".format(rep_host.name),
+                            "health": "Unknown",
+                        }
+                    ],
+                )
+
     def stream(self, hosts):
         """Yield results as each node finishes (completion order, no sorting)."""
+        if getattr(self.options, "one_per_type", False):
+            yield from self._stream_one_per_type(hosts)
+            return
         jobs = max(1, self.options.jobs)
         with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
             futures = [pool.submit(self._one, host) for host in hosts]
