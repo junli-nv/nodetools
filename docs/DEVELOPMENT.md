@@ -221,6 +221,8 @@ python3 -m pytest -q          # 当前 30 passed
 - 不加无关注释；命名跟现有文件保持一致；新逻辑放到对应分层，不堆进 `cli.py`。
 - 提交前：`python3 -m pytest` 全绿；改接口时附真机冒烟证据。
 - 提交信息用英文、祈使句、说明"为什么"。
+- 作者统一为 `junli-nv <junliz@nvidia.com>`（已写入 `pyproject.toml` 的
+  `authors`，并用作 git 提交身份）；不要用其他人的姓名/邮箱署名。
 - 真实 `inventory.ini` / `hosts.list` 不入库（已在 `.gitignore`）；不要提交口令。
 
 ## 9. 已知限制与后续 TODO
