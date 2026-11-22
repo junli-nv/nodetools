@@ -1,7 +1,7 @@
 """Supermicro (FanMode control)."""
 
-from ..subjects import common, power, vm
-from .base import Oem, _body_lines, _jq_r
+from ...subjects import common, power, vm
+from ..base import Oem, _body_lines, _jq_r
 
 _SYSTEM = "/redfish/v1/Systems/1"
 _LOG = _SYSTEM + "/LogServices/Log1"

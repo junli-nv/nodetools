@@ -85,7 +85,7 @@ nodetools (launcher)
        │    ├─ model.py       role/ODM lookup (odm_for) + classify
        │    ├─ caps/*.py      sensor collectors (fallback ladders)
        │    ├─ subjects/*.py  info subjects (power/eventlog/inventory, line output)
-       │    ├─ oem/*.py       ODM differences (extra paths + control + info overrides)
+       │    ├─ oem/{hgx,nvl}/*.py       ODM differences (extra paths + control + info overrides)
        │    └─ transport/*.py Redfish / IPMI / racadm
        └─ report.py      output formatting (sensor CSV/summary + info lines)
 ```
@@ -127,7 +127,7 @@ argv
 | `subjects/{boot,bootorder,netboot,macs,bios}.py` | handlers for the five boot subjects (compute only), dispatching to `device.odm.<subject>` | see §4c |
 | `console.py` | `nodeconsole`: `_argv`/`open_one`/`close_all`/`attach` (IPMI SOL: legacy port + pty session) | see §4d |
 | `oem/base.py` | `Oem` base (GBXX reference) + `power`/`nvswitch_power`/`eventlog`/`firmware_inventory`/`boot`/`bootorder`/`macs`/`bios`/`netboot`/`vm` + `_ipmi_raw` | vendors fall back here when an endpoint is absent |
-| `oem/<odm>.py` | per-ODM control actions / extra chassis / info overrides | reading mostly uses the generic ladder |
+| `oem/{hgx,nvl}/<odm>.py` | per-ODM control actions / extra chassis / info overrides | reading mostly uses the generic ladder |
 | `runtime.py` | `build_device` (+ scan profile), parallel `Runner`/`InfoRunner`, `Scanner`, error isolation | per-host try/except |
 | `report.py` | sensor lines/summary (field order per subject) + info lines (`format_lines`) | keeps `grep -v ,OK` working |
 
@@ -399,7 +399,35 @@ reachable=$(./nodeping --long vdc1-pro2-t10-gpu-cp-[01-18] \
 
 `runtime.build_device` reads identity from the BMC service root and first Manager and System. `model.platform_for` distinguishes HGX (B200/B300) from NVL (GB200/GB300), while `model.odm_for` identifies the OEM independently. The inventory supplies the role through an explicit `role=` or a built-in role group. `oem.for_device` selects an adapter using platform and OEM, so different NVL OEMs can use different adapters. Inventory entries can override detection with `platform=` and `oem=`.
 
-When an OEM spans multiple platforms, register a specific adapter by `(platform, oem, role)` in `oem/__init__.py`. Dell NVL compute nodes use `oem/dell_nvl.py` for Redfish virtual media status. Enable writes after validating the firmware workflow.
+When an OEM spans multiple platforms, register a specific adapter by `(platform, oem, role, generation)` in `oem/__init__.py`. Dell NVL compute nodes use `oem/nvl/dell.py` for Redfish virtual media status. Enable writes after validating the firmware workflow. Use `None` for an adapter shared across generations. Review the [NVIDIA RMS hardware list](https://docs.nvidia.com/rms/documentation/reference/hardware-compatibility-list/) for device identities and interfaces. Qualify each write against the specific device and firmware before registering it.
+
+Public BMC interface references
+
+- [NVIDIA NVSwitch Redfish URI list](https://docs.nvidia.com/networking/display/nvidiaswitchbmcusermanualv8800021040/supported%2Bredfish%2Bscheme%2Buris)
+- [Lenovo GB300 NVL72 management interfaces](https://pubs.lenovo.com/gb300-nvl72/management_options)
+- [HPE GB300 NVL72 BMC Redfish](https://support.hpe.com/hpesc/public/docDisplay?docId=sd00007150en_us&docLocale=en_US&page=GUID-1D3E5F93-529F-40DD-9E81-3D8DE8FDF8FF.html)
+- [Dell XE9780 iDRAC](https://www.dell.com/support/product-details/en-us/product/poweredge-XE9780/resources/manuals)
+- [Lenovo HGX B300 XClarity](https://pubs.lenovo.com/sr680a-v4/configure_the_firmware)
+- [HPE HGX B300 Redfish](https://support.hpe.com/hpesc/public/docDisplay?docId=sd00007670en_us&docLocale=en_US&page=GUID-2D1518D5-6372-401B-AE97-5F40677DFD0D.html)
+- [Supermicro Redfish API](https://www.supermicro.com/en/solutions/management-software/redfish)
+
+### OEM capability checklist
+
+Use the original nodetools scripts as the baseline. Track compatibility per operation and model. Share standard Redfish reads, and override confirmed OEM differences in the adapter.
+
+| Capability | Read path | Control or remaining work |
+| --- | --- | --- |
+| BIOS | `nodebios` current values and `pending` settings | Keep existing OEM actions. Qualify individual writes, apply timing, and reboot requirements |
+| Boot | `nodebootorder` persistent order, `nodenetboot` boot and PXE data | `nodeboot` one-time override. Qualify persistent ordering and port selection by OEM |
+| Assets and firmware | `*inventory` versions, `--details` identity, compute `--gpu` | Qualify full FRU, part numbers, firmware updates, and rollback by model |
+| MAC and network | `nodemacs` host MACs, BMC/PXE for some legacy adapters | Extend BMC/PXE discovery, network settings, and cable diagnostics by interface |
+| Temperature, fan, PSU | `*temp`, `*fan`, `*psu`, including health | Fan control is OEM-specific. PSU and temperature are read-only |
+| Virtual media | `nodevm` status | Existing OEM mount/eject. Qualify media protocols, enable, and insert per model |
+| Logs and tasks | `*eventlog`, `*inventory --tasks` | Clear on supported adapters. Task cancellation and diagnostic bundles remain open |
+| Power and console | `*power` state, `nodeconsole` SOL | Qualify main power, AUX power, and BMC restart separately, including rack devices |
+| Additional legacy tools | Health monitoring, NVLink/UPHY, chassis and platform sensors | Compare thresholds, telemetry schedules, and alarms per tool |
+| Management plane | BMC identity, firmware, and health | Qualify BMC reset, user management, time, and network settings per model |
+
 
 `scan` also probes chassis endpoints and writes a capability map. Its cache key uses vendor, manufacturer, model, available firmware versions and explicit inventory overrides. Normal commands only read the map. With no map or `--no-cache`, they still read device identity and discover sensors live.
 
@@ -493,7 +521,7 @@ effect automatically.
 
 ### Add an ODM
 
-1. Create `oem/<odm>.py`, subclass `oem/base.Oem`, set `name`/`fan_chassis`, and
+1. Create `oem/{hgx,nvl}/<odm>.py`, subclass `oem/base.Oem`, set `name`/`fan_chassis`, and
    implement `fan_control` as needed.
 2. Register it in `oem/__init__.py`'s `_MODULES`; add aliases to `_ALIASES`.
 3. If the ODM's identity string is special, add a marker to `model.SIGNATURES`

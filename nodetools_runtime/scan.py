@@ -21,6 +21,7 @@ import re
 import time
 
 from . import model
+from .inventory import RESOURCE_ID_KEYS
 from .caps import common
 from .config import SCAN_CACHE_DIR, SCAN_CACHE_VERSION
 
@@ -72,7 +73,7 @@ def key_for(identity, overrides=None):
     )
 
     if key:
-        for field in ("platform", "oem"):
+        for field in ("platform", "oem", "role", "generation", *RESOURCE_ID_KEYS):
             value = _slug((overrides or {}).get(field))
             if value:
                 key += "__{}-{}".format(field, value)
@@ -84,7 +85,7 @@ def cache_path(key):
     return os.path.join(SCAN_CACHE_DIR, safe + ".json")
 
 
-def read_identity(redfish):
+def read_identity(redfish, selectors=None):
     """Read the machine identity cheaply (no chassis walk).
 
     This is the few requests a command needs to find the shared template; it is
@@ -97,6 +98,7 @@ def read_identity(redfish):
         "bios": None,
         "bmc_fw": None,
     }
+    selectors = selectors or {}
     root = redfish.get("/redfish/v1")
     if isinstance(root, dict):
         identity["vendor"] = root.get("Vendor") or (root.get("Oem") or {}).get(
@@ -105,14 +107,24 @@ def read_identity(redfish):
     # The manager reports the BMC's own firmware/model; the system reports the
     # real server model and BIOS. Seed from the manager, then let the system
     # override manufacturer/model and supply the BIOS revision.
-    members = common.member_ids(redfish.get("/redfish/v1/Managers"))
+    manager = selectors.get("manager_id")
+    members = ["/redfish/v1/Managers/" + manager] if manager else common.member_ids(
+        redfish.get("/redfish/v1/Managers")
+    )
     if members:
         data = redfish.get(members[0])
         if isinstance(data, dict):
             identity["bmc_fw"] = data.get("FirmwareVersion")
             identity["model"] = data.get("Model")
             identity["manufacturer"] = data.get("Manufacturer")
-    members = common.member_ids(redfish.get("/redfish/v1/Systems"))
+    chassis = selectors.get("chassis_id")
+    system = selectors.get("system_id")
+    if chassis and not system:
+        members = ["/redfish/v1/Chassis/" + chassis]
+    else:
+        members = ["/redfish/v1/Systems/" + system] if system else common.member_ids(
+            redfish.get("/redfish/v1/Systems")
+        )
     if members:
         data = redfish.get(members[0])
         if isinstance(data, dict):
@@ -137,7 +149,7 @@ def _read(key):
 
 def load(device):
     """Cached template for this machine type, matched via its identity."""
-    device.identity = read_identity(device.redfish)
+    device.identity = read_identity(device.redfish, device.vars)
     return _read(key_for(device.identity, device.vars))
 
 
@@ -154,7 +166,7 @@ def store(profile):
 
 
 def clear(device):
-    key = key_for(read_identity(device.redfish), device.vars)
+    key = key_for(read_identity(device.redfish, device.vars), device.vars)
     if not key:
         return False
     try:
@@ -204,9 +216,10 @@ def _chassis_caps(redfish, cid):
 def probe(device, workers=common.SCAN_WORKERS):
     """Walk a BMC and build its interface map (does not touch the cache)."""
     redfish = device.redfish
-    identity = read_identity(redfish)
+    identity = read_identity(redfish, device.vars)
     device.identity = identity
-    chassis = common.discover_chassis(redfish)
+    selected = device.vars.get("chassis_id")
+    chassis = [selected] if selected else common.discover_chassis(redfish)
     caps = {}
 
     def one(cid):
@@ -229,6 +242,7 @@ def probe(device, workers=common.SCAN_WORKERS):
         "caps": caps,
     }
     profile["platform"] = model.platform_for(device)
+    profile["generation"] = model.generation_for(device)
     profile["odm"] = model.odm_for(device)
     profile["key"] = key_for(identity, device.vars)
     return profile

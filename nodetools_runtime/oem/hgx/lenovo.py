@@ -2,9 +2,9 @@
 
 import json
 
-from ..errors import CapUnsupported
-from ..subjects import common, power
-from .base import FIRMWARE, Oem, _body_lines, _jq_r, _members_static
+from ...errors import CapUnsupported
+from ...subjects import common, power
+from ..base import FIRMWARE, Oem, _body_lines, _jq_r, _members_static
 
 _SYSTEM = "/redfish/v1/Systems/1"
 _PLATFORM_LOG = _SYSTEM + "/LogServices/PlatformLog"

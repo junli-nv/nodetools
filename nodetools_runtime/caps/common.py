@@ -138,6 +138,9 @@ def chassis_list(device, defaults=()):
     authoritative: the NVSwitch trays expose ``MGX_*`` chassis that no static
     list would contain, and every vendor names chassis differently.
     """
+    selected = getattr(device, "vars", {}).get("chassis_id")
+    if selected:
+        return [selected]
     cached = getattr(device, "_chassis_cache", None)
     if cached is not None:
         return cached
@@ -176,7 +179,10 @@ def cached_chassis(device, key):
         return None
     caps = prof.get("caps") or {}
     out = []
+    selected = getattr(device, "vars", {}).get("chassis_id")
     for cid, rec in caps.items():
+        if selected and cid != selected:
+            continue
         value = rec.get(key)
         if isinstance(value, bool):
             if value:

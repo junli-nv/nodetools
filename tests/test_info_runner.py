@@ -91,7 +91,7 @@ def test_platform_and_oem_dispatch_are_independent():
         ("HGX B200", "Aivres", "hgx", "aivres"),
         ("B300", "Supermicro", "hgx", "smc"),
         ("HGX B300", "KAYTUS", "hgx", "generic"),
-        ("GB200 NVL72", "Compal", "nvl", "compal"),
+        ("GB200 NVL72", "Compal", "nvl", "generic"),
         ("GB300 NVL72", "Dell", "nvl", "dell"),
         ("GB300 NVL72", "NVIDIA", "nvl", "gb200"),
         ("HGX B300", "NVIDIA", "hgx", "generic"),
@@ -111,7 +111,7 @@ def test_inventory_hardware_overrides_and_cache_keys():
     device = model.Device(host)
     device.identity = {"model": "HGX B300", "manufacturer": "Aivres"}
     assert model.platform_for(device) == "nvl"
-    assert oem.for_device(device).name == "netweb"
+    assert oem.for_device(device).name == "generic"
     assert scan.key_for(device.identity, device.vars) != scan.key_for(device.identity)
     assert scan.key_for(device.identity, device.vars) != scan.key_for(
         device.identity, {"platform": "gb300", "oem": "compal"}

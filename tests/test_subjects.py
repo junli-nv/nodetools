@@ -84,7 +84,7 @@ def test_power_compute_defaults_to_ipmi():
 
 
 def test_power_compute_normalizes_off_and_redfish_transition():
-    from nodetools_runtime.oem.lenovo import Lenovo
+    from nodetools_runtime.oem.hgx.lenovo import Lenovo
 
     ipmi = FakeIpmi("Chassis Power is off")
     assert power.collect(_device(ipmi=ipmi), "status", None) == ["cp-01: Off"]
@@ -120,7 +120,7 @@ def test_power_nvsw_cycle_posts_reset():
 
 
 def test_power_lenovo_cycle_reads_state():
-    from nodetools_runtime.oem.lenovo import Lenovo
+    from nodetools_runtime.oem.hgx.lenovo import Lenovo
 
     rf = FakeRedfish(
         data={"/redfish/v1/Systems/1": {"PowerState": "Off"}},
@@ -135,7 +135,7 @@ def test_power_lenovo_cycle_reads_state():
 
 
 def test_power_smc_status_is_normalized():
-    from nodetools_runtime.oem.smc import Smc
+    from nodetools_runtime.oem.hgx.smc import Smc
 
     data = {"/redfish/v1/Systems/1": {"PowerState": "On"}}
     device = _device(redfish=FakeRedfish(data), odm=Smc())
@@ -151,7 +151,7 @@ def test_power_nvsw_reseat_defaults_to_status():
 
 
 def test_power_nvsw_compal_uses_self_and_full_power_cycle():
-    from nodetools_runtime.oem.compal import Compal
+    from nodetools_runtime.oem.hgx.compal import Compal
 
     rf = FakeRedfish(post={"/redfish/v1/Systems/Self/Actions/ComputerSystem.Reset": (200, {})})
     device = _device("nvswitch", redfish=rf, odm=Compal())
@@ -163,7 +163,7 @@ def test_power_nvsw_compal_uses_self_and_full_power_cycle():
 
 
 def test_power_dgx_reseat_uses_aux_power_cycle_force():
-    from nodetools_runtime.oem.dgx import Dgx
+    from nodetools_runtime.oem.hgx.dgx import Dgx
 
     path = "/redfish/v1/Chassis/BMC/Actions/Oem/NvidiaChassis.AuxPowerReset"
     rf = FakeRedfish(post={path: (200, {"ResetType": "AuxPowerCycleForce"})})
@@ -209,7 +209,7 @@ def test_eventlog_nvsw_space_separated():
 
 
 def test_eventlog_dell_posts_clear():
-    from nodetools_runtime.oem.dell import Dell
+    from nodetools_runtime.oem.hgx.dell import Dell
 
     path = "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Sel/Entries"
     data = {
@@ -254,7 +254,7 @@ def test_inventory_nvsw_has_space_after_colon():
 
 
 def test_inventory_lenovo_filters_pending():
-    from nodetools_runtime.oem.lenovo import Lenovo
+    from nodetools_runtime.oem.hgx.lenovo import Lenovo
 
     data = _firmware_members()
     data["/redfish/v1/UpdateService/FirmwareInventory/BIOS"]["Version"] = "2.0 Pending"
@@ -265,7 +265,7 @@ def test_inventory_lenovo_filters_pending():
 
 
 def test_inventory_ami_name_style():
-    from nodetools_runtime.oem.ami import Ami
+    from nodetools_runtime.oem.hgx.ami import Ami
 
     base = "/redfish/v1/UpdateService/FirmwareInventory"
     data = {
@@ -327,7 +327,7 @@ def test_bootorder_base_quoted_and_expanded():
 
 
 def test_bootorder_ami_comma_unquoted():
-    from nodetools_runtime.oem.ami import Ami
+    from nodetools_runtime.oem.hgx.ami import Ami
 
     base = "/redfish/v1/Systems/1/BootOptions"
     data = {
@@ -342,7 +342,7 @@ def test_bootorder_ami_comma_unquoted():
 
 
 def test_bootorder_dell_two_fields():
-    from nodetools_runtime.oem.dell import Dell
+    from nodetools_runtime.oem.hgx.dell import Dell
 
     base = "/redfish/v1/Systems/System.Embedded.1/BootOptions"
     data = {
@@ -404,7 +404,7 @@ def test_bios_base_filters_and_formats():
 
 
 def test_bios_lenovo_base_patches_pending():
-    from nodetools_runtime.oem.lenovo import Lenovo
+    from nodetools_runtime.oem.hgx.lenovo import Lenovo
 
     pending = "/redfish/v1/Systems/1/Bios/Pending"
     rf = FakeRedfish(patch={pending: (200, {"ok": True})})
@@ -454,7 +454,7 @@ def test_netboot_base_continuous_pxe():
 
 # -- aivres ----------------------------------------------------------------
 def test_aivres_power_status_is_normalized():
-    from nodetools_runtime.oem.aivres import Aivres
+    from nodetools_runtime.oem.hgx.aivres import Aivres
 
     data = {"/redfish/v1/Systems/1": {"PowerState": "On"}}
     device = _device(redfish=FakeRedfish(data), odm=Aivres())
@@ -462,7 +462,7 @@ def test_aivres_power_status_is_normalized():
 
 
 def test_aivres_power_reset_posts_system_1():
-    from nodetools_runtime.oem.aivres import Aivres
+    from nodetools_runtime.oem.hgx.aivres import Aivres
 
     rf = FakeRedfish()
     lines = power.collect(_device(redfish=rf, odm=Aivres()), "reset", None)
@@ -473,7 +473,7 @@ def test_aivres_power_reset_posts_system_1():
 
 
 def test_aivres_bootorder_sorts_by_number():
-    from nodetools_runtime.oem.aivres import Aivres
+    from nodetools_runtime.oem.hgx.aivres import Aivres
 
     path = "/redfish/v1/Systems/1/Bios"
     data = {
@@ -496,7 +496,7 @@ def test_aivres_bootorder_sorts_by_number():
 
 
 def test_aivres_eventlog_hmc_quoted_suggestion():
-    from nodetools_runtime.oem.aivres import Aivres
+    from nodetools_runtime.oem.hgx.aivres import Aivres
 
     path = "/redfish/v1/Managers/1/LogServices/IDL/Entries"
     data = {
@@ -515,7 +515,7 @@ def test_aivres_eventlog_hmc_quoted_suggestion():
 
 # -- compal ----------------------------------------------------------------
 def test_compal_bios_base_patches_sd_and_info():
-    from nodetools_runtime.oem.compal import Compal
+    from nodetools_runtime.oem.hgx.compal import Compal
 
     rf = FakeRedfish()
     lines = bios.collect(_device(redfish=rf, odm=Compal()), "base", None)
@@ -529,7 +529,7 @@ def test_compal_bios_base_patches_sd_and_info():
 
 
 def test_compal_bios_status_filters_and_sorts():
-    from nodetools_runtime.oem.compal import Compal
+    from nodetools_runtime.oem.hgx.compal import Compal
 
     path = "/redfish/v1/Systems/Self/Bios"
     data = {
@@ -547,7 +547,7 @@ def test_compal_bios_status_filters_and_sorts():
 
 
 def test_compal_macs_pairs_self_and_bmc():
-    from nodetools_runtime.oem.compal import Compal
+    from nodetools_runtime.oem.hgx.compal import Compal
 
     sys_eth = "/redfish/v1/Systems/Self/EthernetInterfaces"
     bmc_eth = "/redfish/v1/Managers/BMC/EthernetInterfaces"
@@ -567,7 +567,7 @@ def test_compal_macs_pairs_self_and_bmc():
 
 # -- netweb ----------------------------------------------------------------
 def test_netweb_bootorder_system_0():
-    from nodetools_runtime.oem.netweb import Netweb
+    from nodetools_runtime.oem.hgx.netweb import Netweb
 
     base = "/redfish/v1/Systems/System_0/BootOptions"
     data = {
@@ -583,7 +583,7 @@ def test_netweb_bootorder_system_0():
 
 
 def test_netweb_eventlog_sensor_number():
-    from nodetools_runtime.oem.netweb import Netweb
+    from nodetools_runtime.oem.hgx.netweb import Netweb
 
     path = "/redfish/v1/Chassis/BMC_0/LogServices/Logs/Entries"
     data = {
@@ -601,7 +601,7 @@ def test_netweb_eventlog_sensor_number():
 
 
 def test_netweb_bios_base_patches_system_0():
-    from nodetools_runtime.oem.netweb import Netweb
+    from nodetools_runtime.oem.hgx.netweb import Netweb
 
     rf = FakeRedfish()
     bios.collect(_device(redfish=rf, odm=Netweb()), "base", None)
@@ -609,7 +609,7 @@ def test_netweb_bios_base_patches_system_0():
 
 
 def test_netboot_smc_reorders_network_first():
-    from nodetools_runtime.oem.smc import Smc
+    from nodetools_runtime.oem.hgx.smc import Smc
 
     order_path = "/redfish/v1/Systems/1/Oem/Supermicro/FixedBootOrder"
     reset_path = "/redfish/v1/Systems/1/Actions/ComputerSystem.Reset"
@@ -688,7 +688,7 @@ def test_vm_base_no_interface_message():
 
 
 def test_vm_compal_status_single_line():
-    from nodetools_runtime.oem.compal import Compal
+    from nodetools_runtime.oem.hgx.compal import Compal
 
     rf = FakeRedfish(data=_ami_vm_data("BMC"))
     rf.data["/redfish/v1/Managers/BMC/VirtualMedia/CD1"].update(
@@ -702,7 +702,7 @@ def test_vm_compal_status_single_line():
 
 
 def test_vm_compal_insert_posts_cd1():
-    from nodetools_runtime.oem.compal import Compal
+    from nodetools_runtime.oem.hgx.compal import Compal
 
     rf = FakeRedfish(data=_ami_vm_data("BMC"))
     path = "/redfish/v1/Managers/BMC/VirtualMedia/CD1/Actions/VirtualMedia.InsertMedia"
@@ -711,7 +711,7 @@ def test_vm_compal_insert_posts_cd1():
 
 
 def test_vm_netweb_enable_then_status():
-    from nodetools_runtime.oem.netweb import Netweb
+    from nodetools_runtime.oem.hgx.netweb import Netweb
 
     rf = FakeRedfish(data=_ami_vm_data("BMC_0"))
     lines = vm.collect(_device(redfish=rf, odm=Netweb()), "enable", None)
@@ -720,7 +720,7 @@ def test_vm_netweb_enable_then_status():
 
 
 def test_vm_aivres_mount_parses_nfs_uri():
-    from nodetools_runtime.oem.aivres import Aivres
+    from nodetools_runtime.oem.hgx.aivres import Aivres
 
     vmm = "/redfish/v1/Managers/1/VMMService"
     rf = FakeRedfish(data={vmm: {"RemoteMount": {"Protocol": "NFS"}}})
@@ -738,7 +738,7 @@ def test_vm_aivres_mount_parses_nfs_uri():
 
 
 def test_vm_smc_mount_http_payload():
-    from nodetools_runtime.oem.smc import Smc
+    from nodetools_runtime.oem.hgx.smc import Smc
 
     path = "/redfish/v1/Managers/1/VirtualMedia/VirtualMedia1/Actions/VirtualMedia.InsertMedia"
     rf = FakeRedfish()
@@ -752,7 +752,7 @@ def test_vm_smc_mount_http_payload():
 
 
 def test_vm_dell_mount_uses_racadm():
-    from nodetools_runtime.oem.dell import Dell
+    from nodetools_runtime.oem.hgx.dell import Dell
 
     class FakeDell(Dell):
         def __init__(self):
@@ -783,7 +783,7 @@ def test_vm_rejects_missing_image_before_inventory(action, capsys):
 
 
 def test_vm_netweb_mount_uses_only_explicit_smb_address():
-    from nodetools_runtime.oem.netweb import Netweb
+    from nodetools_runtime.oem.hgx.netweb import Netweb
 
     rf = FakeRedfish(data=_ami_vm_data("BMC_0"))
     image = "smb://images.example.test/custom/unique.iso"
@@ -798,7 +798,7 @@ def test_vm_netweb_mount_uses_only_explicit_smb_address():
 
 def test_vm_netweb_stop_targets_only_matching_image():
     from nodetools_runtime.errors import NodetoolsError
-    from nodetools_runtime.oem.netweb import Netweb
+    from nodetools_runtime.oem.hgx.netweb import Netweb
 
     virtual = "/redfish/v1/Managers/BMC_0/VirtualMedia"
     data = _ami_vm_data("BMC_0")
@@ -819,7 +819,7 @@ def test_vm_compal_stop_uses_requested_filename(monkeypatch):
     import types
     import requests
 
-    from nodetools_runtime.oem.compal import Compal
+    from nodetools_runtime.oem.hgx.compal import Compal
 
     calls = []
 
@@ -846,7 +846,7 @@ def test_vm_compal_stop_uses_requested_filename(monkeypatch):
 @pytest.mark.parametrize("action", ["mount", "insert"])
 def test_vm_failed_enable_does_not_insert(action):
     from nodetools_runtime.errors import TransportError
-    from nodetools_runtime.oem.compal import Compal
+    from nodetools_runtime.oem.hgx.compal import Compal
 
     class RefusedRedfish(FakeRedfish):
         def post(self, path, body):
@@ -858,3 +858,124 @@ def test_vm_failed_enable_does_not_insert(action):
         vm.collect(_device(redfish=rf, odm=Compal()), action, Opts(image="smb://h/share/x.iso"))
     assert len(rf.posts) == 1
     assert next(iter(rf.posts)).endswith("AMIVirtualMedia.EnableRMedia")
+
+
+def test_shared_redfish_reads_the_selected_infrastructure_resources():
+    from nodetools_runtime.errors import CapUnsupported
+
+    switch = "/redfish/v1/Systems/Fabric2"
+    shelf = "/redfish/v1/Chassis/Shelf3"
+    manager = "/redfish/v1/Managers/PowerControl"
+    services = manager + "/LogServices"
+    log = services + "/Events"
+    rf = FakeRedfish({
+        "/redfish/v1/Systems": {"Members": [
+            {"@odata.id": "/redfish/v1/Systems/Compute1"}, {"@odata.id": switch},
+        ]},
+        switch: {"PowerState": "On"},
+        shelf: {"SerialNumber": "S3", "PowerState": "On"},
+        manager: {"LogServices": {"@odata.id": services}},
+        services: {"Members": [{"@odata.id": log}]},
+        log: {"Entries": {"@odata.id": log + "/Entries"}},
+        log + "/Entries": {"Members": [{"Created": "now", "Severity": "OK", "Message": "test"}]},
+    })
+    sw = model.Device(Host("sw", groups=["nvswitch"]), lambda _: rf)
+    sw.odm = oem.for_device(sw)
+    with pytest.raises(CapUnsupported, match="system_id"):
+        power.collect(sw, "status", None)
+    sw.vars["system_id"] = "Fabric2"
+    assert power.collect(sw, "status", None) == ["sw: On"]
+    with pytest.raises(CapUnsupported, match="no verified"):
+        power.collect(sw, "cycle", None)
+
+    ps = model.Device(Host("shelf", groups=["powershelf"], variables={
+        "chassis_id": "Shelf3", "manager_id": "PowerControl", "oem": "liteon",
+    }), lambda _: rf)
+    ps.odm = oem.for_device(ps)
+    assert power.collect(ps, "status", None) == ["shelf: S3,On"]
+    assert eventlog.collect(ps, "status", None) == ["shelf: now OK test"]
+    with pytest.raises(CapUnsupported, match="no verified"):
+        eventlog.collect(ps, "clear", None)
+    assert not rf.posts
+
+
+def test_infrastructure_firmware_follows_redfish_service_links():
+    update = "/redfish/v1/UpdateService"
+    firmware = update + "/FirmwareInventory"
+    path = firmware + "/Controller"
+    rf = FakeRedfish({
+        "/redfish/v1": {"UpdateService": {"@odata.id": update}},
+        update: {"FirmwareInventory": {"@odata.id": firmware}},
+        firmware: {"Members": [{"@odata.id": path}]},
+        path: {"Id": "Controller", "Version": "1.2"},
+    })
+    device = model.Device(Host("shelf", groups=["powershelf"]), lambda _: rf)
+    device.odm = oem.for_device(device)
+    assert inventory.collect(device, None, None) == ["shelf: Controller  1.2"]
+
+
+@pytest.mark.parametrize("maker, product, ident", [
+    ("Dell", "HGX B300", "System.Embedded.1"),
+    ("Lenovo", "GB300 NVL72", "System_0"),
+    ("HPE", "GB300 NVL72", "System_0"),
+    ("NVIDIA", "GB200 NVL72", "System_0"),
+])
+def test_documented_redfish_power_state_routes(maker, product, ident):
+    system = "/redfish/v1/Systems/" + ident
+    device = _device(redfish=FakeRedfish({system: {"PowerState": "Off"}}))
+    device.identity = {"manufacturer": maker, "model": product}
+    device.odm = oem.for_device(device)
+    assert power.collect(device, None, None) == ["cp-01: Off"]
+    assert not device.ipmi.calls
+
+
+def test_generic_nvl_reads_boot_bios_and_macs():
+    system = "/redfish/v1/Systems/OEM-Tray"
+    rf = FakeRedfish({
+        "/redfish/v1/Systems": {"Members": [{"@odata.id": system}]},
+        system: {
+            "Boot": {"BootOrder": ["Boot0002", "Boot0001"]},
+            "Bios": {"@odata.id": system + "/Bios"},
+            "EthernetInterfaces": {"@odata.id": system + "/EthernetInterfaces"},
+        },
+        system + "/Bios": {
+            "Attributes": {"Mode": "Default"},
+            "@Redfish.Settings": {"SettingsObject": {"@odata.id": system + "/Bios/Pending"}},
+        },
+        system + "/Bios/Pending": {"Attributes": {"Mode": "Custom"}},
+        system + "/EthernetInterfaces": {
+            "Members": [{"Id": "eth0", "MACAddress": "00:11:22:33:44:55"}],
+        },
+    })
+    device = _device(redfish=rf)
+    device.identity = {"manufacturer": "GIGABYTE", "model": "GB300 NVL72"}
+    device.odm = oem.for_device(device)
+    assert bios.collect(device, None, None) == ['cp-01: Mode="Default"']
+    assert bios.collect(device, "pending", None) == ['cp-01: Mode="Custom"']
+    assert bootorder.collect(device, None, None) == ["cp-01: Boot0002", "cp-01: Boot0001"]
+    assert macs.collect(device, None, None) == ["cp-01: eth0,00:11:22:33:44:55"]
+    assert not rf.posts and not rf.patches
+
+
+def test_inventory_views_from_cli(monkeypatch, tmp_path, capsys):
+    from nodetools_runtime import cli, runtime
+
+    path = tmp_path / "inventory.ini"
+    path.write_text("[compute]\ncp-01 host=192.0.2.1 system_id=Tray\n")
+    system = "/redfish/v1/Systems/Tray"
+    rf = FakeRedfish({
+        system: {"SerialNumber": "TRAY-123"},
+        system + "/Processors": {
+            "Members": [{"Id": "GPU0", "ProcessorType": "GPU", "SerialNumber": "GPU-1"}],
+        },
+        "/redfish/v1/TaskService/Tasks": {
+            "Members": [{"Id": "9", "TaskState": "Completed", "TaskStatus": "OK"}],
+        },
+    })
+    monkeypatch.setattr(runtime, "build_device", lambda host, options: model.Device(host, lambda _: rf))
+    for option, expected in (
+        ("--details", "serial=TRAY-123"), ("--gpu", "GPU0 serial=GPU-1"),
+        ("--tasks", "9 Completed OK"),
+    ):
+        assert cli.main(["nodeinventory", "-i", str(path), option]) == 0
+        assert expected in capsys.readouterr().out

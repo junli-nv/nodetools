@@ -1,12 +1,12 @@
-"""NVIDIA GB200/GB300 reference tray."""
+"""Wistron GB300 tray (Sensor-based readings, GB200-style fan control)."""
 
-from .base import Oem
+from ..base import Oem
 
 
-class Gb200(Oem):
-    name = "gb200"
+class Wistron(Oem):
+    name = "wistron"
     family = "nvl"
-    fan_chassis = ("Chassis_0", "BMC_0")
+    fan_chassis = ("Chassis_0",)
 
     def fan_control(self, device, action):
         if action == "auto":

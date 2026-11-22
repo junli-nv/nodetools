@@ -70,7 +70,7 @@ nodetools (入口)
        │    ├─ model.py       角色/ODM 读取（odm_for）+ 分类（classify）
        │    ├─ caps/*.py      传感器收集器（回退阶梯）
        │    ├─ subjects/*.py  信息对象（power/eventlog/inventory，逐行输出）
-       │    ├─ oem/*.py       ODM 差异（附加路径 + 控制动作 + 信息覆盖）
+       │    ├─ oem/{hgx,nvl}/*.py       ODM 差异（附加路径 + 控制动作 + 信息覆盖）
        │    └─ transport/*.py Redfish / IPMI / racadm
        └─ report.py      输出格式化（传感器 CSV/汇总 + 信息逐行）
 ```
@@ -112,7 +112,7 @@ argv
 | `subjects/{boot,bootorder,netboot,macs,bios}.py` | 五个启动对象的 handler（仅 compute），转 `device.odm.<subject>` | 见第 4c 节 |
 | `console.py` | `nodeconsole`：`_argv`/`open_one`/`close_all`/`attach`（IPMI SOL，legacy 端口 + pty 交互） | 见第 4d 节 |
 | `oem/base.py` | `Oem` 基类（GBXX 参考）+ `power`/`nvswitch_power`/`eventlog`/`firmware_inventory`/`boot`/`bootorder`/`macs`/`bios`/`netboot`/`vm` + `_ipmi_raw` | 端点缺失时 vendor 回退到这里 |
-| `oem/<odm>.py` | 单个 ODM 的控制动作/专用 chassis/信息覆盖 | 读数据主要靠通用阶梯 |
+| `oem/{hgx,nvl}/<odm>.py` | 单个 ODM 的控制动作/专用 chassis/信息覆盖 | 读数据主要靠通用阶梯 |
 | `runtime.py` | `build_device`（附 scan profile）、`Runner`/`InfoRunner` 并行、`Scanner`、错误隔离 | 每台独立 try/except |
 | `report.py` | 传感器行/汇总（按对象选字段顺序）+ 信息逐行（`format_lines`） | 兼容 `grep -v ,OK` |
 
@@ -340,7 +340,35 @@ reachable=$(./nodeping --long vdc1-pro2-t10-gpu-cp-[01-18] \
 
 `runtime.build_device` 读取 BMC 服务根和首个 Manager/System 的身份信息。`model.platform_for` 区分 HGX（B200/B300）和 NVL（GB200/GB300），`model.odm_for` 独立识别厂商。角色来自 inventory 的显式 `role=` 或角色组。`oem.for_device` 用平台和 OEM 选择适配器。同一 NVL 平台的不同 OEM 可以走不同适配器。库存可用 `platform=` 和 `oem=` 显式覆盖。
 
-同一厂商有多种平台时，可以在 `oem/__init__.py` 中用 `(platform, oem, role)` 注册专用适配器。Dell NVL 计算节点由 `oem/dell_nvl.py` 提供 Redfish 虚拟介质状态查询，写操作需验证后再启用。
+同一厂商有多种平台时，可以在 `oem/__init__.py` 中用 `(platform, oem, role, generation)` 注册专用适配器。Dell NVL 计算节点由 `oem/nvl/dell.py` 提供 Redfish 虚拟介质状态查询，写操作需验证后再启用。 跨代共用的适配器把 `generation` 设为 `None`。设备身份与接口可参考 [NVIDIA RMS 硬件兼容表](https://docs.nvidia.com/rms/documentation/reference/hardware-compatibility-list/)。写操作需要按设备和固件版本验证后再注册。
+
+公开的 BMC 接口参考
+
+- [NVIDIA NVSwitch Redfish URI list](https://docs.nvidia.com/networking/display/nvidiaswitchbmcusermanualv8800021040/supported%2Bredfish%2Bscheme%2Buris)
+- [Lenovo GB300 NVL72 management interfaces](https://pubs.lenovo.com/gb300-nvl72/management_options)
+- [HPE GB300 NVL72 BMC Redfish](https://support.hpe.com/hpesc/public/docDisplay?docId=sd00007150en_us&docLocale=en_US&page=GUID-1D3E5F93-529F-40DD-9E81-3D8DE8FDF8FF.html)
+- [Dell XE9780 iDRAC](https://www.dell.com/support/product-details/en-us/product/poweredge-XE9780/resources/manuals)
+- [Lenovo HGX B300 XClarity](https://pubs.lenovo.com/sr680a-v4/configure_the_firmware)
+- [HPE HGX B300 Redfish](https://support.hpe.com/hpesc/public/docDisplay?docId=sd00007670en_us&docLocale=en_US&page=GUID-2D1518D5-6372-401B-AE97-5F40677DFD0D.html)
+- [Supermicro Redfish API](https://www.supermicro.com/en/solutions/management-software/redfish)
+
+### OEM 能力清单
+
+以原始 nodetools 脚本为对照。每个机型按能力确认接口。标准 Redfish 查询由共用层实现，OEM 模块覆盖已确认的差异。
+
+| 能力 | 读取入口 | 写入或待补 |
+| --- | --- | --- |
+| BIOS | `nodebios` 当前值，`pending` 待读取的设置 | 已有 OEM 动作保留。逐项写入、应用时机和重启条件按机型补齐 |
+| 启动 | `nodebootorder` 持久顺序，`nodenetboot` 启动与 PXE 信息 | `nodeboot` 一次性覆盖。持久重排、网口绑定按 OEM 补齐 |
+| 资产和固件 | `*inventory` 版本，`--details` 厂商/型号/序列号，计算节点 `--gpu` | 完整 FRU、部件号、固件更新和回滚按机型补齐 |
+| MAC 和网络 | `nodemacs` 主机 MAC，部分旧 OEM 适配可读 BMC/PXE MAC | BMC/PXE 通用查询、网络配置和连线诊断按接口补齐 |
+| 温度、风扇、PSU | `*temp`、`*fan`、`*psu`，含健康状态 | 风扇调速走 OEM。PSU 和温度只读 |
+| 虚拟介质 | `nodevm` 查询 | 已有 OEM 支持挂载、推出等动作。新机型按介质协议、启用和插入流程补齐 |
+| 日志与任务 | `*eventlog`，`*inventory --tasks` | 部分适配支持清日志。任务取消与诊断包待补 |
+| 电源与控制台 | `*power` 状态，`nodeconsole` SOL | 按机型区分主电源、AUX 与 BMC 重启。NVSwitch/PowerShelf 单独验证 |
+| 额外旧工具 | 健康监控、NVLink/UPHY、机箱与平台传感器盘点 | 阈值、遥测周期和告警规则需逐工具对照 |
+| 管理控制面 | BMC 身份、固件和健康查询 | BMC 重置、账户管理、时间和网络配置继续按机型补齐 |
+
 
 `scan` 还会探测 chassis 端点并写入能力映射。缓存键使用厂商、制造商、型号、可用的固件版本以及显式库存覆盖值。普通命令只读映射；没有映射或指定 `--no-cache` 时仍读取设备身份，传感器使用实时发现。
 
@@ -422,7 +450,7 @@ BMC 的 `ThermalMetrics` 单次响应就慢（并发轰同一 BMC 还会成倍�
 
 ### 新增一个 ODM
 
-1. 新建 `oem/<odm>.py`，继承 `oem/base.Oem`，设置 `name`、`fan_chassis`，
+1. 新建 `oem/{hgx,nvl}/<odm>.py`，继承 `oem/base.Oem`，设置 `name`、`fan_chassis`，
    按需实现 `fan_control`。
 2. 在 `oem/__init__.py` 的 `_MODULES` 注册；如有别名加到 `_ALIASES`。
 3. 若该 ODM 的身份字符串特殊，在 `model.SIGNATURES` 里加标记（注意顺序）。

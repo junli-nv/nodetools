@@ -92,3 +92,21 @@ def test_dell_nvl_virtual_media_reads_links_and_rejects_writes():
             vm.collect(device, action, None)
     assert not requests
     assert vm.collect(device, "status", None) == ["tray-01: CD\tinserted=True\timage=boot.iso"]
+
+
+def test_generation_specific_adapter_takes_precedence(monkeypatch):
+    from nodetools_runtime.model import Device, generation_for
+    from nodetools_runtime.inventory import Host
+    from nodetools_runtime import scan
+
+    device = Device(Host("tray", groups=["compute"], variables={"oem": "dell"}))
+    device.identity = {"model": "Dell GB200 NVL72"}
+    shared = oem.for_device(device)
+    adapter = object()
+    monkeypatch.setitem(oem._PLATFORM_MODULES, ("nvl", "dell", "compute", "gb300"), adapter)
+    assert generation_for(device) == "gb200"
+    assert oem.for_device(device) is shared
+    device.vars["generation"] = "gb300"
+    assert generation_for(device) == "gb300"
+    assert oem.for_device(device) is adapter
+    assert scan.key_for(device.identity, device.vars) != scan.key_for(device.identity)

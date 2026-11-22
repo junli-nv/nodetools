@@ -4,7 +4,7 @@ import concurrent.futures
 import time
 
 from . import caps, model, oem, scan, subjects
-from .errors import NodetoolsError
+from .errors import CapUnsupported, NodetoolsError
 from .transport.ipmi import Ipmi
 from .transport.redfish import Redfish
 
@@ -65,7 +65,7 @@ def build_device(host, options, apply_deadline=True, load_profile=True):
     device.options = options
     if load_profile:
         if getattr(options, "no_cache", False):
-            device.identity = scan.read_identity(device.redfish)
+            device.identity = scan.read_identity(device.redfish, device.vars)
         else:
             device.profile = scan.load(device)
     return device
@@ -123,6 +123,8 @@ class Runner:
                 )
             if self.capability == "fan":
                 device.odm = oem.for_device(device, "fan")
+            if device.vars.get("chassis_id"):
+                device.ipmi = None
             collector = caps.collector_for(self.capability)
             readings = collector(device)
             if not readings:
@@ -176,6 +178,11 @@ class InfoRunner:
             # overrides (e.g. Compal NVSwitch power) apply; unscanned nodes and
             # ODMs without an override fall back to the base handler.
             device.odm = oem.for_device(device)
+            supported = getattr(device.odm, "info_subjects", None)
+            if supported is not None and self.subject not in supported:
+                raise CapUnsupported("{} has no verified {} adapter".format(
+                    device.name, self.subject
+                ))
             lines = self.handler(device, self.options.action, self.options)
             if not lines and device.transport_errors:
                 return self._result(
@@ -258,8 +265,9 @@ class Scanner:
                     {
                         "id": "hardware",
                         "name": "classification",
-                        "value": "platform={}/oem={}/role={}".format(
-                            profile["platform"], profile["odm"], host.role
+                        "value": "platform={}/oem={}/role={}/generation={}".format(
+                            profile["platform"], profile["odm"], host.role,
+                            profile["generation"]
                         ),
                         "health": "OK",
                     },
@@ -280,7 +288,7 @@ class Scanner:
             device = build_device(
                 host, self.options, apply_deadline=False, load_profile=False
             )
-            identity = scan.read_identity(device.redfish)
+            identity = scan.read_identity(device.redfish, device.vars)
             return host, identity, None
         except Exception as exc:  # noqa: BLE001 - reported per node
             return host, None, "{}: {}".format(type(exc).__name__, exc)

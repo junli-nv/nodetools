@@ -6,9 +6,9 @@ Endpoints are pinned to ``Systems/System_0`` / ``Managers/BMC_0`` /
 
 import time
 
-from ..errors import NodetoolsError, TransportError
-from ..subjects import common, vm
-from .base import Oem, _body_lines, _jq_r, firmware_name_lines
+from ...errors import NodetoolsError, TransportError
+from ...subjects import common, vm
+from ..base import Oem, _body_lines, _jq_r, firmware_name_lines
 
 _SYSTEM = "/redfish/v1/Systems/System_0"
 _MANAGER = "/redfish/v1/Managers/BMC_0"

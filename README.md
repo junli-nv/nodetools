@@ -239,6 +239,12 @@ Ansible 风格 INI，见 `inventory.example.ini`。每台主机用 `host=` 带 B
 用 `./nodevm --group dell_nvl` 查询 Dell NVL 虚拟介质。Dell NVL 的
 挂载和推出需要已验证的机型适配，目前提供 Redfish 只读查询。
 
+`generation=gb200` / `gb300`（HGX 可填 `b200` / `b300`）用于覆盖 BMC
+型号识别，型号不明确时可省略。NVSwitch 和电源架按设备本身设置 OEM，
+例如 `oem=nvidia` 和 `oem=liteon`。共享 BMC 时，可用 `system_id` 定位
+电源控制系统，`manager_id` 定位日志管理器，`chassis_id` 限定机箱和传感器查询。
+固件库存仍按 BMC 列出。未适配的机型尝试 Redfish 只读发现，写操作需要已验证的适配器。
+
 `[nodehealth:defaults]` 设置运行默认值：`jobs`、`timeout`（单请求）、
 `node_timeout`（含身份识别的整节点请求预算，默认 30 秒）。可用 `--node-timeout S` 覆盖 `node_timeout`；用完后
 慢 BMC 会被放弃，而不是拖住整批。`scan` 不使用它（本身就是长任务）。
@@ -250,6 +256,14 @@ Ansible 风格 INI，见 `inventory.example.ini`。每台主机用 `host=` 带 B
 ```
 
 `inventory.ini` 含真实地址/凭据，已被 git 忽略。
+
+固件列表是库存命令的默认输出。需要查硬件标识、GPU 序列号或最近的 BMC 任务时，可以指定查询类型。
+
+```sh
+./nodeinventory HGX390 --details
+./nodeinventory HGX390 --gpu
+./nodeinventory HGX390 --tasks
+```
 
 ## 输出
 

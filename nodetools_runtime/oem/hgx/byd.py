@@ -1,6 +1,6 @@
 """BYD tray."""
 
-from .base import Oem
+from ..base import Oem
 
 
 class Byd(Oem):

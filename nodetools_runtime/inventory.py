@@ -22,6 +22,7 @@ import os
 from .config import DEFAULTS_SECTION, NAME_ROLE_PATTERNS, ROLE_GROUPS
 from .errors import InventoryError
 
+RESOURCE_ID_KEYS = ("system_id", "manager_id", "chassis_id")
 _ADDRESS_KEYS = ("host", "bmc_ip", "ansible_host", "ip", "address")
 
 
@@ -136,6 +137,10 @@ class Inventory:
             for group in host.groups:
                 host.vars.update(inv.group_vars.get(group, {}))
             host.vars.update(inline_vars[host.name])
+            for field in RESOURCE_ID_KEYS:
+                value = host.get(field)
+                if value and (value in (".", "..") or any(char in value for char in "/\\?#%")):
+                    raise InventoryError("invalid {} for {}".format(field, host.name))
             # Validate explicit roles during parsing, before any BMC operation.
             if host.get("role"):
                 _ = host.role

@@ -376,7 +376,7 @@ def test_inlet_probes_chassis_until_found():
 
 
 def test_aivres_fan_uses_canonical_legacy_chassis():
-    from nodetools_runtime.oem.aivres import Aivres
+    from nodetools_runtime.oem.hgx.aivres import Aivres
 
     fan_row = {"MemberId": "0", "Name": "Fan 0", "Reading": 0, "Status": {"Health": "OK"}}
     data = {

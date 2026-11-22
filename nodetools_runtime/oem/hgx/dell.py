@@ -2,9 +2,9 @@
 
 import re
 
-from ..subjects import common, vm
-from ..transport.racadm import Racadm
-from .base import Oem
+from ...subjects import common, power, vm
+from ...transport.racadm import Racadm
+from ..base import Oem
 
 _SEL = "/redfish/v1/Managers/iDRAC.Embedded.1/LogServices/Sel"
 _SQUEEZE = re.compile(r"\s+")
@@ -60,7 +60,13 @@ class Dell(Oem):
             raise NotImplementedError(action)
         return "ok"
 
-    # nodepower.dell is empty: keep the base IPMI behaviour.
+    def power(self, device, action):
+        if action == "status":
+            path = "/redfish/v1/Systems/" + self.bootorder_system
+            state = common.resource(device, path).get("PowerState")
+            if state:
+                return power.host_status(device.name, state)
+        return super().power(device, action)
 
     def eventlog(self, device, action):
         if action == "clear":

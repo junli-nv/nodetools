@@ -1,7 +1,7 @@
 """NVIDIA DGX (HGX) system."""
 
-from ..subjects import common
-from .base import FIRMWARE, Oem, _body_lines
+from ...subjects import common
+from ..base import FIRMWARE, Oem, _body_lines
 
 _BIOS = "/redfish/v1/Systems/DGX/LogServices/BIOS"
 _HGX = "/redfish/v1/Systems/HGX_Baseboard_0/LogServices/EventLog"

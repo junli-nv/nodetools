@@ -56,6 +56,9 @@ class Options:
         self.action = None
         self.inlet_target = getattr(args, "target", None)
         self.inlet_tolerance = getattr(args, "tolerance", None)
+        self.details = getattr(args, "details", False)
+        self.gpu = getattr(args, "gpu", False)
+        self.tasks = getattr(args, "tasks", False)
         self.image = getattr(args, "image", None)
         self.vm_user = getattr(args, "vm_user", None)
         self.vm_password = getattr(args, "vm_password", None)
@@ -111,9 +114,9 @@ def _cmd_inventory(args):
             print("  [{}] {} hosts".format(group, len(names)))
         for name in inv.order:
             host = inv.get(name)
-            print("  {} role={} platform={} oem={} host={}".format(
+            print("  {} role={} platform={} oem={} generation={} host={}".format(
                 name, host.role, host.get("platform") or "auto", host.get("oem") or "auto",
-                host.address or "-",
+                host.get("generation") or "auto", host.address or "-",
             ))
         return 0
     print("usage: nodetools inventory {init|show}", file=sys.stderr)

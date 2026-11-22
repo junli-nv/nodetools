@@ -7,10 +7,10 @@ control and NIC inventory use the ``Oem.Public`` namespace.
 import json
 import time
 
-from ..errors import CapUnsupported
-from ..errors import NodetoolsError
-from ..subjects import common, power, vm
-from .base import Oem, _body_lines, _jq_r, _members_static
+from ...errors import CapUnsupported
+from ...errors import NodetoolsError
+from ...subjects import common, power, vm
+from ..base import Oem, _body_lines, _jq_r, _members_static
 
 _SYSTEM = "/redfish/v1/Systems/1"
 _MANAGER = "/redfish/v1/Managers/1"

@@ -11,7 +11,11 @@ SIGNATURES = (
     ("lenovo", ("lenovo",)),
     ("smc", ("supermicro", "super micro")),
     ("gigabyte", ("gigabyte", "giga-byte")),
-    ("wistron", ("wistron", "wiwynn")),
+    ("wistron", ("wistron",)),
+    ("wiwynn", ("wiwynn",)),
+    ("hpe", ("hewlett packard enterprise", "hpe")),
+    ("liteon", ("lite-on", "liteon", "lite on")),
+    ("delta", ("delta electronics", "delta")),
     ("inventec", ("inventec",)),
     ("byd", ("byd",)),
     ("aivres", ("aivres",)),
@@ -98,6 +102,22 @@ def hardware_identity(device):
     }
 
 
+_GENERATION = re.compile(r"\b(gb|b)[ _-]?(200|300)\b", re.I)
+
+
+def generation_for(device):
+    override = device.vars.get("generation", "").strip().lower()
+    if override == "unknown":
+        return override
+    if override and not _GENERATION.fullmatch(override):
+        raise ValueError("Unsupported inventory generation: " + override)
+    platform = device.vars.get("platform", "").strip()
+    platform_generation = platform if _GENERATION.fullmatch(platform) else ""
+    source = override or platform_generation or hardware_identity(device).get("model") or ""
+    generations = {prefix.lower() + number for prefix, number in _GENERATION.findall(str(source))}
+    return generations.pop() if len(generations) == 1 else "unknown"
+
+
 def platform_for(device):
     override = (getattr(device, "vars", {}) or {}).get("platform", "").strip().lower()
     if override:
@@ -107,6 +127,9 @@ def platform_for(device):
         if override != "unknown":
             raise ValueError("Unsupported inventory platform: " + override)
         return override
+    generation = generation_for(device)
+    if generation != "unknown":
+        return "nvl" if generation.startswith("gb") else "hgx"
     family = platform_family(hardware_identity(device), getattr(device, "name", ""))
     if family == "unknown" and getattr(device, "role", None) in ("nvswitch", "powershelf"):
         return "nvl"

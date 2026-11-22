@@ -1,9 +1,4 @@
-"""power: ``nodepower`` / ``nvswpower`` / ``pspower``.
-
-Compute trays dispatch to the ODM handler (NVIDIA GBXX reference by default,
-HGX x86 vendor override where the original script differs). NVSwitch and power
-shelf are NVIDIA infrastructure and always use their fixed Redfish paths.
-"""
+"""Power state and control for compute trays, NVSwitches, and power shelves."""
 
 from . import common
 
@@ -39,7 +34,7 @@ def collect(device, action, options):
     if device.role == "nvswitch":
         return device.odm.nvswitch_power(device, action)
     if device.role == "powershelf":
-        return _powershelf(device, action)
+        return device.odm.powershelf_power(device, action)
     return device.odm.power(device, action)
 
 

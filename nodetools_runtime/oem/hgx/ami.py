@@ -2,8 +2,8 @@
 
 import re
 
-from ..subjects import common
-from .base import Oem, firmware_name_lines
+from ...subjects import common
+from ..base import Oem, firmware_name_lines
 
 _SEL = "/redfish/v1/Managers/1/LogServices/SEL"
 _EVENT_TYPE = re.compile(r"Event.*Event_Type")

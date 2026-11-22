@@ -265,6 +265,14 @@ Omit `platform` or `oem` to detect them from the BMC. Run
 to query Dell NVL virtual media. Dell NVL currently provides read-only Redfish
 status. Mount and eject require a verified adapter.
 
+Use `generation=gb200` or `gb300` (or `b200` / `b300` for HGX) to override
+BMC model detection. It is optional. Set the OEM per device, for example
+`oem=nvidia` for an NVSwitch or `oem=liteon` for a power shelf. On a shared BMC,
+`system_id` selects the power system, `manager_id` selects the log manager, and
+`chassis_id` scopes chassis and sensor queries. Firmware inventory is BMC-wide.
+Unmapped infrastructure uses read-only Redfish discovery. Writes require a
+verified adapter.
+
 The `[nodehealth:defaults]` section sets run defaults: `jobs`, `timeout`
 (per request) and `node_timeout` (whole-node request budget including identification, default 30 seconds).
 Use `--node-timeout S` to override `node_timeout`; once it is spent a slow BMC is abandoned
@@ -277,6 +285,14 @@ Generate a starter file from a `DeviceType Hostname BMC_IP` hosts.list:
 ```
 
 `inventory.ini` contains real addresses/credentials and is git-ignored.
+
+Inventory commands list firmware by default. Select a view for hardware identifiers, GPU serial numbers, or BMC tasks.
+
+```sh
+./nodeinventory HGX390 --details
+./nodeinventory HGX390 --gpu
+./nodeinventory HGX390 --tasks
+```
 
 ## Output
 

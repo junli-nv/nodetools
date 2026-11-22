@@ -1,0 +1,158 @@
+"""Shared read-only Redfish resource discovery."""
+
+from .. import model
+from ..errors import CapUnsupported
+from ..subjects import common, inventory, power
+from .base import Oem
+
+
+class RedfishDiscovery(Oem):
+    def _target(self, device, collection, field):
+        base = "/redfish/v1/" + collection
+        ident = device.vars.get(field)
+        if ident:
+            return common.resource(device, base + "/" + ident, required=True)
+        paths = common.member_ids(common.resource(device, base, required=True))
+        if len(paths) != 1:
+            raise CapUnsupported("expected one {} resource; configure {}".format(collection, field))
+        return common.resource(device, paths[0], required=True)
+
+    def _require_status(self, device, action, allowed=("status",)):
+        if action not in allowed:
+            raise CapUnsupported(
+                "no verified {} adapter for {} {} action {!r}".format(
+                    device.role, model.odm_for(device), model.generation_for(device), action
+                )
+            )
+
+    def nvswitch_power(self, device, action):
+        self._require_status(device, action)
+        system = self._target(device, "Systems", "system_id")
+        return power.host_status(device.name, system.get("PowerState"))
+
+    def powershelf_power(self, device, action):
+        self._require_status(device, action)
+        if device.vars.get("system_id") and not device.vars.get("chassis_id"):
+            data = self._target(device, "Systems", "system_id")
+        else:
+            data = self._target(device, "Chassis", "chassis_id")
+        return ["{}: {},{}".format(
+            device.name, data.get("SerialNumber") or "-", data.get("PowerState") or "Unknown"
+        )]
+
+    def infrastructure_eventlog(self, device, action):
+        self._require_status(device, action, ("status", "bmc", "hmc"))
+        if device.vars.get("manager_id") or device.role == "powershelf":
+            parent = self._target(device, "Managers", "manager_id")
+        else:
+            parent = self._target(device, "Systems", "system_id")
+        services = common.resource(device, self._link(parent, "LogServices"), required=True)
+        lines = []
+        for path in common.member_ids(services):
+            service = common.resource(device, path, required=True)
+            lines.extend(common.log_lines(device, self._link(service, "Entries"), sep=" "))
+        return self._label_lines(device, lines)
+
+    def infrastructure_inventory(self, device):
+        root = common.resource(device, "/redfish/v1", required=True)
+        service = common.resource(device, self._link(root, "UpdateService"), required=True)
+        return inventory._firmware(device, self._link(service, "FirmwareInventory"))
+
+    @staticmethod
+    def _link(resource, name):
+        link = resource.get(name) or {}
+        path = link.get("@odata.id") if isinstance(link, dict) else None
+        if not path:
+            raise CapUnsupported("Redfish did not advertise {}".format(name))
+        return path
+
+
+class ReadOnlyCompute(RedfishDiscovery):
+    """Generic compute queries using the Redfish resources the BMC exposes."""
+
+    info_subjects = ("power", "eventlog", "inventory", "vm", "bios", "bootorder", "macs")
+    vm_write_supported = False
+
+    def __init__(self, name="generic", system_id=None, family="nvl"):
+        self.name = name
+        self.family = family
+        self.read_system_id = system_id
+
+    def _system(self, device):
+        if self.read_system_id and not device.vars.get("system_id"):
+            data = common.resource(device, "/redfish/v1/Systems/" + self.read_system_id)
+            if data:
+                return data
+        return self._target(device, "Systems", "system_id")
+
+    def power(self, device, action):
+        self._require_status(device, action)
+        return power.host_status(device.name, self._system(device).get("PowerState"))
+
+    def bios(self, device, action):
+        action = action or "status"
+        self._require_status(device, action, ("status", "read", "pending"))
+        system = self._system(device)
+        data = common.resource(device, self._link(system, "Bios"), required=True)
+        if action == "pending":
+            settings = data.get("@Redfish.Settings") or {}
+            data = common.resource(device, self._link(settings, "SettingsObject"), required=True)
+        attributes = data.get("Attributes")
+        if not isinstance(attributes, dict):
+            raise CapUnsupported("Redfish did not report BIOS attributes")
+        return self._label_lines(device, [
+            "{}={}".format(key, common.jq(value)) for key, value in sorted(attributes.items())
+        ])
+
+    def bootorder(self, device, action):
+        boot = self._system(device).get("Boot") or {}
+        order = boot.get("BootOrder")
+        if not isinstance(order, list):
+            raise CapUnsupported("Redfish did not report a persistent boot order")
+        return self._label_lines(device, order)
+
+    def macs(self, device, action):
+        system = self._system(device)
+        path = self._link(system, "EthernetInterfaces")
+        lines = []
+        for iface in common.entries(device, path):
+            mac = iface.get("MACAddress") or iface.get("PermanentMACAddress")
+            if mac:
+                lines.append("{},{}".format(iface.get("Id") or iface.get("Name") or "-", mac))
+        return self._label_lines(device, lines)
+
+    def eventlog(self, device, action):
+        return self.infrastructure_eventlog(device, action)
+
+    def firmware_inventory(self, device):
+        return self.infrastructure_inventory(device)
+
+    def vm(self, device, action, options=None):
+        media_paths = set()
+        lines = []
+        for collection, field in (("Managers", "manager_id"), ("Systems", "system_id")):
+            if any(device.vars.get(key) for key in ("manager_id", "system_id")) and not device.vars.get(field):
+                continue
+            selected = device.vars.get(field)
+            base = "/redfish/v1/" + collection
+            paths = [base + "/" + selected] if selected else common.member_ids(
+                common.resource(device, base)
+            )
+            for parent_path in paths:
+                parent = common.resource(device, parent_path)
+                media = parent.get("VirtualMedia")
+                if not isinstance(media, dict) or not media.get("@odata.id"):
+                    continue
+                members = common.resource(device, media["@odata.id"], required=True)
+                for path in common.member_ids(members):
+                    if path in media_paths:
+                        continue
+                    media_paths.add(path)
+                    data = common.resource(device, path, required=True)
+                    lines.append("{}\tinserted={}\timage={}".format(
+                        data.get("Id") or path, data.get("Inserted", "unknown"),
+                        data.get("ImageName") or data.get("Image") or "-",
+                    ))
+        if not lines:
+            raise CapUnsupported("BMC did not advertise any VirtualMedia devices")
+        return self._label_lines(device, lines)

@@ -13,7 +13,7 @@ import re
 import time
 
 from ..errors import CapUnsupported, TransportTimeout
-from ..subjects import common, power, vm
+from ..subjects import common, eventlog, inventory, power, vm
 
 # func.sh identifiers (GBXX / NVIDIA reference).
 SYSTEM_ID = "system"
@@ -170,6 +170,15 @@ class Oem:
             return ["{}: {}".format(device.name, text)] if text else []
         data = common.resource(device, base, required=True)
         return ["{}: {}".format(device.name, common.jq(data.get("PowerState")))]
+
+    def powershelf_power(self, device, action):
+        return power._powershelf(device, action)
+
+    def infrastructure_eventlog(self, device, action):
+        return eventlog._infra(device, action)
+
+    def infrastructure_inventory(self, device):
+        return inventory._firmware(device)
 
     def _reseat(self, device):
         """Auxiliary power cycle: func.sh ``reseat_gb200`` with a ``nodeAC``

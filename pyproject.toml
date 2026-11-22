@@ -43,7 +43,7 @@ nodevm = "nodetools_runtime.cli:main"
 nodeconsole = "nodetools_runtime.cli:main"
 
 [tool.setuptools]
-packages = ["nodetools_runtime", "nodetools_runtime.transport", "nodetools_runtime.caps", "nodetools_runtime.oem", "nodetools_runtime.subjects"]
+packages = ["nodetools_runtime", "nodetools_runtime.transport", "nodetools_runtime.caps", "nodetools_runtime.oem", "nodetools_runtime.oem.hgx", "nodetools_runtime.oem.nvl", "nodetools_runtime.subjects"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

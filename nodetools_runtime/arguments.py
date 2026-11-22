@@ -119,7 +119,7 @@ def _add_sensor_opts(parser, subject):
     parser.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
 
-def _add_info_opts(parser, subject):
+def _add_info_opts(parser, subject, role):
     parser.add_argument(
         "noderange",
         nargs="?",
@@ -141,6 +141,15 @@ def _add_info_opts(parser, subject):
         parser.add_argument(
             "--vm-password", default=None, help="virtual-media password"
         )
+    if subject == "inventory":
+        view = parser.add_mutually_exclusive_group()
+        view.add_argument(
+            "--details", action="store_true",
+            help="show Redfish hardware model, manufacturer, and serial number",
+        )
+        if role == "compute":
+            view.add_argument("--gpu", action="store_true", help="show GPU serial numbers")
+        view.add_argument("--tasks", action="store_true", help="show Redfish task states")
     _add_inventory_opt(parser)
     parser.add_argument("--group", action="append", default=[], help="select a group")
     parser.add_argument("--all", action="store_true", help="select every host")
@@ -225,7 +234,7 @@ def build_parser():
 
     for name, (role, subject) in INFO_COMMANDS.items():
         info = sub.add_parser(name, help="{} {}".format(role, subject))
-        _add_info_opts(info, subject)
+        _add_info_opts(info, subject, role)
 
     cs = sub.add_parser(
         "nodeconsole",

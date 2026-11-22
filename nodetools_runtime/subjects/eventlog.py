@@ -1,8 +1,4 @@
-"""eventlog: ``nodeeventlog`` / ``nvsweventlog`` / ``pseventlog``.
-
-Compute trays dispatch to the ODM handler. NVSwitch reads its ``System_0``
-EventLog, the power shelf its ``PMC_0`` EventLog; both support ``clear``.
-"""
+"""Event log operations dispatched by device role and OEM."""
 
 from . import common
 
@@ -16,7 +12,7 @@ def collect(device, action, options):
     if action in _READ:
         action = "status"
     if device.role in ("nvswitch", "powershelf"):
-        return _infra(device, action)
+        return device.odm.infrastructure_eventlog(device, action)
     return device.odm.eventlog(device, action)
 
 
