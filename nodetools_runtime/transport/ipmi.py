@@ -119,3 +119,11 @@ class Ipmi:
     def raw(self, *payload):
         out = self._run(["raw"] + [hex(b) if isinstance(b, int) else b for b in payload])
         return out.strip()
+
+    def run(self, *command):
+        """Run an arbitrary ipmitool command, returning raw stdout."""
+        return self._run(list(command))
+
+    def power(self, action):
+        """``ipmitool ... power <action>`` (status/on/off/cycle/reset)."""
+        return self._run(["power", action])

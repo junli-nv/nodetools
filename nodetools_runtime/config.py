@@ -7,6 +7,28 @@ VERSION = "0.1.0"
 # Capabilities implemented in this phase.
 CAPS = ("fan", "psu", "temp")
 
+# Info commands: subject suffix -> roles that expose it. The prefix names the
+# role (see ROLE_PREFIXES), so ``node``+``power`` = ``nodepower``,
+# ``nvsw``+``inventory`` = ``nvswinventory`` and so on. One command per legacy
+# script: compute carries the ODM-specific subjects, the NVIDIA infrastructure
+# roles carry only the ones the original scripts provide.
+INFO_SUBJECTS = {
+    "power": ("compute", "nvswitch", "powershelf"),
+    "eventlog": ("compute", "nvswitch", "powershelf"),
+    "inventory": ("compute", "nvswitch", "powershelf"),
+}
+
+# Accepted actions per subject (first entry is the read/default form); used for
+# help text and validation. An empty tuple means the subject is read-only.
+INFO_ACTIONS = {
+    "power": ("status", "on", "off", "cycle", "reset", "reseat"),
+    "eventlog": ("status", "bmc", "hmc", "clear"),
+    "inventory": (),
+}
+# Action words that mean "just read" for the info commands (the legacy scripts
+# default the action to ``status`` when it is empty).
+INFO_READ_WORDS = ("", "status", "check", "read")
+
 DEFAULT_JOBS = 18
 DEFAULT_TIMEOUT = 10
 DEFAULT_SUMMARY = False
@@ -40,6 +62,24 @@ ROLE_GROUPS = {
     "compute": "compute",
     "nvswitch": "nvswitch",
     "powershelf": "powershelf",
+}
+
+# Display order of the roles and the DeviceType labels the legacy scripts print
+# in `nodelist` (from hosts.list column 1). Kept so `nodelist` output lines up
+# with the original tools.
+ROLE_ORDER = ("compute", "nvswitch", "powershelf")
+ROLE_LABELS = {
+    "compute": "PhysicalNode",
+    "nvswitch": "Switch",
+    "powershelf": "PowerShelf",
+}
+
+# Command-name prefix -> node role. The legacy scripts encode the role in the
+# prefix (``node`` = compute tray, ``nvsw`` = NVSwitch, ``ps`` = power shelf).
+ROLE_PREFIXES = {
+    "node": "compute",
+    "nvsw": "nvswitch",
+    "ps": "powershelf",
 }
 
 # Role inferred from a hostname when it is not listed in inventory.

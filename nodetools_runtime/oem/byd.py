@@ -15,3 +15,10 @@ class Byd(Oem):
         else:
             raise NotImplementedError(action)
         return "ok"
+
+    # nodeeventlog.byd reads the IPMI SEL list.
+    def eventlog(self, device, action):
+        if action == "clear":
+            text = self._sel_clear(device)
+            return ["{}: {}".format(device.name, text)] if text else []
+        return self._sel_lines(device)

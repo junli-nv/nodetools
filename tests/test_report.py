@@ -12,12 +12,20 @@ def _result(readings, error=None):
     }
 
 
-def test_line_format():
+def test_fan_line_format():
     result = _result(
         [{"id": "Fan_1", "name": "Front Fan 1", "value": 8500, "health": "OK"}]
     )
     lines = render([result])
-    assert lines == ["cp-01: FAN,compute,Fan_1,Front_Fan_1,8500,OK"]
+    assert lines == ["cp-01: Fan_1,Front_Fan_1,8500,OK"]
+
+
+def test_psu_line_format():
+    result = _result(
+        [{"id": "PSU_1", "name": "psu", "value": "1318.8", "health": "OK"}]
+    )
+    result["cap"] = "psu"
+    assert render([result]) == ["cp-01: PSU_1,OK,1318.8"]
 
 
 def test_grep_not_ok_compatible():
@@ -27,7 +35,7 @@ def test_grep_not_ok_compatible():
     )
     lines = render([result])
     assert [line for line in lines if ",OK" not in line] == [
-        "cp-01: FAN,compute,Fan_2,f,NA,Critical"
+        "cp-01: Fan_2,f,NA,Critical"
     ]
 
 

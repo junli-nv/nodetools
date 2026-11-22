@@ -14,9 +14,29 @@ dependencies = ["requests>=2.20"]
 
 [project.scripts]
 nodetools = "nodetools_runtime.cli:main"
+nodelist = "nodetools_runtime.cli:main"
+nodeping = "nodetools_runtime.cli:main"
+nodefan = "nodetools_runtime.cli:main"
+nodepsu = "nodetools_runtime.cli:main"
+nodetemp = "nodetools_runtime.cli:main"
+nvswfan = "nodetools_runtime.cli:main"
+nvswpsu = "nodetools_runtime.cli:main"
+nvswtemp = "nodetools_runtime.cli:main"
+psfan = "nodetools_runtime.cli:main"
+pspsu = "nodetools_runtime.cli:main"
+pstemp = "nodetools_runtime.cli:main"
+nodepower = "nodetools_runtime.cli:main"
+nodeeventlog = "nodetools_runtime.cli:main"
+nodeinventory = "nodetools_runtime.cli:main"
+nvswpower = "nodetools_runtime.cli:main"
+nvsweventlog = "nodetools_runtime.cli:main"
+nvswinventory = "nodetools_runtime.cli:main"
+pspower = "nodetools_runtime.cli:main"
+pseventlog = "nodetools_runtime.cli:main"
+psinventory = "nodetools_runtime.cli:main"
 
 [tool.setuptools]
-packages = ["nodetools_runtime", "nodetools_runtime.transport", "nodetools_runtime.caps", "nodetools_runtime.oem"]
+packages = ["nodetools_runtime", "nodetools_runtime.transport", "nodetools_runtime.caps", "nodetools_runtime.oem", "nodetools_runtime.subjects"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

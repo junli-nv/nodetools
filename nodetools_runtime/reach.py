@@ -3,18 +3,23 @@
 import subprocess
 
 
-def ping(ip, timeout=1.0, count=1):
-    """Return True if ``ip`` answers ICMP, False otherwise, None if no address."""
+def ping(ip, timeout=1.0):
+    """Return True if ``ip`` answers ICMP, False otherwise, None if no address.
+
+    Mirrors the legacy ``nodeping``: a single flood probe
+    (``ping -M do -f -c 1 -W 1 -w 1``), which needs the same privileges the
+    original script did.
+    """
     if not ip:
         return None
     wait = max(1, int(round(timeout)))
-    cmd = ["ping", "-n", "-c", str(count), "-W", str(wait), ip]
+    cmd = ["ping", "-M", "do", "-f", "-c", "1", "-W", str(wait), "-w", str(wait), ip]
     try:
         proc = subprocess.run(
             cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            timeout=wait * count + 2,
+            timeout=wait + 2,
         )
     except (subprocess.TimeoutExpired, OSError):
         return False

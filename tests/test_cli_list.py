@@ -24,9 +24,9 @@ def test_list_all_aggregated(tmp_path, capsys):
     rc = cli.main(["list", "-i", _inv(tmp_path)])
     out = capsys.readouterr()
     assert rc == 0
-    assert "compute: vdc1-t10-gpu-cp-[01-02]" in out.out
-    assert "powershelf: vdc1-t10-gpu-pwr-01" in out.out
-    assert "3 hosts" in out.err
+    assert "   PhysicalNode: vdc1-t10-gpu-cp-[01-02]" in out.out
+    assert "     PowerShelf: vdc1-t10-gpu-pwr-01" in out.out
+    assert out.err == ""
 
 
 def test_list_group_long(tmp_path, capsys):
@@ -42,8 +42,11 @@ def test_ping_aggregated(tmp_path, capsys, monkeypatch):
     rc = cli.main(["ping", "compute", "-i", _inv(tmp_path)])
     out = capsys.readouterr()
     assert rc == 0
-    assert "pingable: vdc1-t10-gpu-cp-01" in out.out
-    assert "unreachable: vdc1-t10-gpu-cp-02" in out.out
+    assert "----------------\nvdc1-t10-gpu-cp-01\n----------------\nBMC pingable" in out.out
+    assert (
+        "----------------\nvdc1-t10-gpu-cp-02\n----------------\nBMC unreachable"
+        in out.out
+    )
 
 
 def test_ping_long_per_host(tmp_path, capsys, monkeypatch):
@@ -55,6 +58,13 @@ def test_ping_long_per_host(tmp_path, capsys, monkeypatch):
     assert "vdc1-t10-gpu-cp-02: BMC unreachable" in out.out
 
 
-def test_ping_requires_selector(tmp_path, capsys):
+def test_ping_default_all(tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(cli.reach, "ping", lambda ip, timeout=1.0: ip == "10.0.0.1")
     rc = cli.main(["ping", "-i", _inv(tmp_path)])
-    assert rc == 2
+    out = capsys.readouterr()
+    assert rc == 0
+    assert "----------------\nvdc1-t10-gpu-cp-01\n----------------\nBMC pingable" in out.out
+    assert (
+        "----------------\nvdc1-t10-gpu-cp-02,vdc1-t10-gpu-pwr-01\n----------------\n"
+        "BMC unreachable" in out.out
+    )

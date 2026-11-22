@@ -3,7 +3,7 @@
 import concurrent.futures
 import time
 
-from . import caps, model, oem, scan
+from . import caps, model, oem, scan, subjects
 from .errors import NodetoolsError
 from .transport.ipmi import Ipmi
 from .transport.redfish import Redfish
@@ -137,6 +137,59 @@ class Runner:
     def _detect(self, device):
         if self.options.no_cache:
             return self._classify(device)
+        return model.detect_odm(device)
+
+    def stream(self, hosts):
+        """Yield results as each node finishes (completion order, no sorting)."""
+        jobs = max(1, self.options.jobs)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+            futures = [pool.submit(self._one, host) for host in hosts]
+            for future in concurrent.futures.as_completed(futures):
+                yield future.result()
+
+    def run(self, hosts):
+        return list(self.stream(hosts))
+
+
+class InfoRunner:
+    """Run an info subject (power/eventlog/inventory) and return verbatim lines."""
+
+    def __init__(self, subject, options):
+        self.subject = subject
+        self.options = options
+        self.handler = subjects.handler_for(subject)
+
+    def _result(self, host, lines=None, error=None):
+        return {
+            "name": host.name,
+            "role": host.role,
+            "address": host.address,
+            "cap": self.subject,
+            "lines": lines or [],
+            "error": error,
+        }
+
+    def _one(self, host):
+        if not host.address:
+            return self._result(host, error="no BMC address (missing from inventory)")
+        device = None
+        try:
+            device = build_device(host, self.options)
+            if host.role == "compute":
+                device.odm = oem.get(self._detect(device))
+            lines = self.handler(device, self.options.action, self.options)
+            return self._result(host, lines=lines)
+        except Exception as exc:  # noqa: BLE001 - reported per node
+            return self._result(host, error="{}: {}".format(type(exc).__name__, exc))
+        finally:
+            if device:
+                device.close()
+
+    def _detect(self, device):
+        if self.options.no_cache:
+            probe = model.probe_redfish(device.redfish)
+            device.probe = probe
+            return model.classify(probe)
         return model.detect_odm(device)
 
     def stream(self, hosts):
