@@ -173,10 +173,13 @@ def _cmd_scan(args):
     if not hosts:
         print("nodetools: no hosts selected", file=sys.stderr)
         return 1
-    results = Scanner(options).run(hosts)
-    for line in render(results, summary=False, errors_only=False):
-        print(line)
-    return 0 if not any(result.get("error") for result in results) else 1
+    exit_code = 0
+    for result in Scanner(options).stream(hosts):
+        for line in render([result], summary=False, errors_only=False):
+            print(line, flush=True)
+        if result.get("error"):
+            exit_code = 1
+    return exit_code
 
 
 def _cmd_capability(args):
@@ -199,12 +202,12 @@ def _cmd_capability(args):
     exit_code = 0
     for capability in capabilities:
         runner = Runner(capability, options)
-        results = runner.run(hosts)
-        for line in render(results, summary=options.summary,
-                           errors_only=args.errors_only):
-            print(line)
-        if any(result.get("error") for result in results):
-            exit_code = 1
+        for result in runner.stream(hosts):
+            for line in render([result], summary=options.summary,
+                               errors_only=args.errors_only):
+                print(line, flush=True)
+            if result.get("error"):
+                exit_code = 1
     return exit_code
 
 

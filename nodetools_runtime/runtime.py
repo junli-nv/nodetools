@@ -139,10 +139,16 @@ class Runner:
             return self._classify(device)
         return model.detect_odm(device)
 
-    def run(self, hosts):
+    def stream(self, hosts):
+        """Yield results as each node finishes (completion order, no sorting)."""
         jobs = max(1, self.options.jobs)
         with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
-            return list(pool.map(self._one, hosts))
+            futures = [pool.submit(self._one, host) for host in hosts]
+            for future in concurrent.futures.as_completed(futures):
+                yield future.result()
+
+    def run(self, hosts):
+        return list(self.stream(hosts))
 
 
 class Scanner:
@@ -205,7 +211,13 @@ class Scanner:
             if device:
                 device.close()
 
-    def run(self, hosts):
+    def stream(self, hosts):
+        """Yield results as each node finishes (completion order, no sorting)."""
         jobs = max(1, self.options.jobs)
         with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
-            return list(pool.map(self._one, hosts))
+            futures = [pool.submit(self._one, host) for host in hosts]
+            for future in concurrent.futures.as_completed(futures):
+                yield future.result()
+
+    def run(self, hosts):
+        return list(self.stream(hosts))
