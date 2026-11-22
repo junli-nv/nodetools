@@ -16,14 +16,24 @@ from ..config import DEFAULT_CHASSIS, INLET_TARGET, INLET_TOLERANCE
 from . import common, temp
 
 _INLET_HINTS = ("inlet", "ambient", "intake", "front_io")
-_INLET_SKIP = ("processormodule", "pdb")
+# Chassis-level names that stay valid even with a prefix (Chassis_0_Front_IO_Temp_0).
+_CHASSIS_HINTS = ("front_io", "intake")
+# Downstream module inlets: their "inlet" is behind the fans, not the chassis
+# intake (PSU0_Inlet_Temp, HGX_Inlet_Temp, HGX_ProcessorModule_0_Inlet_Temp_0).
+_MODULE_SKIP = (
+    "processormodule", "pdb", "psu", "hsc", "hgx", "nvsw", "nvme",
+    "gpu", "cpu", "dimm", "vrm", "sxm", "module", "board",
+    "switch", "oam", "nic", "raid", "ssd", "hdd",
+)
 
 
 def _is_inlet(reading):
     name = (reading.get("name") or reading.get("id") or "").lower()
+    if any(hint in name for hint in _CHASSIS_HINTS):
+        return True
     if not any(hint in name for hint in _INLET_HINTS):
         return False
-    return not any(skip in name for skip in _INLET_SKIP)
+    return not any(skip in name for skip in _MODULE_SKIP)
 
 
 def _limit(device, attr, fallback):
