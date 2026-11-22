@@ -33,8 +33,9 @@ Recommended order (step 0 once; step 2 optional):
 ./nodelist                      # aggregated node list by role
 ./nodeping --long               # per-node BMC reachability
 
-# 2) optional: scan once to cache each BMC's Redfish map (speeds up fan/psu/temp)
-./nodetools scan --all
+# 2) optional: scan once to cache the Redfish map per machine type (speeds up fan/psu/temp)
+#    scanning one representative node covers every node of the same type
+./nodetools scan cp01
 
 # 3) start using it
 ./nodetemp  cp[01-18] --summary # one summary line per node
@@ -269,14 +270,16 @@ vendor-specific and not always advertised (Wistron exposes a `Sensors`
 collection that its chassis detail never lists), so `scan` probes the
 collection endpoints directly and records, per chassis, how many
 `Sensors`/`Fans`/`PowerSupplies`/`Temperatures` it exposes plus whether the
-legacy `Thermal`/`Power` objects exist. The map is written per BMC under
-`~/.cache/nodetools/scan/<ip>.json`.
+legacy `Thermal`/`Power` objects exist. The map is keyed **by machine type**
+(vendor + manufacturer + model) under
+`~/.cache/nodetools/scan/<vendor>__<model>.json`, so one scanned node of a type
+serves every node of that type.
 
 `fan`/`psu`/`temp` read that map and only walk the chassis that can answer
 (measurements: compute `fan` 0.9 s vs 11 s live, `psu` 8 s vs 22 s, `temp`
 7 s vs 17 s). Without a map they fall back to live discovery, so nothing is
-required up front. Re-run `scan` to refresh a machine that changed, or
-`scan --clear` to drop the entry.
+required up front. Re-scan any one node of a type to refresh it after a change,
+or `scan --clear` to drop that type's template.
 
 ## How collection works
 

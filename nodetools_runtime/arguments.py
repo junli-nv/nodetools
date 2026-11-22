@@ -256,7 +256,7 @@ def build_parser():
     cs.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
     sc = sub.add_parser(
-        "scan", help="probe and cache each BMC's Redfish map (re-run to refresh)"
+        "scan", help="probe and cache a machine type's Redfish map (re-run to refresh)"
     )
     _add_selection(sc)
     sc.add_argument("--jobs", type=int, default=None, help="parallel workers")

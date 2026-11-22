@@ -132,28 +132,61 @@ def test_scan_cache_roundtrip(tmp_path, monkeypatch):
     from nodetools_runtime import scan
 
     monkeypatch.setattr(scan, "SCAN_CACHE_DIR", str(tmp_path))
+    data = {
+        "/redfish/v1": {"Vendor": "NVIDIA"},
+        "/redfish/v1/Managers": {
+            "Members": [{"@odata.id": "/redfish/v1/Managers/BMC_0"}]
+        },
+        "/redfish/v1/Managers/BMC_0": {"Model": "GB200"},
+        "/redfish/v1/Systems": {"Members": []},
+    }
+    device = _device(data)
+    key = scan.key_for(scan.read_identity(device.redfish))
+    assert key == "nvidia__gb200"
     profile = {
         "version": scan.SCAN_CACHE_VERSION,
-        "address": "10.0.0.1",
-        "chassis": ["Chassis_0"],
+        "key": key,
         "caps": {"Chassis_0": {"Fans": 16}},
     }
-    scan.store("10.0.0.1", profile)
-    assert scan.load("10.0.0.1")["caps"]["Chassis_0"]["Fans"] == 16
-    assert scan.clear("10.0.0.1") is True
-    assert scan.load("10.0.0.1") is None
+    scan.store(profile)
+    assert scan.load(device)["caps"]["Chassis_0"]["Fans"] == 16
+    assert scan.clear(device) is True
+    assert scan.load(device) is None
 
 
 def test_scan_load_ignores_wrong_version(tmp_path, monkeypatch):
     import json
+
+    from nodetools_runtime import scan
+
+    monkeypatch.setattr(scan, "SCAN_CACHE_DIR", str(tmp_path))
+    with open(scan.cache_path("nvidia__gb200"), "w") as handle:
+        json.dump({"version": 999, "key": "nvidia__gb200"}, handle)
+    device = _device(
+        {
+            "/redfish/v1": {"Vendor": "NVIDIA"},
+            "/redfish/v1/Managers": {
+                "Members": [{"@odata.id": "/redfish/v1/Managers/BMC_0"}]
+            },
+            "/redfish/v1/Managers/BMC_0": {"Model": "GB200"},
+            "/redfish/v1/Systems": {"Members": []},
+        }
+    )
+    assert scan.load(device) is None
+
+
+def test_scan_unidentified_machine_is_not_cached(tmp_path, monkeypatch):
     import os
 
     from nodetools_runtime import scan
 
     monkeypatch.setattr(scan, "SCAN_CACHE_DIR", str(tmp_path))
-    with open(os.path.join(str(tmp_path), "10.0.0.1.json"), "w") as handle:
-        json.dump({"version": 999}, handle)
-    assert scan.load("10.0.0.1") is None
+    device = _device({})
+    profile = scan.refresh(device)
+    assert profile["key"] is None
+    assert os.listdir(str(tmp_path)) == []
+    assert scan.load(device) is None
+    assert scan.clear(device) is False
 
 
 def test_scan_refresh_records_caps(tmp_path, monkeypatch):
@@ -177,15 +210,17 @@ def test_scan_refresh_records_caps(tmp_path, monkeypatch):
             "TemperatureReadingsCelsius": [{"Reading": 1}, {"Reading": 2}]
         },
     }
-    profile = scan.refresh(_device(data, chassis=("Chassis_0",)))
+    device = _device(data, chassis=("Chassis_0",))
+    profile = scan.refresh(device)
     assert profile["chassis"] == ["Chassis_0"]
+    assert profile["key"] == "nvidia__gb200"
     rec = profile["caps"]["Chassis_0"]
     assert rec["Fans"] == 16
     assert rec["Sensors"] == 5
     assert rec["Temperatures"] == 2
     assert rec["PowerSupplies"] == 0
     assert rec["Thermal"] is False
-    assert scan.load("10.0.0.1")["caps"]["Chassis_0"]["Fans"] == 16
+    assert scan.load(device)["caps"]["Chassis_0"]["Fans"] == 16
 
 
 def test_rung_chassis_uses_profile():

@@ -17,8 +17,8 @@
 ## 快速开始
 
 `scan` **不是必须的**：`nodelist`/`nodeping` 以及所有 `node*`/`nvsw*`/`ps*` 命令
-都能直接运行。`scan` 只是**给 `fan`/`psu`/`temp` 提速**（把每个 BMC 的 Redfish
-映射缓存下来），缺省时这些命令回退到实时发现；`power`/`eventlog`/`inventory`
+都能直接运行。`scan` 只是**给 `fan`/`psu`/`temp` 提速**（按机型缓存 Redfish 映射，
+取一台做模版即可），缺省时这些命令回退到实时发现；`power`/`eventlog`/`inventory`
 根本不读该映射。
 
 推荐顺序（第 0 步一次性，第 2 步可选）：
@@ -31,8 +31,9 @@
 ./nodelist                      # 按角色聚合的节点列表
 ./nodeping --long               # 逐节点 BMC 可达性
 
-# 2) 可选：扫描一次并缓存每个 BMC 的 Redfish 映射（fan/psu/temp 提速）
-./nodetools scan --all
+# 2) 可选：扫描一次并缓存每种机型的 Redfish 映射（fan/psu/temp 提速）
+#    同机型取一台做模版，其余同机型节点自动复用
+./nodetools scan cp01
 
 # 3) 开始用
 ./nodetemp  cp[01-18] --summary # 每个节点一行汇总
@@ -246,12 +247,14 @@ vdc1-pro2-t10-gpu-cp-01: PSU_1,OK,1318.8
 一个 GB200 BMC 会摊开几十个 chassis，哪个 chassis 有什么**因厂商而异且不一定声明**
 （Wistron 暴露了 `Sensors` 集合，但其 chassis detail 从不列出），因此 `scan` 直接探测
 集合端点，按 chassis 记录它暴露了多少 `Sensors`/`Fans`/`PowerSupplies`/
-`Temperatures`，以及旧式 `Thermal`/`Power` 对象是否存在。映射按 BMC 存到
-`~/.cache/nodetools/scan/<ip>.json`。
+`Temperatures`，以及旧式 `Thermal`/`Power` 对象是否存在。映射**按机型**
+（厂商+制造商+型号）存到 `~/.cache/nodetools/scan/<vendor>__<model>.json`，
+所以同机型只需扫一台做模版，其余节点读同一份。
 
 `fan`/`psu`/`temp` 读该映射，只遍历"能回答"的 chassis（实测 compute：`fan` 0.9s
 vs 实时 11s，`psu` 8s vs 22s，`temp` 7s vs 17s）。没有映射时回退到实时发现，所以
-事先什么都不做也能用。机器变动后重跑 `scan` 刷新，`scan --clear` 删除条目。
+事先什么都不做也能用。机器变动后重跑 `scan` 刷新（同机型扫任意一台即可），
+`scan --clear` 删除该机型的模版。
 
 ## 采集原理
 

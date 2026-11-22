@@ -1,16 +1,23 @@
-"""Probe and cache each BMC's Redfish interface map.
+"""Probe and cache each *machine type's* Redfish interface map.
 
 Scanning a GB200 BMC means walking every chassis (dozens of them) to learn
 which collections exist and how many members each holds. Doing that on every
-``fan``/``psu``/``temp`` run is the single biggest cost, so ``nodetools scan``
-records it once per BMC and the collectors then read the cache and only touch
-the chassis that can actually answer. Re-run ``scan`` to refresh an entry for a
-machine that changed, or ``scan --clear`` to drop it.
+``fan``/``psu``/``temp`` run would be the single biggest cost, so ``nodetools
+scan`` records it once and the collectors then read the cache and only touch the
+chassis that can actually answer.
+
+The map is a property of the hardware, so the cache is keyed by the machine
+identity (vendor + manufacturer + model) rather than the BMC address: scan one
+representative tray to a template and every other tray of the same type reuses
+it. Commands match their template by reading the machine identity and looking
+the file up, so dispatch is a cache lookup, not a full walk. Re-run ``scan`` to
+refresh a template, or ``scan --clear`` to drop it.
 """
 
 import concurrent.futures
 import json
 import os
+import re
 import time
 
 from . import model
@@ -28,16 +35,69 @@ COUNTS = ("Sensors", "Fans", "PowerSupplies", "Temperatures")
 OBJECTS = ("Thermal", "Power")
 
 
-def cache_path(address):
-    safe = (address or "unknown").replace("/", "_").replace(":", "_")
+def _slug(value):
+    """Normalize an identity field for use in a cache key/filename."""
+    return re.sub(r"[^a-z0-9]+", "-", str(value or "").lower()).strip("-")
+
+
+def identity_key(vendor, manufacturer, model):
+    """Cache key for a machine type (vendor + manufacturer + model).
+
+    Empty fields are skipped; ``None`` when nothing identifies the machine, so
+    the caller caches nothing (rather than falling back to a per-address file).
+    """
+    parts = [_slug(value) for value in (vendor, manufacturer, model)]
+    parts = [part for part in parts if part]
+    return "__".join(parts) if parts else None
+
+
+def key_for(identity):
+    """Cache key for a device: its machine identity, or ``None`` if unidentified.
+
+    There is deliberately no per-BMC fallback: a machine whose identity cannot
+    be read is simply not cached (it falls back to live discovery), rather than
+    getting a private per-address file.
+    """
+    return identity_key(
+        identity.get("vendor"), identity.get("manufacturer"), identity.get("model")
+    )
+
+
+def cache_path(key):
+    safe = str(key).replace("/", "_").replace(":", "_")
     return os.path.join(SCAN_CACHE_DIR, safe + ".json")
 
 
-def load(address):
-    if not address:
+def read_identity(redfish):
+    """Read the machine identity cheaply (no chassis walk).
+
+    This is the few requests a command needs to find the shared template; it is
+    not the expensive part of a scan.
+    """
+    identity = {"vendor": None, "manufacturer": None, "model": None}
+    root = redfish.get("/redfish/v1")
+    if isinstance(root, dict):
+        identity["vendor"] = root.get("Vendor") or (root.get("Oem") or {}).get(
+            "Vendor"
+        )
+    for collection in ("/redfish/v1/Managers", "/redfish/v1/Systems"):
+        members = common.member_ids(redfish.get(collection))
+        if not members:
+            continue
+        data = redfish.get(members[0])
+        if isinstance(data, dict):
+            identity["model"] = identity["model"] or data.get("Model")
+            identity["manufacturer"] = identity["manufacturer"] or data.get(
+                "Manufacturer"
+            )
+    return identity
+
+
+def _read(key):
+    if not key:
         return None
     try:
-        with open(cache_path(address), "r", encoding="utf-8") as handle:
+        with open(cache_path(key), "r", encoding="utf-8") as handle:
             data = json.load(handle)
     except (OSError, ValueError):
         return None
@@ -46,11 +106,16 @@ def load(address):
     return data
 
 
-def store(address, profile):
-    if not address:
+def load(device):
+    """Cached template for this machine type, matched via its identity."""
+    return _read(key_for(read_identity(device.redfish)))
+
+
+def store(profile):
+    if not profile.get("key"):
         return None
     os.makedirs(SCAN_CACHE_DIR, exist_ok=True)
-    path = cache_path(address)
+    path = cache_path(profile["key"])
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as handle:
         json.dump(profile, handle, sort_keys=True)
@@ -58,9 +123,12 @@ def store(address, profile):
     return path
 
 
-def clear(address):
+def clear(device):
+    key = key_for(read_identity(device.redfish))
+    if not key:
+        return False
     try:
-        os.remove(cache_path(address))
+        os.remove(cache_path(key))
         return True
     except OSError:
         return False
@@ -106,17 +174,7 @@ def _chassis_caps(redfish, cid):
 def probe(device, workers=common.SCAN_WORKERS):
     """Walk a BMC and build its interface map (does not touch the cache)."""
     redfish = device.redfish
-    root = redfish.get("/redfish/v1")
-    vendor = None
-    if isinstance(root, dict):
-        vendor = root.get("Vendor") or (root.get("Oem") or {}).get("Vendor")
-    model_name = manufacturer = None
-    for collection in ("/redfish/v1/Managers", "/redfish/v1/Systems"):
-        for oid in common.member_ids(redfish.get(collection)):
-            data = redfish.get(oid)
-            if isinstance(data, dict):
-                model_name = model_name or data.get("Model")
-                manufacturer = manufacturer or data.get("Manufacturer")
+    identity = read_identity(redfish)
     chassis = common.discover_chassis(redfish)
     caps = {}
 
@@ -133,18 +191,19 @@ def probe(device, workers=common.SCAN_WORKERS):
         "version": SCAN_CACHE_VERSION,
         "address": device.address,
         "scanned": time.time(),
-        "vendor": vendor,
-        "model": model_name,
-        "manufacturer": manufacturer,
+        "vendor": identity["vendor"],
+        "model": identity["model"],
+        "manufacturer": identity["manufacturer"],
         "chassis": chassis,
         "caps": caps,
     }
     profile["odm"] = model.classify(profile)
+    profile["key"] = key_for(identity)
     return profile
 
 
 def refresh(device, workers=common.SCAN_WORKERS):
-    """Probe and write/update the cached map for this BMC."""
+    """Probe and write/update the cached template for this machine type."""
     profile = probe(device, workers=workers)
-    store(device.address, profile)
+    store(profile)
     return profile

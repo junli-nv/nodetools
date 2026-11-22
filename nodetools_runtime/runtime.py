@@ -31,11 +31,14 @@ def _resolve_creds(host, options):
     return user, password
 
 
-def build_device(host, options, apply_deadline=True):
+def build_device(host, options, apply_deadline=True, load_profile=True):
     """Construct a Device for a host and attach its cached scan map (if any).
 
-    When ``apply_deadline`` is set, the transports share one wall-clock budget
+    The scan map is a per-machine-type template looked up from the device's
+    identity, so a command only needs a cheap identity read to find it. When
+    ``apply_deadline`` is set, the transports share one wall-clock budget
     (``options.node_timeout``) so a slow BMC cannot stall the whole run.
+    ``load_profile=False`` skips the lookup (used by ``scan`` itself).
     """
     user, password = _resolve_creds(host, options)
     redfish = Redfish(host.address, user, password, timeout=options.timeout)
@@ -54,8 +57,8 @@ def build_device(host, options, apply_deadline=True):
     device = model.Device(
         host, redfish_factory=lambda h: redfish, ipmi_factory=lambda h: ipmi
     )
-    if not getattr(options, "no_cache", False):
-        device.profile = scan.load(host.address)
+    if load_profile and not getattr(options, "no_cache", False):
+        device.profile = scan.load(device)
     return device
 
 
@@ -195,7 +198,7 @@ class InfoRunner:
 
 
 class Scanner:
-    """Probe each BMC's Redfish interface map and cache it (the ``scan`` cmd)."""
+    """Probe a BMC's Redfish map and cache it per machine type (``scan`` cmd)."""
 
     def __init__(self, options):
         self.options = options
@@ -211,24 +214,26 @@ class Scanner:
         }
 
     def _one(self, host):
-        if getattr(self.options, "clear", False):
-            removed = scan.clear(host.address)
-            return self._result(
-                host,
-                readings=[
-                    {
-                        "id": "cache",
-                        "name": "cache",
-                        "value": "cleared" if removed else "absent",
-                        "health": "OK" if removed else "Unknown",
-                    }
-                ],
-            )
         if not host.address:
             return self._result(host, error="no BMC address (missing from inventory)")
         device = None
         try:
-            device = build_device(host, self.options, apply_deadline=False)
+            device = build_device(
+                host, self.options, apply_deadline=False, load_profile=False
+            )
+            if getattr(self.options, "clear", False):
+                removed = scan.clear(device)
+                return self._result(
+                    host,
+                    readings=[
+                        {
+                            "id": "cache",
+                            "name": "cache",
+                            "value": "cleared" if removed else "absent",
+                            "health": "OK" if removed else "Unknown",
+                        }
+                    ],
+                )
             profile = scan.refresh(device)
             useful = sum(
                 1

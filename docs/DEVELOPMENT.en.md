@@ -401,15 +401,23 @@ The **only source of vendor identity is `scan`**: `scan.probe` pulls
 `/redfish/v1`, `Managers/*`, `Systems/*`, `Chassis/*`, runs `model.classify`
 against `model.SIGNATURES` (specific vendors first, `nvidia` falling back to
 `gb200`), and stores `vendor`/`model`/`manufacturer`/`odm` together with the
-chassis capability map in `~/.cache/nodetools/scan/<ip>.json`.
+chassis capability map in `~/.cache/nodetools/scan/<identity>.json`.
 
-No other command probes: `runtime`, when `role == "compute"`, only reads
-`model.odm_for` (the scan profile's `odm`). With no cache it is `unknown` → base
-(GBXX, the same reference the legacy top-level scripts used) and sensors still
-walk the live ladders. `--no-cache` means "do not read the scan cache this run",
-so it likewise falls back to base and **never** creates a cache. This removes
-the per-command detection cost and the two-cache inconsistency (the old
-standalone `oem/<ip>` cache is gone with this unification).
+The cache is keyed **by machine type** (`vendor` + `manufacturer` + `model`,
+normalized), not by BMC address: trays of one type share identical hardware and
+Redfish map, so scanning **one representative** builds the template that every
+other tray of that type reuses (`scan.key_for`). To find it a command does one
+cheap identity read (`scan.read_identity`: `/redfish/v1` plus the first
+Manager/System Model/Manufacturer), never a full walk. When the identity cannot
+be read (unreachable/unidentified) it is **not cached** — there is no per-IP
+fallback file.
+
+No other command probes: `runtime.build_device` loads the template via
+`scan.load(device)`, then `InfoRunner` dispatches through `model.odm_for` (the
+profile's `odm`). With no template it is `unknown` → base (GBXX, the same
+reference the legacy top-level scripts used) and sensors still walk the live
+ladders. `--no-cache` means "do not read the scan cache this run", so it likewise
+falls back to base and **never** creates a cache.
 
 ### Scan cache (scan)
 
@@ -419,15 +427,16 @@ collections is **vendor-specific and not always declared in the detail**
 probes the collection endpoints directly and records, per chassis, the member
 counts of `Sensors`/`Fans`/`PowerSupplies`/`Temperatures` and whether the legacy
 `Thermal`/`Power` singleton objects exist — plus the identity/ODM — writing to
-`~/.cache/nodetools/scan/<ip>.json` (`SCAN_CACHE_VERSION`; bump it on structural
-change to avoid misreading old files). This is the tool's **only cache**.
+`~/.cache/nodetools/scan/<identity>.json` (`SCAN_CACHE_VERSION`; bump it on
+structural change to avoid misreading old files). This is the tool's **only
+cache**, and it is **per machine type**, not per address.
 
 fan/psu/temp walk only the chassis that can answer their ladder via
 `common.rung_chassis(device, key)` (falling back to live discovery when there is
 no cache, unchanged behavior): `Fans`/`PowerSupplies`/`Sensors`/`Temperatures`
 by count > 0, `Thermal`/`Power` by existence. Measured on compute nodes: `fan`
-0.9 s vs 11 s live, `psu` 8 s vs 22 s, `temp` 7 s vs 17 s. Re-running `scan`
-refreshes it (when a machine changes); `scan --clear` deletes it.
+0.9 s vs 11 s live, `psu` 8 s vs 22 s, `temp` 7 s vs 17 s. Re-scan any one node of
+a type to refresh its template; `scan --clear` deletes it.
 
 ### IPMI password modes
 

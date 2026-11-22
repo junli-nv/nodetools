@@ -341,13 +341,18 @@ reachable=$(./nodeping --long vdc1-pro2-t10-gpu-cp-[01-18] \
 厂商身份的**唯一来源是 `scan`**：`scan.probe` 拉取 `/redfish/v1`、`Managers/*`、
 `Systems/*`、`Chassis/*`，用 `model.classify` 按 `model.SIGNATURES` 匹配（具体厂商
 在前，`nvidia` 兜底 `gb200`），把 `vendor`/`model`/`manufacturer`/`odm` 与 chassis
-能力图一起写进 `~/.cache/nodetools/scan/<ip>.json`。
+能力图一起写进 `~/.cache/nodetools/scan/<identity>.json`。
 
-其余命令**不再自己探测**：`runtime` 在 `role == "compute"` 时只读 `model.odm_for`
-（即 scan profile 的 `odm`）。没有缓存 → `unknown` → 基类（GBXX，等同旧顶层脚本），
-传感器照常走实时回退阶梯。`--no-cache` 表示"本次不读 scan 缓存"，于是同样回退基类，
-**不会**新建任何缓存。这样既没有每条命令一次的探测开销，也避免了身份存在两处的
-不一致（旧版曾有独立的 `oem/<ip>` 缓存，已随本次统一移除）。
+缓存**按机型**（`vendor`+`manufacturer`+`model`，归一化后作 key），不是按 BMC 地址：
+同一机型的 tray 硬件一致、Redfish 映射相同，所以扫**一台做模版即可**，其余同机型节点
+复用同一份文件（`scan.key_for`）。命令加载模版前只做一次轻量身份读取
+（`scan.read_identity`：`/redfish/v1` + 首个 Manager/System 的 Model/Manufacturer），
+不整机遍历。身份读不到（不可达/无标识）时**不缓存**——没有按 IP 的兜底文件。
+
+其余命令**不再自己探测**：`runtime.build_device` 用 `scan.load(device)` 按身份读回
+模版，`InfoRunner` 再经 `model.odm_for`（即 profile 的 `odm`）派发。没有模版 →
+`unknown` → 基类（GBXX，等同旧顶层脚本），传感器照常走实时回退阶梯。`--no-cache`
+表示"本次不读 scan 缓存"，于是同样回退基类，**不会**新建任何缓存。
 
 ### 扫描缓存（scan）
 
@@ -355,14 +360,14 @@ reachable=$(./nodeping --long vdc1-pro2-t10-gpu-cp-[01-18] \
 在 detail 里声明**（Wistron 的 `Sensors` 集合就不出现在 chassis detail 中）。
 因此 `scan` 直接探测各集合端点，按 chassis 记录 `Sensors`/`Fans`/`PowerSupplies`/
 `Temperatures` 的成员数，以及旧式 `Thermal`/`Power` 单例对象是否存在，连同身份/ODM
-一并存到 `~/.cache/nodetools/scan/<ip>.json`（`SCAN_CACHE_VERSION`，改结构时递增
-以免误读旧档）。这是工具**唯一的缓存**。
+一并存到 `~/.cache/nodetools/scan/<identity>.json`（`SCAN_CACHE_VERSION`，改结构时
+递增以免误读旧档）。这是工具**唯一的缓存**，且**按机型**而非按地址。
 
 fan/psu/temp 通过 `common.rung_chassis(device, key)` 只遍历"能回答该阶梯"的
 chassis（无缓存则回退到实时发现，行为不变）：`Fans`/`PowerSupplies`/`Sensors`/
 `Temperatures` 用数量 >0 判定，`Thermal`/`Power` 用存在性。实测 compute 节点
-`fan` 0.9s vs 实时 11s、`psu` 8s vs 22s、`temp` 7s vs 17s。重新 `scan` 即刷新
-（机器有变动时），`scan --clear` 删除。
+`fan` 0.9s vs 实时 11s、`psu` 8s vs 22s、`temp` 7s vs 17s。同机型重扫任意一台即刷新，
+`scan --clear` 删除该机型的模版。
 
 ### IPMI 密码双模式
 

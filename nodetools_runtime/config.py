@@ -64,13 +64,15 @@ CACHE_DIR = os.path.join(
     "nodetools",
 )
 
-# The one cache: the per-BMC Redfish interface map produced by `nodetools scan`
-# and reused by every other command (which only read it, never write it). It
-# also carries the ODM identity, so dispatch is a cache lookup, not a probe.
+# The one cache: the per-machine-type Redfish interface map produced by
+# `nodetools scan` and reused by every other command (which only read it, never
+# write it). It is keyed by the machine identity (vendor/manufacturer/model), so
+# one representative tray's template serves every tray of the same type; it also
+# carries the ODM identity, so dispatch is a cache lookup, not a probe.
 # Bump SCAN_CACHE_VERSION whenever the schema changes so stale files are
 # ignored instead of misread.
 SCAN_CACHE_DIR = os.path.join(CACHE_DIR, "scan")
-SCAN_CACHE_VERSION = 2
+SCAN_CACHE_VERSION = 3
 
 # Roles and the inventory group that maps to each one.
 ROLE_GROUPS = {
