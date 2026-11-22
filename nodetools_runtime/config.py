@@ -48,8 +48,7 @@ DEFAULT_TIMEOUT = 10
 DEFAULT_SUMMARY = False
 # Whole-node wall-clock budget for a capability run: once it is spent, the
 # transport stops issuing new requests instead of hanging on a slow BMC.
-# No CLI flag on purpose (keep the interface small); set node_timeout in the
-# [nodehealth:defaults] inventory section to override.
+# Override with --node-timeout or node_timeout in [nodehealth:defaults].
 DEFAULT_NODE_TIMEOUT = 30.0
 
 # Air-intake ("inlet") temperature check (``nodeinlet``, compute only). The tray

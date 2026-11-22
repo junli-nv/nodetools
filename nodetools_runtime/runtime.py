@@ -15,8 +15,6 @@ _CRED_KEYS = {
     "unknown": ("bmc_user", "bmc_password"),
 }
 
-_FAN_ACTIONS = ("auto", "max")
-_PSU_ACTIONS = ("on", "off", "cycle")
 
 # Capabilities whose fast path never consults the cached scan template. The
 # inlet check reads one chassis directly, so skipping the template skips the
@@ -65,8 +63,11 @@ def build_device(host, options, apply_deadline=True, load_profile=True):
     # Expose run options to collectors that need a parameter (e.g. the inlet
     # target/tolerance in ``caps.inlet``); most collectors ignore this.
     device.options = options
-    if load_profile and not getattr(options, "no_cache", False):
-        device.profile = scan.load(device)
+    if load_profile:
+        if getattr(options, "no_cache", False):
+            device.identity = scan.read_identity(device.redfish)
+        else:
+            device.profile = scan.load(device)
     return device
 
 
@@ -94,21 +95,11 @@ class Runner:
 
     def _control(self, device, module):
         action = self.options.action
-        if self.capability == "fan":
-            if action not in _FAN_ACTIONS:
-                raise NodetoolsError("invalid fan action {!r}".format(action))
-            module.fan_control(device, action)
-        elif self.capability == "psu":
-            if action not in _PSU_ACTIONS:
-                raise NodetoolsError("invalid psu action {!r}".format(action))
-            if device.role == "powershelf":
-                oem.power_shelf_control(device, action)
-            else:
-                module.psu_control(device, action)
-        else:
-            raise NodetoolsError(
-                "action not supported for capability {!r}".format(self.capability)
-            )
+        if self.capability != "fan":
+            raise NodetoolsError("action not supported for capability {!r}".format(self.capability))
+        if action not in module.fan_actions:
+            raise NodetoolsError("invalid fan action {!r}".format(action))
+        module.fan_control(device, action)
 
     def _one(self, host):
         if not host.address:
@@ -116,9 +107,8 @@ class Runner:
         device = None
         try:
             device = self._device(host)
-            module = oem.get("unknown")
             if self.options.action:
-                module = oem.get(model.odm_for(device))
+                module = oem.for_device(device, self.capability)
                 self._control(device, module)
                 return self._result(
                     host,
@@ -131,6 +121,8 @@ class Runner:
                         }
                     ],
                 )
+            if self.capability == "fan":
+                device.odm = oem.for_device(device, "fan")
             collector = caps.collector_for(self.capability)
             readings = collector(device)
             if not readings:
@@ -183,7 +175,7 @@ class InfoRunner:
             # Every role dispatches to the ODM recorded by ``scan`` so vendor
             # overrides (e.g. Compal NVSwitch power) apply; unscanned nodes and
             # ODMs without an override fall back to the base handler.
-            device.odm = oem.get(model.odm_for(device))
+            device.odm = oem.for_device(device)
             lines = self.handler(device, self.options.action, self.options)
             if not lines and device.transport_errors:
                 return self._result(
@@ -262,7 +254,15 @@ class Scanner:
                             len(profile["chassis"]), useful
                         ),
                         "health": "OK",
-                    }
+                    },
+                    {
+                        "id": "hardware",
+                        "name": "classification",
+                        "value": "platform={}/oem={}/role={}".format(
+                            profile["platform"], profile["odm"], host.role
+                        ),
+                        "health": "OK",
+                    },
                 ],
             )
         except Exception as exc:  # noqa: BLE001 - reported per node
@@ -306,7 +306,7 @@ class Scanner:
             if error:
                 yield self._result(host, error=error)
                 continue
-            key = scan.key_for(identity)
+            key = scan.key_for(identity, host.vars)
             # An unidentified machine cannot be deduped; scan each one on its
             # own so a whole class is not silently collapsed into one node.
             groups.setdefault(key or "address:" + host.name, []).append((key, host))

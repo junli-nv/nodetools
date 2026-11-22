@@ -62,17 +62,22 @@ nodetemp --group compute --summary
 命令名 = 前缀 + 对象，与旧脚本一致：`node` = compute tray，`nvsw` = NVSwitch，
 `ps` = power shelf。GBXX 三个前缀都要；BXX 只用 `node*`。
 
+计算节点 `nodefan` 默认每节点一行列出转速。数字单位为 RPM，百分比带 `%`。`check` 逐风扇显示健康状态，配合 `--errors-only` 可只看异常。`auto` 和 `max` 由 OEM 适配器处理，Netweb 还支持 `low` 和 `opt`。
+
+PSU 默认输出 `ID,Health,Reading`。用 `nodepsu --details HGX390` 查看名称、厂商、型号、固件、健康状态、输入功率（W）和输出功率（W）。未提供的字段显示 `NA`。
+只读传感器查询按 Ctrl-C 立即退出，返回退出码 130。
+
 ```
 # 传感器
-nodefan  <noderange> [status|check|auto|max]
-nodepsu  <noderange> [status|on|off|cycle]
+nodefan  <noderange> [status|check|auto|max|low|opt]
+nodepsu  <noderange> [status|check]
 nodetemp <noderange>
 nodeinlet <noderange> [--target C] [--tolerance D]
 nvswfan  <noderange> [status|check|auto|max]
-nvswpsu  <noderange> [status|on|off|cycle]
+nvswpsu  <noderange> [status|check]
 nvswtemp <noderange>
 psfan    <noderange> [status|check|auto|max]
-pspsu    <noderange> [status|on|off|cycle]
+pspsu    <noderange> [status|check]
 pstemp   <noderange>
 
 # 信息
@@ -114,8 +119,7 @@ nodetools inventory show [-i inventory.ini]
 * `noderange` 是 hostlist 表达式（`cp[01-18]`）、inventory 组名或主机名。它会被
   收窄到前缀所对应的角色。也可改用 `--group G` / `--all`（`--all` 也会收窄到该
   命令的角色）。
-* `action` 默认是读取（`status`/`check`）；`auto`/`max`（fan）与 `on`/`off`/`cycle`
-  （psu）会下发控制动作。`power` 额外支持 `reset`/`reseat`。
+* 传感器默认读取状态。风扇的调速动作由 OEM 决定；PSU 查询为只读。设备电源动作通过 `power` 命令执行。
 * 传感器输出为逗号分隔字段；信息命令原样逐行输出 `<node>: <line>`（见下文）。
 * `nodeinlet`（仅 compute）取机箱进风温度（GB200 为 `Chassis_0_Front_IO_Temp_0`，
   其他 ODM 为 `Inlet_Temp`/`Ambient_Temp` 等），排除处理器模块/PDB 等内部进风点；
@@ -134,6 +138,7 @@ nodetools inventory show [-i inventory.ini]
   `nvswpower`/`pspower` 是 NVIDIA 专有基础设施，默认固定走 Redfish 复位
   （`Systems/System_0` 的 `ComputerSystem.Reset`）；Compal 的 NVSwitch 走
   `Systems/Self` 且 `reseat` 为 `FullPowerCycle`。
+  `nodepower status` 将 Redfish 和 IPMI 的状态统一为 `On`、`Off` 等值，状态缺失时显示 `N/A`。
 * **eventlog** — `nodeeventlog` 默认读 `[HMC]`（`HGX_Baseboard_0` EventLog），
   `bmc` 读 `[BMC]`（IPMI SEL），`clear` 清 BMC/HMC 日志；各 OEM 覆盖各自的 Sol/
   PlatformLog/BIOS 集合。
@@ -160,6 +165,11 @@ nodetools inventory show [-i inventory.ini]
   Aivres/SMC/Dell 各自实现（Dell 走 `racadm remoteimage`）。`image` 支持 `smb://`
   （Compal/Netweb/GBXX）、`http://`（SMC/Dell）、`nfs://`（Aivres），`--vm-user`/
   `--vm-password` 覆盖 SMB 凭据。
+  `mount URL` 是统一挂载入口，`insert URL` 与它等价。AMI、Compal、Netweb 和 Dell
+  先启用远程媒体再插入。Aivres 传 NFS ISO URL，先挂载其目录再插入该 ISO；
+  `eject` 也须指定该 URL。SMC 直接插入。`status` 查询当前状态。
+  Compal 正常弹出失败后可显式执行 `stop URL`，调用专用停止接口。Netweb 的
+  `stop URL` 使用标准弹出接口，按 BMC 报告的完整 URL 匹配目标。
 
 > 注意：`nodenetboot` 与 `nodebios base/pending` 会**修改** BMC/BIOS，属于写操作；
 > `nodevm` 的 `enable`/`mount`/`insert`/`eject`/`umount`/`stop` 也是写操作。
@@ -204,7 +214,7 @@ reachable=$(./nodeping --long cp[01-18] \
 | `--log-file` / `--log-dir` / `--no-log` | 交互会话日志路径/目录/关闭 |
 | `--reconnect` / `--no-reconnect` | 断线后是否重连（`--console` 默认重连） |
 | `--reconnect-attempts` / `--reconnect-delay` | 重连次数/间隔（默认 3 / 5s） |
-| `--no-cache` | 忽略 ODM 与 scan 缓存 |
+| `--no-cache` | 跳过扫描映射缓存 |
 | `-x`, `--debug` | 详细日志 |
 
 ## Inventory
@@ -218,8 +228,19 @@ Ansible 风格 INI，见 `inventory.example.ini`。每台主机用 `host=` 带 B
 | nvswitch | `nvswitch_bmc_user` / `nvswitch_bmc_password` |
 | powershelf | `powershelf_bmc_user` / `powershelf_bmc_password` |
 
+同一厂商可以有不同平台。`platform=hgx` 表示 B200/B300，`platform=nvl`
+表示 GB200/GB300，`oem=dell` 指定厂商。示例 inventory 包含 `dell_hgx` 和
+`dell_nvl` 两组，用 `role=compute` 声明角色。角色也可以设为 `nvswitch`
+或 `powershelf`。原有的三个同名角色组仍可自动识别角色。机器在多个组时，
+后出现的组成员关系优先，行内设置优先于所有组。
+
+不指定 `platform` 或 `oem` 时，由 BMC 自动识别。用
+`./nodetools inventory show -i inventory.ini` 查看配置值，`auto` 表示交给自动识别。
+用 `./nodevm --group dell_nvl` 查询 Dell NVL 虚拟介质。Dell NVL 的
+挂载和推出需要已验证的机型适配，目前提供 Redfish 只读查询。
+
 `[nodehealth:defaults]` 设置运行默认值：`jobs`、`timeout`（单请求）、
-`node_timeout`（整节点墙钟预算，默认 30s）。`node_timeout` 没有 CLI flag；用完后
+`node_timeout`（含身份识别的整节点请求预算，默认 30 秒）。可用 `--node-timeout S` 覆盖 `node_timeout`；用完后
 慢 BMC 会被放弃，而不是拖住整批。`scan` 不使用它（本身就是长任务）。
 
 从 `DeviceType Hostname BMC_IP` 的 hosts.list 生成初始文件：
@@ -276,9 +297,9 @@ vs 实时 11s，`psu` 8s vs 22s，`temp` 7s vs 17s）。没有映射时回退到
 * **temp** — `Thermal.Temperatures` → `ThermalSubsystem/ThermalMetrics` →
   `TelemetryService/MetricReports` → `Sensors` → IPMI `sdr type Temperature`。
 
-ODM（Dell/Lenovo/Supermicro/AMI/BYD/GIGABYTE/DGX/NVIDIA/Wistron/Inventec）从 BMC 的
-Redfish 身份探测并缓存到 `~/.cache/nodetools/oem/<ip>`。ODM 模块另外提供厂商特有的
-控制动作以及 power/eventlog/inventory 的覆盖实现，端点缺失时回退到基类（GBXX 约定）。
+硬件识别分为三项：平台、OEM 和角色。HGX 对应 B200/B300，NVL 对应 GB200/GB300。两类平台都独立识别 OEM；NVL 的计算托盘、NVSwitch 和电源架仍按库存角色选择命令。`scan` 输出这三项。
+
+库存可在主机行或组变量中设置 `platform=hgx` / `platform=nvl` 和 `oem=aivres` / `oem=compal` 等覆盖。省略时从 BMC 身份识别，平台还可根据主机名判断。OEM 适配器也在未扫描时选择。`--no-cache` 跳过扫描映射，仍读取 BMC 身份。
 
 ## 开发
 

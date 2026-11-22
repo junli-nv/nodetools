@@ -1,11 +1,6 @@
-"""Device model: identity (ODM) lookup, classification and transport errors.
+"""Device model and independent platform and OEM identification."""
 
-Vendor identity is never probed by a command. ``nodetools scan`` walks a BMC
-once and records the ODM in its scan map; every other command reads that map
-(:func:`odm_for`), so dispatch costs a cache lookup, not a live walk. The only
-identity work here is :func:`classify`, which ``scan`` uses to turn a probe
-into an ODM string.
-"""
+import re
 
 from .config import ROLE_GROUPS
 
@@ -15,16 +10,17 @@ SIGNATURES = (
     ("dell", ("dell",)),
     ("lenovo", ("lenovo",)),
     ("smc", ("supermicro", "super micro")),
-    ("ami", ("american megatrends", "ami_")),
     ("gigabyte", ("gigabyte", "giga-byte")),
     ("wistron", ("wistron", "wiwynn")),
     ("inventec", ("inventec",)),
     ("byd", ("byd",)),
     ("aivres", ("aivres",)),
+    ("kaytus", ("kaytus",)),
     ("compal", ("compal",)),
     ("netweb", ("netweb",)),
     ("dgx", ("dgx",)),
-    ("gb200", ("gb200", "gb300", "nvidia")),
+    ("ami", ("american megatrends", "ami_")),
+    ("nvidia", ("nvidia",)),
 )
 
 
@@ -40,6 +36,7 @@ class Device:
         self.redfish = redfish_factory(host) if redfish_factory else None
         self.ipmi = ipmi_factory(host) if ipmi_factory else None
         self.odm = None
+        self.identity = {}
         # Cached scan map for this BMC (``nodetools scan``), attached by
         # ``runtime.build_device``; ``None`` when there is no cache.
         self.profile = None
@@ -64,44 +61,72 @@ class Device:
             self.redfish.close()
 
 
-def _collect_strings(obj, acc):
-    if isinstance(obj, dict):
-        for key, value in obj.items():
-            if isinstance(value, str):
-                acc.append(value.lower())
-            elif key == "Oem" and isinstance(value, dict):
-                acc.extend(k.lower() for k in value.keys())
-            else:
-                _collect_strings(value, acc)
-    elif isinstance(obj, list):
-        for item in obj:
-            _collect_strings(item, acc)
+_PLATFORM_PATTERNS = (
+    ("nvl", re.compile(r"\b(?:gb[ -]?(?:200|300)|nvl(?:72|36)?)\b", re.I)),
+    ("hgx", re.compile(r"\b(?:hgx(?:[-_]?\d+)?|b[ -]?(?:200|300))\b", re.I)),
+)
 
 
 def classify(probe):
-    """Turn a scan probe (or scan profile) into an ODM name."""
-    haystack = []
-    _collect_strings(probe, haystack)
-    for name, markers in SIGNATURES:
-        for marker in markers:
-            if any(marker in item for item in haystack):
+    """Identify the system OEM, falling back to the Redfish vendor."""
+    system = " ".join(
+        str(probe.get(key) or "") for key in ("manufacturer", "model")
+    ).lower()
+    vendor = str(probe.get("vendor") or "").lower()
+    for source in (system, vendor):
+        for name, markers in SIGNATURES:
+            if name not in ("ami", "nvidia") and any(marker in source for marker in markers):
                 return name
+    for name, markers in SIGNATURES:
+        if any(marker in system or marker in vendor for marker in markers):
+            return name
     return "unknown"
+
+
+def platform_family(identity, name=""):
+    for source in (identity.get("model"), name):
+        for platform, pattern in _PLATFORM_PATTERNS:
+            if pattern.search(str(source or "")):
+                return platform
+    return "unknown"
+
+
+def hardware_identity(device):
+    return {
+        **(getattr(device, "profile", None) or {}),
+        **{key: value for key, value in (getattr(device, "identity", None) or {}).items() if value},
+    }
+
+
+def platform_for(device):
+    override = (getattr(device, "vars", {}) or {}).get("platform", "").strip().lower()
+    if override:
+        for platform, pattern in _PLATFORM_PATTERNS:
+            if pattern.fullmatch(override):
+                return platform
+        if override != "unknown":
+            raise ValueError("Unsupported inventory platform: " + override)
+        return override
+    family = platform_family(hardware_identity(device), getattr(device, "name", ""))
+    if family == "unknown" and getattr(device, "role", None) in ("nvswitch", "powershelf"):
+        return "nvl"
+    return family
 
 
 def odm_for(device):
-    """ODM recorded by ``nodetools scan`` for this BMC, else ``unknown``.
-
-    A plain cache lookup: commands never walk the BMC to identify a vendor.
-    An unscanned node falls back to the base (GBXX/NVIDIA) handler, which is
-    the reference the legacy top-level scripts used.
-    """
-    profile = getattr(device, "profile", None)
-    if isinstance(profile, dict):
-        odm = profile.get("odm")
-        if odm:
-            return odm
-    return "unknown"
+    override = (getattr(device, "vars", {}) or {}).get("oem", "").strip().lower()
+    if override:
+        override = {"giga": "gigabyte", "gb200": "nvidia"}.get(override, override)
+        if override != "unknown" and all(name != override for name, _ in SIGNATURES):
+            raise ValueError("Unsupported inventory OEM: " + override)
+        return override
+    identity = hardware_identity(device)
+    detected = classify(identity)
+    if detected != "unknown":
+        return detected
+    cached = identity.get("odm")
+    # The old gb200 bucket also included unidentified NVIDIA devices.
+    return cached if cached and cached != "gb200" else "unknown"
 
 
 def role_for_groups(groups):

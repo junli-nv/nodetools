@@ -73,7 +73,10 @@ def _add_selection(parser):
     parser.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
 
-def _add_sensor_opts(parser):
+def _add_sensor_opts(parser, subject):
+    actions = {
+        "fan": "status (default) | check (per-fan health) | auto/max (OEM) | low/opt (Netweb)",
+    }
     parser.add_argument(
         "noderange",
         nargs="?",
@@ -83,7 +86,7 @@ def _add_sensor_opts(parser):
         "action",
         nargs="?",
         default=None,
-        help="status/check (read, default) | auto/max (fan) | on/off/cycle (psu)",
+        help=actions.get(subject, "status/check (read, default)"),
     )
     _add_inventory_opt(parser)
     parser.add_argument("--group", action="append", default=[], help="select a group")
@@ -94,6 +97,10 @@ def _add_sensor_opts(parser):
     parser.add_argument("--errors-only", action="store_true", help="only non-OK lines")
     parser.add_argument("--jobs", type=int, default=None, help="parallel workers")
     parser.add_argument("--timeout", type=float, default=None, help="per-request timeout")
+    parser.add_argument(
+        "--node-timeout", type=float, default=None,
+        help="total request budget per node, including identification (default 30 seconds)",
+    )
     parser.add_argument(
         "-a",
         "--action",
@@ -120,6 +127,8 @@ def _add_info_opts(parser, subject):
     )
     actions = [a for a in INFO_ACTIONS.get(subject, ()) if a != "status"]
     help_text = "read (default) | " + " | ".join(actions) if actions else "read-only"
+    if subject == "vm":
+        help_text = "status (default) | mount/insert URL | eject | stop URL (OEM) | enable/umount/media/lic (OEM)"
     parser.add_argument("action", nargs="?", default=None, help=help_text)
     if subject == "vm":
         parser.add_argument(
@@ -138,6 +147,10 @@ def _add_info_opts(parser, subject):
     parser.add_argument("--errors-only", action="store_true", help="only non-OK lines")
     parser.add_argument("--jobs", type=int, default=None, help="parallel workers")
     parser.add_argument("--timeout", type=float, default=None, help="per-request timeout")
+    parser.add_argument(
+        "--node-timeout", type=float, default=None,
+        help="total request budget per node, including identification (default 30 seconds)",
+    )
     parser.add_argument(
         "-a",
         "--action",
@@ -190,7 +203,12 @@ def build_parser():
         sensor = sub.add_parser(
             name, help="{} {} readings/control".format(role, subject)
         )
-        _add_sensor_opts(sensor)
+        _add_sensor_opts(sensor, subject)
+        if subject == "psu":
+            sensor.add_argument(
+                "--details", action="store_true",
+                help="show PSU name, manufacturer, model, firmware, health and input/output watts",
+            )
         if subject == "inlet":
             sensor.add_argument(
                 "--target",

@@ -1,12 +1,13 @@
 """ODM module registry."""
 
-from ..errors import CapUnsupported
+from .. import model
 from .aivres import Aivres
 from .ami import Ami
 from .base import Oem
 from .byd import Byd
 from .compal import Compal
 from .dell import Dell
+from .dell_nvl import DellNvl
 from .dgx import Dgx
 from .gb200 import Gb200
 from .gigabyte import Gigabyte
@@ -32,6 +33,10 @@ _MODULES = {
     "netweb": Netweb(),
 }
 
+_PLATFORM_MODULES = {
+    ("nvl", "dell", "compute"): DellNvl(),
+}
+
 _GENERIC = Oem()
 
 # ODM tokens as returned by model.classify, including aliases.
@@ -45,18 +50,22 @@ def get(odm):
     return _MODULES.get(key, _GENERIC)
 
 
+def for_device(device, capability=None):
+    platform = model.platform_for(device)
+    odm = model.odm_for(device)
+    module = _PLATFORM_MODULES.get((platform, odm, device.role))
+    if module is not None:
+        return module
+    if platform == "nvl" and odm == "dell":
+        return _GENERIC
+    if capability == "fan" and platform == "hgx" and odm == "kaytus":
+        product = str(model.hardware_identity(device).get("model") or "").upper()
+        if product.startswith("KR9288-X3-"):
+            return get("aivres")
+    if odm in ("nvidia", "gb200"):
+        return get("gb200") if platform == "nvl" else _GENERIC
+    return get(odm)
+
+
 def names():
     return sorted(_MODULES)
-
-
-def power_shelf_control(device, action):
-    """Generic PowerShelf power control shared by every ODM."""
-    if action == "cycle":
-        raise CapUnsupported("PowerShelf does not advertise PowerCycle")
-    body = {"ResetType": "On" if action == "on" else "ForceOff"}
-    status, _ = device.redfish.post(
-        "/redfish/v1/Chassis/PowerShelf_0/Actions/Chassis.Reset", body
-    )
-    if status in (200, 202, 204):
-        return "ok"
-    raise RuntimeError("Chassis.Reset returned {}".format(status))

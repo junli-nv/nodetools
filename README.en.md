@@ -65,17 +65,22 @@ The prefix names the node role and the suffix names the subject, exactly like
 the legacy scripts: `node` = compute tray, `nvsw` = NVSwitch, `ps` = power shelf.
 GBXX uses all three prefixes; BXX only needs `node*`.
 
+Compute-node `nodefan` lists speeds on one line per node. Numbers are RPM and percentage readings carry `%`. Use `check` for per-fan health and `--errors-only` to show exceptions. OEM adapters handle `auto` and `max`. Netweb also supports `low` and `opt`.
+
+PSU output defaults to `ID,Health,Reading`. Use `nodepsu --details HGX390` for name, manufacturer, model, firmware, health, input watts and output watts. Missing fields appear as `NA`.
+Ctrl-C exits read-only sensor queries immediately with status 130.
+
 ```
 # sensors
-nodefan  <noderange> [status|check|auto|max]
-nodepsu  <noderange> [status|on|off|cycle]
+nodefan  <noderange> [status|check|auto|max|low|opt]
+nodepsu  <noderange> [status|check]
 nodetemp <noderange>
 nodeinlet <noderange> [--target C] [--tolerance D]
 nvswfan  <noderange> [status|check|auto|max]
-nvswpsu  <noderange> [status|on|off|cycle]
+nvswpsu  <noderange> [status|check]
 nvswtemp <noderange>
 psfan    <noderange> [status|check|auto|max]
-pspsu    <noderange> [status|on|off|cycle]
+pspsu    <noderange> [status|check]
 pstemp   <noderange>
 
 # info
@@ -118,9 +123,7 @@ group; select the whole role explicitly with `--all` (or `--group G`).
 * `noderange` is a hostlist expression (`cp[01-18]`), an inventory group name,
   or a hostname. It is narrowed to the role named by the prefix. Use
   `--group G` / `--all` instead (both also narrow to the command's role).
-* `action` defaults to a read (`status`/`check`); `auto`/`max` (fan) and
-  `on`/`off`/`cycle` (psu) issue a control action. `power` additionally accepts
-  `reset`/`reseat`.
+* Sensor commands read status by default. Fan modes depend on the OEM. PSU queries are read-only. Device power actions use the `power` commands.
 * Sensor output is comma-separated fields; info commands print verbatim
   `<node>: <line>` lines (see below).
 * `nodeinlet` (compute only) reports the chassis air intake (on GB200 the
@@ -145,6 +148,7 @@ output verbatim:
   infrastructure, using the Redfish reset (`Systems/System_0`
   `ComputerSystem.Reset`) by default; Compal NVSwitch uses `Systems/Self` with
   `reseat` as `FullPowerCycle`.
+  `nodepower status` displays consistent Redfish and IPMI states such as `On` and `Off`, with `N/A` when unavailable.
 * **eventlog** — `nodeeventlog` reads `[HMC]` by default
   (`HGX_Baseboard_0` EventLog), `bmc` reads `[BMC]` (IPMI SEL), `clear` clears
   the BMC/HMC logs; each OEM overrides its own Sel/PlatformLog/BIOS collection.
@@ -178,6 +182,13 @@ class when an endpoint is absent):
   own (Dell goes through `racadm remoteimage`). `image` accepts `smb://`
   (Compal/Netweb/GBXX), `http://` (SMC/Dell) or `nfs://` (Aivres);
   `--vm-user`/`--vm-password` override the SMB credentials.
+  `mount URL` runs the OEM's complete workflow. `insert URL` is an alias.
+  AMI, Compal, Netweb and Dell enable remote media before inserting it.
+  Aivres mounts the NFS directory and inserts the supplied ISO. Its `eject`
+  also requires the ISO URL. SMC inserts directly. Use `status` to inspect media.
+  Compal supports an explicit `stop URL` through its stop-media endpoint if
+  normal eject fails. Netweb `stop URL` uses standard eject and matches the
+  full mounted URL reported by the BMC.
 
 > Note: `nodenetboot` and `nodebios base/pending` **modify** the BMC/BIOS;
 > `nodevm`'s `enable`/`mount`/`insert`/`eject`/`umount`/`stop` are writes too.
@@ -225,7 +236,7 @@ reachable=$(./nodeping --long cp[01-18] \
 | `--log-file` / `--log-dir` / `--no-log` | session log path/dir/off |
 | `--reconnect` / `--no-reconnect` | reconnect after a drop (`--console`: on) |
 | `--reconnect-attempts` / `--reconnect-delay` | tries/interval (default 3 / 5s) |
-| `--no-cache` | ignore the cached ODM and scan maps |
+| `--no-cache` | skip the scan-map cache |
 | `-x`, `--debug` | verbose logging |
 
 ## Inventory
@@ -240,9 +251,23 @@ address via `host=`. Credentials are role-scoped and resolved with precedence
 | nvswitch | `nvswitch_bmc_user` / `nvswitch_bmc_password` |
 | powershelf | `powershelf_bmc_user` / `powershelf_bmc_password` |
 
+One OEM can have multiple platforms. Use `platform=hgx` for B200/B300,
+`platform=nvl` for GB200/GB300, and `oem=dell` to identify the manufacturer.
+The example inventory defines `dell_hgx` and `dell_nvl` groups with `role=compute`.
+Use `role=nvswitch` or `role=powershelf` for the corresponding devices. The three
+built-in role groups still infer their roles. For hosts in multiple groups,
+later memberships take precedence among group variables. Inline settings take precedence
+over all group variables.
+
+Omit `platform` or `oem` to detect them from the BMC. Run
+`./nodetools inventory show -i inventory.ini` to see the configured values.
+`auto` indicates automatic detection. Run `./nodevm --group dell_nvl`
+to query Dell NVL virtual media. Dell NVL currently provides read-only Redfish
+status. Mount and eject require a verified adapter.
+
 The `[nodehealth:defaults]` section sets run defaults: `jobs`, `timeout`
-(per request) and `node_timeout` (whole-node wall-clock budget, default 30s).
-`node_timeout` has no CLI flag; once it is spent a slow BMC is abandoned
+(per request) and `node_timeout` (whole-node request budget including identification, default 30 seconds).
+Use `--node-timeout S` to override `node_timeout`; once it is spent a slow BMC is abandoned
 instead of hanging the run. `scan` ignores it (it is a long task by design).
 
 Generate a starter file from a `DeviceType Hostname BMC_IP` hosts.list:
@@ -305,11 +330,9 @@ data, so a single build covers every ODM:
 * **temp** — `Thermal.Temperatures` → `ThermalSubsystem/ThermalMetrics` →
   `TelemetryService/MetricReports` → `Sensors` → IPMI `sdr type Temperature`.
 
-The ODM (Dell/Lenovo/Supermicro/AMI/BYD/GIGABYTE/DGX/NVIDIA/Wistron/Inventec) is
-detected from the BMC's Redfish identity and cached under
-`~/.cache/nodetools/oem/<ip>`. ODM modules additionally provide vendor-specific
-control actions and power/eventlog/inventory overrides, falling back to the
-base class (GBXX convention) when an endpoint is absent.
+Hardware identification tracks platform, OEM and role independently. HGX covers B200/B300 and NVL covers GB200/GB300. Each platform can have multiple OEMs. NVL compute trays, NVSwitches and power shelves keep their inventory roles. `scan` reports all three dimensions.
+
+Inventory host entries or group variables can override detection with `platform=hgx` / `platform=nvl` and values such as `oem=aivres` or `oem=compal`. Detection otherwise uses BMC identity and can use the hostname for the platform. OEM dispatch also works without a scan template. `--no-cache` skips the template but still reads BMC identity.
 
 ## Development
 

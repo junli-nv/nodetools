@@ -17,6 +17,23 @@ def _normalize(action):
     return "status" if action in _READ else action
 
 
+def host_status(name, state):
+    """Render Redfish and ipmitool chassis states using the same spelling."""
+    state = str(state or "").strip().lower()
+    prefix = "chassis power is "
+    if state.startswith(prefix):
+        state = state[len(prefix):].strip()
+    states = {
+        "on": "On",
+        "off": "Off",
+        "poweringon": "PoweringOn",
+        "poweringoff": "PoweringOff",
+        "paused": "Paused",
+        "unknown": "Unknown",
+    }
+    return ["{}: {}".format(name, states.get(state, "N/A"))]
+
+
 def collect(device, action, options):
     action = _normalize(action)
     if device.role == "nvswitch":

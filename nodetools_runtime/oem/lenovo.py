@@ -3,7 +3,7 @@
 import json
 
 from ..errors import CapUnsupported
-from ..subjects import common
+from ..subjects import common, power
 from .base import FIRMWARE, Oem, _body_lines, _jq_r, _members_static
 
 _SYSTEM = "/redfish/v1/Systems/1"
@@ -54,6 +54,8 @@ class Lenovo(Oem):
         if action in _RESET:
             return self._reset(device, _RESET[action])
         data = common.resource(device, _SYSTEM, required=True)
+        if action == "status":
+            return power.host_status(device.name, data.get("PowerState"))
         return ["{}: PowerState={}".format(device.name, data.get("PowerState"))]
 
     def _reset(self, device, reset_type):

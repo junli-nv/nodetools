@@ -79,8 +79,19 @@ def _device(role="compute", redfish=None, ipmi=None, odm=None):
 # -- power -----------------------------------------------------------------
 def test_power_compute_defaults_to_ipmi():
     device = _device(ipmi=FakeIpmi("Chassis Power is on"))
-    assert power.collect(device, None, None) == ["cp-01: Chassis Power is on"]
+    assert power.collect(device, None, None) == ["cp-01: On"]
     assert device.ipmi.calls == [("power", "status")]
+
+
+def test_power_compute_normalizes_off_and_redfish_transition():
+    from nodetools_runtime.oem.lenovo import Lenovo
+
+    ipmi = FakeIpmi("Chassis Power is off")
+    assert power.collect(_device(ipmi=ipmi), "status", None) == ["cp-01: Off"]
+    rf = FakeRedfish({"/redfish/v1/Systems/1": {"PowerState": "PoweringOn"}})
+    assert power.collect(_device(redfish=rf, odm=Lenovo()), "status", None) == [
+        "cp-01: PoweringOn"
+    ]
 
 
 def test_power_compute_ipmi_failure_is_na():
@@ -123,12 +134,12 @@ def test_power_lenovo_cycle_reads_state():
     }
 
 
-def test_power_smc_status_is_quoted():
+def test_power_smc_status_is_normalized():
     from nodetools_runtime.oem.smc import Smc
 
     data = {"/redfish/v1/Systems/1": {"PowerState": "On"}}
     device = _device(redfish=FakeRedfish(data), odm=Smc())
-    assert power.collect(device, "status", None) == ['cp-01: "On"']
+    assert power.collect(device, "status", None) == ["cp-01: On"]
 
 
 def test_power_nvsw_reseat_defaults_to_status():
@@ -442,12 +453,12 @@ def test_netboot_base_continuous_pxe():
 
 
 # -- aivres ----------------------------------------------------------------
-def test_aivres_power_status_quoted():
+def test_aivres_power_status_is_normalized():
     from nodetools_runtime.oem.aivres import Aivres
 
     data = {"/redfish/v1/Systems/1": {"PowerState": "On"}}
     device = _device(redfish=FakeRedfish(data), odm=Aivres())
-    assert power.collect(device, "status", None) == ['cp-01: "On"']
+    assert power.collect(device, "status", None) == ["cp-01: On"]
 
 
 def test_aivres_power_reset_posts_system_1():
@@ -657,11 +668,11 @@ def test_vm_base_status_discovers_bmc_and_interface():
 def test_vm_base_mount_cifs_payload():
     rf = FakeRedfish(data=_ami_vm_data())
     path = "/redfish/v1/Managers/BMC_0/VirtualMedia/CD1/Actions/VirtualMedia.InsertMedia"
-    vm.collect(_device(redfish=rf), "mount", Opts(image="smb://h/share/y.iso"))
+    vm.collect(_device(redfish=rf), "mount", Opts(image="smb://h/share/y.iso", vm_user="test-user", vm_password="test-pass"))
     assert rf.posts[path] == {
         "Image": "smb://h/share/y.iso",
-        "UserName": "smbuser",
-        "Password": "smbuser",
+        "UserName": "test-user",
+        "Password": "test-pass",
         "TransferMethod": "Stream",
         "TransferProtocolType": "CIFS",
         "WriteProtected": True,
@@ -670,9 +681,10 @@ def test_vm_base_mount_cifs_payload():
 
 def test_vm_base_no_interface_message():
     rf = FakeRedfish(data={"/redfish/v1/Managers": {"Members": []}})
-    assert vm.collect(_device(redfish=rf), "mount", None) == [
-        "cp-01: No Virtual Media Interface found"
-    ]
+    from nodetools_runtime.errors import CapUnsupported
+
+    with pytest.raises(CapUnsupported, match="No Virtual Media Interface found"):
+        vm.collect(_device(redfish=rf), "mount", Opts(image="smb://h/share/x.iso"))
 
 
 def test_vm_compal_status_single_line():
@@ -720,11 +732,9 @@ def test_vm_aivres_mount_parses_nfs_uri():
         "Path": "/isos",
         "Protocol": "NFS",
     }
-    assert lines[-3:] == [
-        "cp-01: {",
-        'cp-01:   "Protocol": "NFS"',
-        "cp-01: }",
-    ]
+    assert list(rf.posts) == [vmm + "/RemoteMount", vmm + "/RemoteMediaInsert"]
+    assert rf.posts[vmm + "/RemoteMediaInsert"] == {"ImagePath": "NFS/z.iso", "FileType": "File"}
+    assert 'cp-01:   "Protocol": "NFS"' in lines
 
 
 def test_vm_smc_mount_http_payload():
@@ -745,11 +755,106 @@ def test_vm_dell_mount_uses_racadm():
     from nodetools_runtime.oem.dell import Dell
 
     class FakeDell(Dell):
+        def __init__(self):
+            self.calls = []
+
         def _racadm(self, device, *args):
-            self.calls = args
-            return "Remote Image is now Configured"
+            self.calls.append(args)
+            return "Remote Image is now Configured" if args[0] == "remoteimage" else "Enabled"
 
     odm = FakeDell()
-    lines = vm.collect(_device(redfish=FakeRedfish(), odm=odm), "mount", None)
-    assert odm.calls == ("remoteimage", "-c", "-l", odm.vm_image)
-    assert lines == ["cp-01: Remote Image is now Configured"]
+    image = "https://images.example.test/site/custom.iso"
+    lines = vm.collect(_device(redfish=FakeRedfish(), odm=odm), "mount", Opts(image=image))
+    assert odm.calls == [
+        ("set", "iDRAC.VirtualMedia.Enable", "1"),
+        ("remoteimage", "-c", "-l", image),
+    ]
+    assert lines == ["cp-01: Enabled", "cp-01: Remote Image is now Configured"]
+    vm.collect(_device(redfish=FakeRedfish(), odm=odm), "eject", None)
+    assert odm.calls[-1] == ("remoteimage", "-d")
+
+
+@pytest.mark.parametrize("action", ["mount", "insert", "stop"])
+def test_vm_rejects_missing_image_before_inventory(action, capsys):
+    from nodetools_runtime import cli
+
+    assert cli.main(["nodevm", "-i", "/nonexistent-inventory", "cp-01", action]) == 1
+    assert "requires an explicit image URL" in capsys.readouterr().err
+
+
+def test_vm_netweb_mount_uses_only_explicit_smb_address():
+    from nodetools_runtime.oem.netweb import Netweb
+
+    rf = FakeRedfish(data=_ami_vm_data("BMC_0"))
+    image = "smb://images.example.test/custom/unique.iso"
+    vm.collect(_device(redfish=rf, odm=Netweb()), "mount", Opts(image=image))
+    enable, insert = rf.posts
+    assert enable.endswith("AMIVirtualMedia.EnableRMedia")
+    assert insert.endswith("VirtualMedia.InsertMedia")
+    payload = rf.posts[insert]
+    assert payload["Image"] == image
+    assert "UserName" not in payload and "Password" not in payload
+
+
+def test_vm_netweb_stop_targets_only_matching_image():
+    from nodetools_runtime.errors import NodetoolsError
+    from nodetools_runtime.oem.netweb import Netweb
+
+    virtual = "/redfish/v1/Managers/BMC_0/VirtualMedia"
+    data = _ami_vm_data("BMC_0")
+    image = "smb://images.example.test/custom/unique.iso"
+    data[virtual]["Members"].append({"@odata.id": virtual + "/CD2"})
+    data[virtual + "/CD1"].update(Image=image)
+    data[virtual + "/CD2"] = {"Image": "smb://other.example.test/custom/unique.iso"}
+    rf = FakeRedfish(data=data)
+    device = _device(redfish=rf, odm=Netweb())
+    with pytest.raises(NodetoolsError, match="no mounted Netweb image"):
+        vm.collect(device, "stop", Opts(image="smb://wrong.example.test/custom/unique.iso"))
+    assert not rf.posts
+    vm.collect(device, "stop", Opts(image=image))
+    assert list(rf.posts) == [virtual + "/CD1/Actions/VirtualMedia.EjectMedia"]
+
+
+def test_vm_compal_stop_uses_requested_filename(monkeypatch):
+    import types
+    import requests
+
+    from nodetools_runtime.oem.compal import Compal
+
+    calls = []
+
+    class Session:
+        def post(self, url, **kwargs):
+            calls.append((url, kwargs))
+            return types.SimpleNamespace(
+                json=lambda: {"CSRFToken": "test-token"},
+                text="stopped",
+                raise_for_status=lambda: None,
+            )
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(requests, "Session", Session)
+    device = _device(redfish=FakeRedfish(), odm=Compal())
+    vm.collect(device, "stop", Opts(image="smb://images.example.test/share/custom%20boot.iso"))
+    url, request = calls[-1]
+    assert url.endswith("/stop-media")
+    assert request["json"]["image_name"] == "custom boot.iso"
+
+
+@pytest.mark.parametrize("action", ["mount", "insert"])
+def test_vm_failed_enable_does_not_insert(action):
+    from nodetools_runtime.errors import TransportError
+    from nodetools_runtime.oem.compal import Compal
+
+    class RefusedRedfish(FakeRedfish):
+        def post(self, path, body):
+            self.posts[path] = body
+            return 503, {"error": {}}
+
+    rf = RefusedRedfish(data=_ami_vm_data("BMC"))
+    with pytest.raises(TransportError, match="HTTP 503"):
+        vm.collect(_device(redfish=rf, odm=Compal()), action, Opts(image="smb://h/share/x.iso"))
+    assert len(rf.posts) == 1
+    assert next(iter(rf.posts)).endswith("AMIVirtualMedia.EnableRMedia")

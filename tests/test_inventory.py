@@ -82,3 +82,31 @@ def test_generate_from_hostslist(tmp_path):
     assert inv.members("powershelf") == ["vdc1-t10-gpu-pwr-01"]
     assert inv.members("nvswitch") == ["vdc1-t10-gpu-nvl-01"]
     assert inv.get("vdc1-t10-gpu-cp-01").address == "10.0.0.1"
+
+
+def test_custom_role_group_and_inline_overrides():
+    from types import SimpleNamespace
+
+    from nodetools_runtime.cli import _role_hosts
+
+    inv = Inventory.from_text("""
+    [all:vars]
+    oem=dell
+
+    [dell_nvl]
+    tray-01 host=192.0.2.20
+    tray-02 host=192.0.2.21 platform=hgx oem=lenovo
+
+    [dell_nvl:vars]
+    role=compute
+    platform=nvl
+
+    [rack]
+    tray-02
+    """)
+    assert inv.get("tray-01").get("platform") == "nvl"
+    assert inv.get("tray-02").get("platform") == "hgx"
+    assert inv.get("tray-02").get("oem") == "lenovo"
+    assert [host.name for host in _role_hosts(SimpleNamespace(), inv, "compute")] == [
+        "tray-01", "tray-02"
+    ]

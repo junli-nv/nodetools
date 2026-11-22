@@ -56,20 +56,27 @@ def identity_key(vendor, manufacturer, model, bios=None, bmc_fw=None):
     return "__".join(parts) if parts else None
 
 
-def key_for(identity):
+def key_for(identity, overrides=None):
     """Cache key for a device: its machine identity, or ``None`` if unidentified.
 
     There is deliberately no per-BMC fallback: a machine whose identity cannot
     be read is simply not cached (it falls back to live discovery), rather than
     getting a private per-address file.
     """
-    return identity_key(
+    key = identity_key(
         identity.get("vendor"),
         identity.get("manufacturer"),
         identity.get("model"),
         identity.get("bios"),
         identity.get("bmc_fw"),
     )
+
+    if key:
+        for field in ("platform", "oem"):
+            value = _slug((overrides or {}).get(field))
+            if value:
+                key += "__{}-{}".format(field, value)
+    return key
 
 
 def cache_path(key):
@@ -130,7 +137,8 @@ def _read(key):
 
 def load(device):
     """Cached template for this machine type, matched via its identity."""
-    return _read(key_for(read_identity(device.redfish)))
+    device.identity = read_identity(device.redfish)
+    return _read(key_for(device.identity, device.vars))
 
 
 def store(profile):
@@ -146,7 +154,7 @@ def store(profile):
 
 
 def clear(device):
-    key = key_for(read_identity(device.redfish))
+    key = key_for(read_identity(device.redfish), device.vars)
     if not key:
         return False
     try:
@@ -197,6 +205,7 @@ def probe(device, workers=common.SCAN_WORKERS):
     """Walk a BMC and build its interface map (does not touch the cache)."""
     redfish = device.redfish
     identity = read_identity(redfish)
+    device.identity = identity
     chassis = common.discover_chassis(redfish)
     caps = {}
 
@@ -219,8 +228,9 @@ def probe(device, workers=common.SCAN_WORKERS):
         "chassis": chassis,
         "caps": caps,
     }
-    profile["odm"] = model.classify(profile)
-    profile["key"] = key_for(identity)
+    profile["platform"] = model.platform_for(device)
+    profile["odm"] = model.odm_for(device)
+    profile["key"] = key_for(identity, device.vars)
     return profile
 
 

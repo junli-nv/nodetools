@@ -5,6 +5,25 @@ from ..ladder import first
 from . import common
 
 
+def _speed_unit(data):
+    units = str(data.get("ReadingUnits") or data.get("ReadingUnit") or "").lower()
+    if units in ("%", "percent", "percentage"):
+        return "%"
+    if units in ("rpm", "r/min", "rev/min"):
+        return "RPM"
+    return None
+
+
+def _fan_unit(detail):
+    speed = detail.get("SpeedPercent")
+    if isinstance(speed, dict):
+        if speed.get("SpeedRPM") is not None:
+            return "RPM"
+        if speed.get("Reading") is not None:
+            return "%"
+    return _speed_unit(detail) or "RPM"
+
+
 def _from_thermal_subsystem(device):
     rf = device.redfish
 
@@ -19,6 +38,7 @@ def _from_thermal_subsystem(device):
                     detail.get("Name"),
                     common.fan_speed(detail),
                     common.health_of(detail.get("Status")),
+                    unit=_fan_unit(detail),
                 )
             )
         return out
@@ -27,7 +47,7 @@ def _from_thermal_subsystem(device):
     return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 
-def _from_thermal(device):
+def _from_thermal(device, chassis=None):
     rf = device.redfish
 
     def scan(cid):
@@ -38,18 +58,16 @@ def _from_thermal(device):
                 common.reading(
                     fan.get("MemberId") or fan.get("FanName") or fan.get("Id"),
                     fan.get("Name") or fan.get("FanName"),
-                    common.num(fan.get("Reading") or fan.get("ReadingRPM")),
+                    common.fan_speed(fan),
                     common.health_of(fan.get("Status")),
+                    unit=_fan_unit(fan),
                 )
             )
         return out
 
-    chassis = common.rung_chassis(device, "Thermal", DEFAULT_CHASSIS)
+    if chassis is None:
+        chassis = common.rung_chassis(device, "Thermal", DEFAULT_CHASSIS)
     if not chassis:
-        return []
-    if common.profile(device) is None and common.absent(
-        device, "/redfish/v1/Chassis/{}/Thermal".format(chassis[0])
-    ):
         return []
     return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
@@ -69,6 +87,7 @@ def _from_sensors(device):
                     name,
                     common.num(sensor.get("Reading")),
                     common.health_of(sensor.get("Status")),
+                    unit=_speed_unit(sensor),
                 )
             )
         return out
@@ -80,17 +99,27 @@ def _from_sensors(device):
 def _from_ipmi(device):
     if not device.ipmi:
         return []
-    readings = device.ipmi.sdr("Fan")
     out = []
-    for name, value in readings.items():
-        if "fan" not in name.lower() and "rpm" not in name.lower():
+    for line in device.ipmi.run("sdr", "type", "Fan").splitlines():
+        fields = [field.strip() for field in line.split("|")]
+        if len(fields) < 3:
             continue
-        out.append(common.reading(name, name, common.num(value)))
+        name = fields[0]
+        health = fields[2]
+        value = fields[-1] if len(fields) >= 5 else fields[1]
+        if "fan" not in name.lower() and "rpm" not in (name + value).lower():
+            continue
+        health = {"ok": "OK", "ns": "Unknown", "na": "Unknown"}.get(health.lower(), health)
+        out.append(common.reading(name, name, common.num(value), health, unit="RPM"))
     return out
 
 
 def collect(device):
-    steps = [
+    steps = []
+    preferred = getattr(getattr(device, "odm", None), "fan_read_chassis", ())
+    if preferred:
+        steps.append(("oem_thermal", lambda: _from_thermal(device, preferred)))
+    steps += [
         ("thermal_subsystem", lambda: _from_thermal_subsystem(device)),
         ("thermal", lambda: _from_thermal(device)),
         ("sensors", lambda: _from_sensors(device)),

@@ -17,6 +17,10 @@ class TransportError(NodetoolsError):
     """Raised when a Redfish/IPMI/CLI call cannot be performed."""
 
 
+class TransportTimeout(TransportError):
+    """The BMC did not respond within the request or node budget."""
+
+
 class AuthError(TransportError):
     """Raised on authentication failure."""
 

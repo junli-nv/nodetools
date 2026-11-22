@@ -58,6 +58,11 @@ class Host:
 
     @property
     def role(self):
+        declared = self.vars.get("role", "").strip().lower()
+        if declared:
+            if declared not in ROLE_GROUPS:
+                raise InventoryError("unsupported role {!r} for {}".format(declared, self.name))
+            return declared
         for group in self.groups:
             if group in ROLE_GROUPS:
                 return ROLE_GROUPS[group]
@@ -123,11 +128,20 @@ class Inventory:
             else:
                 host_lines.append((section, stripped))
 
+        inline_vars = {}
         for group, raw in host_lines:
-            inv._add_host_line(group, raw)
+            inv._add_host_line(group, raw, inline_vars)
+        for host in inv.hosts.values():
+            host.vars.update(inv.all_vars)
+            for group in host.groups:
+                host.vars.update(inv.group_vars.get(group, {}))
+            host.vars.update(inline_vars[host.name])
+            # Validate explicit roles during parsing, before any BMC operation.
+            if host.get("role"):
+                _ = host.role
         return inv
 
-    def _add_host_line(self, group, raw):
+    def _add_host_line(self, group, raw, inline_vars):
         tokens = raw.split()
         name = tokens[0]
         inline = {}
@@ -143,20 +157,16 @@ class Inventory:
             else:
                 inline[key] = value
 
-        merged = {}
-        merged.update(self.all_vars)
-        merged.update(self.group_vars.get(group, {}))
-        merged.update(inline)
+        inline_vars.setdefault(name, {}).update(inline)
 
         if name in self.hosts:
             host = self.hosts[name]
             if group not in host.groups:
                 host.groups.append(group)
-            host.vars.update(merged)
             if address and not host.address:
                 host.address = address
         else:
-            host = Host(name, address=address, variables=merged, groups=[group])
+            host = Host(name, address=address, groups=[group])
             self.hosts[name] = host
             self.order.append(name)
         if name not in self.groups.setdefault(group, []):

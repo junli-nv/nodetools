@@ -83,7 +83,7 @@ argv
  → selection.select(...)                       # 名字/组/模式 → Host[]
  → Runner.run(hosts) / InfoRunner.run(hosts)  (ThreadPoolExecutor)
      每台: 解析角色凭据 → 建 Redfish+Ipmi → Device（附 scan profile，若无缓存则为 None）
-           ├─ 传感器 --action: 读 profile 的 ODM → oem.get(odm).fan_control/psu_control
+           ├─ 传感器 --action: 读 profile 的 ODM → oem.get(odm).fan_control
            ├─ 传感器否则: caps.collector_for(cap)(device) → readings[]
            └─ 信息命令: compute 读 profile 的 ODM → subjects.handler_for(subject)(device, action)
  → report.render(results)                      # 传感器 行/汇总；信息 原样逐行
@@ -100,7 +100,7 @@ argv
 | `selection.py` | 选择器解析（组/名字/模式） | 只选你点名的机器，不做关联 |
 | `reach.py` | BMC 的 ICMP 可达性检查 | `list`/`ping` 命令用；不涉及凭据 |
 | `scan.py` | 探测各集合端点，记录每个 chassis 的能力图 + 设备身份/ODM | **唯一的缓存写入者**；其余命令经 `rung_chassis`/`odm_for` 读 |
-| `model.py` | `Device`、`classify`、`odm_for`（只读 scan profile 的 ODM） | 无缓存回退 `unknown`，命令自身不探测 |
+| `model.py` | `Device`、`platform_for`、`odm_for` | 根据 BMC 身份和库存覆盖分类 |
 | `ladder.py` | "按顺序试，返回第一个非空" | 收集器的核心控制流 |
 | `transport/redfish.py` | Redfish `get/get_raw/post/patch` | `verify=False`，连接超时 3s |
 | `transport/ipmi.py` | ipmitool 封装，`sdr` / `raw` | 双模式传密码，见第 5 节 |
@@ -336,23 +336,13 @@ reachable=$(./nodeping --long vdc1-pro2-t10-gpu-cp-[01-18] \
 ./nodetemp "$reachable" --errors-only
 ```
 
-### ODM 身份与缓存（统一：scan 写，命令只读）
+### 平台、OEM、角色与缓存
 
-厂商身份的**唯一来源是 `scan`**：`scan.probe` 拉取 `/redfish/v1`、`Managers/*`、
-`Systems/*`、`Chassis/*`，用 `model.classify` 按 `model.SIGNATURES` 匹配（具体厂商
-在前，`nvidia` 兜底 `gb200`），把 `vendor`/`model`/`manufacturer`/`odm` 与 chassis
-能力图一起写进 `~/.cache/nodetools/scan/<identity>.json`。
+`runtime.build_device` 读取 BMC 服务根和首个 Manager/System 的身份信息。`model.platform_for` 区分 HGX（B200/B300）和 NVL（GB200/GB300），`model.odm_for` 独立识别厂商。角色来自 inventory 的显式 `role=` 或角色组。`oem.for_device` 用平台和 OEM 选择适配器。同一 NVL 平台的不同 OEM 可以走不同适配器。库存可用 `platform=` 和 `oem=` 显式覆盖。
 
-缓存**按机型**（`vendor`+`manufacturer`+`model`，归一化后作 key），不是按 BMC 地址：
-同一机型的 tray 硬件一致、Redfish 映射相同，所以扫**一台做模版即可**，其余同机型节点
-复用同一份文件（`scan.key_for`）。命令加载模版前只做一次轻量身份读取
-（`scan.read_identity`：`/redfish/v1` + 首个 Manager/System 的 Model/Manufacturer），
-不整机遍历。身份读不到（不可达/无标识）时**不缓存**——没有按 IP 的兜底文件。
+同一厂商有多种平台时，可以在 `oem/__init__.py` 中用 `(platform, oem, role)` 注册专用适配器。Dell NVL 计算节点由 `oem/dell_nvl.py` 提供 Redfish 虚拟介质状态查询，写操作需验证后再启用。
 
-其余命令**不再自己探测**：`runtime.build_device` 用 `scan.load(device)` 按身份读回
-模版，`InfoRunner` 再经 `model.odm_for`（即 profile 的 `odm`）派发。没有模版 →
-`unknown` → 基类（GBXX，等同旧顶层脚本），传感器照常走实时回退阶梯。`--no-cache`
-表示"本次不读 scan 缓存"，于是同样回退基类，**不会**新建任何缓存。
+`scan` 还会探测 chassis 端点并写入能力映射。缓存键使用厂商、制造商、型号、可用的固件版本以及显式库存覆盖值。普通命令只读映射；没有映射或指定 `--no-cache` 时仍读取设备身份，传感器使用实时发现。
 
 ### 扫描缓存（scan）
 
@@ -433,7 +423,7 @@ BMC 的 `ThermalMetrics` 单次响应就慢（并发轰同一 BMC 还会成倍�
 ### 新增一个 ODM
 
 1. 新建 `oem/<odm>.py`，继承 `oem/base.Oem`，设置 `name`、`fan_chassis`，
-   按需实现 `fan_control` / `psu_control`。
+   按需实现 `fan_control`。
 2. 在 `oem/__init__.py` 的 `_MODULES` 注册；如有别名加到 `_ALIASES`。
 3. 若该 ODM 的身份字符串特殊，在 `model.SIGNATURES` 里加标记（注意顺序）。
 4. 如果它的**读数据**也和通用路径不同，优先在 `caps/*.py` 的阶梯里加一个
@@ -478,7 +468,7 @@ python3 -m pytest -q          # 当前 73 passed
 ./nodetemp vdc1-pro2-t10-gpu-cp-[01-03] -i /tmp/nt.ini --errors-only
 ```
 
-**注意**：`--action`（fan `auto/max`、psu `on/off/cycle`）会真正改动设备状态，
+**注意**：`--action`（fan `auto/max`）会真正改动设备状态，
 测试时先在单台、且确认可回退的机器上做，不要整批跑。
 
 ## 8. 代码风格与提交约定

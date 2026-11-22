@@ -82,3 +82,44 @@ def test_info_runner_unscanned_falls_back_to_base(monkeypatch):
     from nodetools_runtime import oem
 
     assert captured[0] is oem.get("unknown")
+
+
+def test_platform_and_oem_dispatch_are_independent():
+    from nodetools_runtime import oem
+
+    for product, maker, family, adapter in (
+        ("HGX B200", "Aivres", "hgx", "aivres"),
+        ("B300", "Supermicro", "hgx", "smc"),
+        ("HGX B300", "KAYTUS", "hgx", "generic"),
+        ("GB200 NVL72", "Compal", "nvl", "compal"),
+        ("GB300 NVL72", "Dell", "nvl", "dell"),
+        ("GB300 NVL72", "NVIDIA", "nvl", "gb200"),
+        ("HGX B300", "NVIDIA", "hgx", "generic"),
+        ("GB200", "", "nvl", "generic"),
+    ):
+        device = model.Device(_host())
+        device.identity = {"model": product, "manufacturer": maker}
+        assert model.platform_for(device) == family
+        assert oem.for_device(device).name == adapter
+
+
+def test_inventory_hardware_overrides_and_cache_keys():
+    from nodetools_runtime import oem, scan
+
+    host = Host("HGX390", groups=["compute"],
+                variables={"platform": "gb300", "oem": "netweb"})
+    device = model.Device(host)
+    device.identity = {"model": "HGX B300", "manufacturer": "Aivres"}
+    assert model.platform_for(device) == "nvl"
+    assert oem.for_device(device).name == "netweb"
+    assert scan.key_for(device.identity, device.vars) != scan.key_for(device.identity)
+    assert scan.key_for(device.identity, device.vars) != scan.key_for(
+        device.identity, {"platform": "gb300", "oem": "compal"}
+    )
+
+
+def test_kaytus_oem_is_retained_without_an_avr_override():
+    device = model.Device(Host("HGX390", groups=["compute"]))
+    device.identity = {"manufacturer": "KAYTUS", "model": "KR9288-X3-A0-F0-01"}
+    assert model.platform_for(device) == "hgx"
+    assert model.odm_for(device) == "kaytus"

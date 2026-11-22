@@ -24,6 +24,7 @@ class Redfish:
         self.verify = verify
         self._deadline = None
         self.transport_errors = 0
+        self.timeout_reason = None
         self._session = requests.Session()
         self._session.verify = verify
         self._session.auth = (user, password) if user else None
@@ -45,9 +46,9 @@ class Redfish:
     def _timeout(self, timeout=None):
         read = timeout or self.timeout
         remaining = self._remaining()
-        if remaining is not None:
-            read = min(read, max(0.1, remaining))
-        return (min(3.0, read), read)
+        if remaining is None:
+            return (min(3.0, read), read)
+        return urllib3.util.Timeout(total=max(1e-6, remaining), connect=min(3.0, read), read=read)
 
     def url(self, path):
         if path.startswith("http://") or path.startswith("https://"):
@@ -67,14 +68,20 @@ class Redfish:
 
     def get_raw(self, path, timeout=None):
         """Return (status, parsed-or-text). status is None on transport error."""
+        self.timeout_reason = None
         if self._expired():
+            self.timeout_reason = "node deadline exceeded before Redfish GET"
             return None, None
         try:
             resp = self._session.get(
                 self.url(path), timeout=self._timeout(timeout)
             )
-        except requests.RequestException:
+        except requests.RequestException as exc:
             self.transport_errors += 1
+            if isinstance(exc, requests.Timeout) or any(
+                isinstance(arg, urllib3.exceptions.ReadTimeoutError) for arg in exc.args
+            ):
+                self.timeout_reason = "Redfish GET timed out"
             return None, None
         if resp.status_code in (401, 403):
             return resp.status_code, None

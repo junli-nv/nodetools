@@ -6,7 +6,8 @@ Endpoints are pinned to ``Systems/System_0`` / ``Managers/BMC_0`` /
 
 import time
 
-from ..subjects import common
+from ..errors import NodetoolsError, TransportError
+from ..subjects import common, vm
 from .base import Oem, _body_lines, _jq_r, firmware_name_lines
 
 _SYSTEM = "/redfish/v1/Systems/System_0"
@@ -43,6 +44,8 @@ class Netweb(Oem):
     bootorder_expand = False
 
     # -- fan control (nodefan.nw) ---------------------------------------
+    fan_actions = ("auto", "low", "opt", "max")
+
     def fan_control(self, device, action):
         if action == "auto":
             self._ipmi_raw(device, 0x3A, 0xD0, 0x11, *_duty(0x00))
@@ -104,10 +107,12 @@ class Netweb(Oem):
         return self._macs_iface_pairs(device, "System_0", "BMC_0")
 
     # -- virtual media (nodevm.nw) --------------------------------------
+    vm_extra_actions = ("enable", "stop")
+
     def vm(self, device, action, options=None):
         action = (action or "status").strip().lower() or "status"
         if action == "enable":
-            _, body = common.post(
+            _, body = vm.post(
                 device,
                 _MANAGER + "/Actions/Oem/AMIVirtualMedia.EnableRMedia",
                 {"RMediaState": "Enable"},
@@ -115,24 +120,33 @@ class Netweb(Oem):
             lines = _body_lines(body, pretty=True)
             time.sleep(5)
             mgr = common.resource(device, _MANAGER, required=True)
-            lines.append(_jq_r(((mgr.get("Oem") or {}).get("Ami") or {}).get("VirtualMedia", {}).get("RMediaStatus")))
+            status = ((mgr.get("Oem") or {}).get("Ami") or {}).get("VirtualMedia", {}).get("RMediaStatus")
+            if status is not None and str(status).strip().lower() not in ("enabled", "enable"):
+                raise TransportError("remote media did not become enabled")
+            lines.append(_jq_r(status))
             return self._label_lines(device, lines)
-        if action == "insert":
-            _, body = common.post(
+        if action in ("mount", "insert"):
+            _, body = vm.post(
                 device,
                 self._vm_insert_path(_VM_MANAGER, _VM_IFACE),
                 self._vm_cifs_payload(options),
             )
             return self._label_lines(device, _body_lines(body, pretty=True))
-        if action == "eject":
+        if action in ("eject", "stop"):
+            image = vm.image_source(options, "smb", "cifs")[0] if action == "stop" else None
             lines = []
             coll = common.resource(device, _MANAGER + "/VirtualMedia")
+            matched = False
             for oid in common.member_ids(coll):
                 iface = common.resource(device, oid)
-                if iface.get("Image") in (None, "null"):
+                mounted = iface.get("Image")
+                if mounted in (None, "", "null") or (image is not None and mounted != image):
                     continue
-                _, body = common.post(device, oid + "/Actions/VirtualMedia.EjectMedia", {})
+                matched = True
+                _, body = vm.post(device, oid + "/Actions/VirtualMedia.EjectMedia", {})
                 lines += _body_lines(body, pretty=True)
+            if image is not None and not matched:
+                raise NodetoolsError("no mounted Netweb image matches the supplied URL")
             return self._label_lines(device, lines)
         mgr = common.resource(device, _MANAGER, required=True)
         status = ((mgr.get("Oem") or {}).get("Ami") or {}).get("VirtualMedia", {}).get(

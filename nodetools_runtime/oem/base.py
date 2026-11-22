@@ -12,8 +12,8 @@ import json
 import re
 import time
 
-from ..errors import CapUnsupported
-from ..subjects import common
+from ..errors import CapUnsupported, TransportTimeout
+from ..subjects import common, power, vm
 
 # func.sh identifiers (GBXX / NVIDIA reference).
 SYSTEM_ID = "system"
@@ -132,14 +132,11 @@ class Oem:
     bootorder_expand = True  # GBXX expands members; ODMs fetch each member
 
     # -- controls --------------------------------------------------------
+    fan_actions = ("auto", "max")
+
     def fan_control(self, device, action):
         raise CapUnsupported(
             "fan action {!r} not supported for ODM {!r}".format(action, self.name)
-        )
-
-    def psu_control(self, device, action):
-        raise CapUnsupported(
-            "psu action {!r} not supported for ODM {!r}".format(action, self.name)
         )
 
     # -- power (nodepower) ----------------------------------------------
@@ -150,8 +147,12 @@ class Oem:
             raise CapUnsupported("ipmitool unavailable for {}".format(device.name))
         try:
             out = device.ipmi.power(action).strip()
+        except TransportTimeout:
+            raise
         except Exception:  # noqa: BLE001 - legacy scripts echo N/A on failure
             out = "N/A"
+        if action == "status":
+            return power.host_status(device.name, out)
         return ["{}: {}".format(device.name, out or "N/A")]
 
     # -- nvswitch power (nvswpower) -------------------------------------
@@ -431,19 +432,23 @@ class Oem:
     # -- virtual media (nodevm) -----------------------------------------
     # GBXX/AMI reference: ``Managers/<id>/VirtualMedia/<CD*|USB*>`` with the
     # ``AMIVirtualMedia.EnableRMedia`` OEM action (reference ``oem/gb200/nodevm``).
-    vm_image = "smb://10.143.11.129/share/ubuntu-24.04-live.iso"
-    vm_user = "smbuser"
-    vm_password = "smbuser"
+
+    vm_write_supported = True
+    vm_protocols = ("smb", "cifs")
+    vm_mount_steps = ("enable", "insert")
+    vm_eject_action = "eject"
+    vm_extra_actions = ("enable",)
 
     def vm(self, device, action, options=None):
         action = (action or "status").strip().lower() or "status"
+        payload = self._vm_cifs_payload(options) if action in ("mount", "insert") else None
         bmc_id = self._vm_manager_id(device)
-        vmi = self._vm_interface(device, bmc_id)
-        if not vmi:
-            return [self._label(device, "No Virtual Media Interface found")]
+        vmi = self._vm_interface(device, bmc_id) if action != "enable" else ""
+        if action != "enable" and not vmi:
+            raise CapUnsupported("No Virtual Media Interface found")
         lines = ["BMC_ID={}, VMI={}".format(bmc_id, vmi)]
         if action == "enable":
-            _, body = common.post(
+            _, body = vm.post(
                 device,
                 "/redfish/v1/Managers/{}/Actions/Oem/AMIVirtualMedia.EnableRMedia".format(
                     bmc_id
@@ -451,13 +456,13 @@ class Oem:
                 {"RMediaState": "Enable"},
             )
             lines += _body_lines(body, pretty=True)
-        elif action == "mount":
-            _, body = common.post(
-                device, self._vm_insert_path(bmc_id, vmi), self._vm_cifs_payload(options)
+        elif action in ("mount", "insert"):
+            _, body = vm.post(
+                device, self._vm_insert_path(bmc_id, vmi), payload
             )
             lines += _body_lines(body, pretty=True)
         elif action == "eject":
-            _, body = common.post(device, self._vm_eject_path(bmc_id, vmi), {})
+            _, body = vm.post(device, self._vm_eject_path(bmc_id, vmi), {})
             lines += _body_lines(body, pretty=True)
         else:
             lines += self._vm_ami_status(device, bmc_id, vmi)
@@ -515,14 +520,18 @@ class Oem:
         )
 
     def _vm_cifs_payload(self, options):
-        return {
-            "Image": _opt(options, "image", self.vm_image),
-            "UserName": _opt(options, "vm_user", self.vm_user),
-            "Password": _opt(options, "vm_password", self.vm_password),
+        image, _ = vm.image_source(options, "smb", "cifs")
+        payload = {
+            "Image": image,
             "TransferMethod": "Stream",
             "TransferProtocolType": "CIFS",
             "WriteProtected": True,
         }
+        for field, option in (("UserName", "vm_user"), ("Password", "vm_password")):
+            value = _opt(options, option, None)
+            if value is not None:
+                payload[field] = value
+        return payload
 
     # -- boot-family helpers --------------------------------------------
     def _sys(self, override):

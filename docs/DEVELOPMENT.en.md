@@ -98,7 +98,7 @@ argv
  → selection.select(...)                       # name/group/pattern → Host[]
  → Runner.run(hosts) / InfoRunner.run(hosts)  (ThreadPoolExecutor)
      per host: resolve role creds → build Redfish+Ipmi → Device (+ scan profile, None if uncached)
-           ├─ sensor --action: read ODM from profile → oem.get(odm).fan_control/psu_control
+           ├─ sensor --action: read ODM from profile → oem.get(odm).fan_control
            ├─ sensor otherwise: caps.collector_for(cap)(device) → readings[]
            └─ info: compute reads ODM from profile → subjects.handler_for(subject)(device, action)
  → report.render(results)                      # sensor  lines/summary; info  verbatim lines
@@ -395,29 +395,13 @@ reachable=$(./nodeping --long vdc1-pro2-t10-gpu-cp-[01-18] \
 ./nodetemp "$reachable" --errors-only
 ```
 
-### ODM identity and cache (unified: scan writes, commands only read)
+### Platform, OEM, role and cache
 
-The **only source of vendor identity is `scan`**: `scan.probe` pulls
-`/redfish/v1`, `Managers/*`, `Systems/*`, `Chassis/*`, runs `model.classify`
-against `model.SIGNATURES` (specific vendors first, `nvidia` falling back to
-`gb200`), and stores `vendor`/`model`/`manufacturer`/`odm` together with the
-chassis capability map in `~/.cache/nodetools/scan/<identity>.json`.
+`runtime.build_device` reads identity from the BMC service root and first Manager and System. `model.platform_for` distinguishes HGX (B200/B300) from NVL (GB200/GB300), while `model.odm_for` identifies the OEM independently. The inventory supplies the role through an explicit `role=` or a built-in role group. `oem.for_device` selects an adapter using platform and OEM, so different NVL OEMs can use different adapters. Inventory entries can override detection with `platform=` and `oem=`.
 
-The cache is keyed **by machine type** (`vendor` + `manufacturer` + `model`,
-normalized), not by BMC address: trays of one type share identical hardware and
-Redfish map, so scanning **one representative** builds the template that every
-other tray of that type reuses (`scan.key_for`). To find it a command does one
-cheap identity read (`scan.read_identity`: `/redfish/v1` plus the first
-Manager/System Model/Manufacturer), never a full walk. When the identity cannot
-be read (unreachable/unidentified) it is **not cached** — there is no per-IP
-fallback file.
+When an OEM spans multiple platforms, register a specific adapter by `(platform, oem, role)` in `oem/__init__.py`. Dell NVL compute nodes use `oem/dell_nvl.py` for Redfish virtual media status. Enable writes after validating the firmware workflow.
 
-No other command probes: `runtime.build_device` loads the template via
-`scan.load(device)`, then `InfoRunner` dispatches through `model.odm_for` (the
-profile's `odm`). With no template it is `unknown` → base (GBXX, the same
-reference the legacy top-level scripts used) and sensors still walk the live
-ladders. `--no-cache` means "do not read the scan cache this run", so it likewise
-falls back to base and **never** creates a cache.
+`scan` also probes chassis endpoints and writes a capability map. Its cache key uses vendor, manufacturer, model, available firmware versions and explicit inventory overrides. Normal commands only read the map. With no map or `--no-cache`, they still read device identity and discover sensors live.
 
 ### Scan cache (scan)
 
@@ -510,7 +494,7 @@ effect automatically.
 ### Add an ODM
 
 1. Create `oem/<odm>.py`, subclass `oem/base.Oem`, set `name`/`fan_chassis`, and
-   implement `fan_control`/`psu_control` as needed.
+   implement `fan_control` as needed.
 2. Register it in `oem/__init__.py`'s `_MODULES`; add aliases to `_ALIASES`.
 3. If the ODM's identity string is special, add a marker to `model.SIGNATURES`
    (mind the order).
@@ -560,7 +544,7 @@ the per-node deadline (`subprocess` stubbed, no network). Cache tests override
 ./nodetemp vdc1-pro2-t10-gpu-cp-[01-03] -i /tmp/nt.ini --errors-only
 ```
 
-**Note**: `--action` (fan `auto/max`, psu `on/off/cycle`) really changes device
+**Note**: `--action` (fan `auto/max`) really changes device
 state; test on a single, known-reversible machine first, never the whole batch.
 
 ## 8. Code style and commit conventions

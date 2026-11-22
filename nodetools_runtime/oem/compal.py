@@ -6,7 +6,8 @@ Endpoints are pinned to ``Systems/Self`` / ``Managers/BMC`` / ``Chassis/Self``.
 import re
 import time
 
-from ..subjects import common
+from ..errors import NodetoolsError, TransportError
+from ..subjects import common, vm
 from .base import Oem, _body_lines, _jq_r, firmware_name_lines
 
 _SYSTEM = "/redfish/v1/Systems/Self"
@@ -129,10 +130,12 @@ class Compal(Oem):
         return self._macs_iface_pairs(device, "Self", "BMC")
 
     # -- virtual media (nodevm.cpl) -------------------------------------
+    vm_extra_actions = ("enable", "stop")
+
     def vm(self, device, action, options=None):
         action = (action or "status").strip().lower() or "status"
         if action == "enable":
-            _, body = common.post(
+            _, body = vm.post(
                 device,
                 _MANAGER + "/Actions/Oem/AMIVirtualMedia.EnableRMedia",
                 {"RMediaState": "Enable"},
@@ -140,10 +143,13 @@ class Compal(Oem):
             lines = _body_lines(body, pretty=True)
             time.sleep(5)
             mgr = common.resource(device, _MANAGER, required=True)
-            lines.append(_jq_r(((mgr.get("Oem") or {}).get("Ami") or {}).get("VirtualMedia", {}).get("RMediaStatus")))
+            status = ((mgr.get("Oem") or {}).get("Ami") or {}).get("VirtualMedia", {}).get("RMediaStatus")
+            if status is not None and str(status).strip().lower() not in ("enabled", "enable"):
+                raise TransportError("remote media did not become enabled")
+            lines.append(_jq_r(status))
             return [self._label(device, line) for line in lines]
-        if action == "insert":
-            _, body = common.post(
+        if action in ("mount", "insert"):
+            _, body = vm.post(
                 device,
                 self._vm_insert_path(_VM_MANAGER, _VM_IFACE),
                 self._vm_cifs_payload(options),
@@ -158,11 +164,11 @@ class Compal(Oem):
                 iface = common.resource(device, oid)
                 if iface.get("Image") in (None, "null"):
                     continue
-                _, body = common.post(device, oid + "/Actions/VirtualMedia.EjectMedia", {})
+                _, body = vm.post(device, oid + "/Actions/VirtualMedia.EjectMedia", {})
                 lines += _body_lines(body, pretty=True)
             return self._label_lines(device, lines)
         if action == "stop":
-            return self._vm_stop(device)
+            return self._vm_stop(device, options)
         mgr = common.resource(device, _MANAGER, required=True)
         status = ((mgr.get("Oem") or {}).get("Ami") or {}).get("VirtualMedia", {}).get(
             "RMediaStatus"
@@ -179,8 +185,14 @@ class Compal(Oem):
         )
         return [self._label(device, row)]
 
-    def _vm_stop(self, device):
+    def _vm_stop(self, device, options):
         import requests
+        from urllib.parse import unquote
+
+        _, source = vm.image_source(options, "smb", "cifs")
+        name = unquote(source.path.rsplit("/", 1)[-1])
+        if not name or "/" in name or "\\" in name:
+            raise NodetoolsError("Compal stop requires an image file URL")
 
         url = "https://{}/api".format(device.address)
         session = requests.Session()
@@ -194,9 +206,10 @@ class Compal(Oem):
                 },
                 timeout=20,
             )
+            login.raise_for_status()
             token = (login.json() or {}).get("CSRFToken")
             if not token:
-                return [self._label(device, "ERROR stop-media: no CSRF token")]
+                raise TransportError("stop-media: no CSRF token")
             headers = {
                 "X-CSRFTOKEN": token,
                 "X-Requested-With": "XMLHttpRequest",
@@ -205,7 +218,7 @@ class Compal(Oem):
             resp = session.post(
                 url + "/settings/media/remote/stop-media",
                 json={
-                    "image_name": "ubuntu-24.04-live.iso",
+                    "image_name": name,
                     "image_type": 1,
                     "image_index": 0,
                     "image_share_type": "cifs",
@@ -213,9 +226,10 @@ class Compal(Oem):
                 headers=headers,
                 timeout=20,
             )
+            resp.raise_for_status()
             text = resp.text.strip()
-        except Exception as exc:  # noqa: BLE001 - network/JSON best effort
-            return [self._label(device, "ERROR stop-media: {}".format(exc))]
+        except (requests.RequestException, ValueError) as exc:
+            raise TransportError("stop-media request failed") from exc
         finally:
             session.close()
         return self._label_lines(device, text.splitlines())

@@ -1,7 +1,9 @@
 """Entry point wiring: parse args, load inventory, run capabilities."""
 
 import concurrent.futures
+import math
 import os
+import signal
 import sys
 
 from . import hostlist, reach, selection
@@ -18,7 +20,6 @@ from .config import (
     DEFAULT_NODE_TIMEOUT,
     DEFAULT_SUMMARY,
     DEFAULT_TIMEOUT,
-    ROLE_GROUPS,
     ROLE_LABELS,
     ROLE_ORDER,
     VERSION,
@@ -27,6 +28,7 @@ from . import console
 from .errors import NodetoolsError
 from .inventory import Inventory, generate_from_hostslist
 from .report import render
+from .subjects.vm import image_source
 from .runtime import InfoRunner, Runner, Scanner
 
 _READ_WORDS = ("", "status", "check", "read")
@@ -81,9 +83,13 @@ def _apply_defaults(options, inv, args):
     options.timeout = args.timeout if args.timeout is not None else float(
         inv.default("timeout", DEFAULT_TIMEOUT)
     )
-    options.node_timeout = float(
+    node_timeout = getattr(args, "node_timeout", None)
+    options.node_timeout = node_timeout if node_timeout is not None else float(
         inv.default("node_timeout", DEFAULT_NODE_TIMEOUT)
     )
+    for label, value in (("timeout", options.timeout), ("node_timeout", options.node_timeout)):
+        if not math.isfinite(value) or value <= 0:
+            raise NodetoolsError("{} must be a finite positive number".format(label))
     summary = getattr(args, "summary", None)
     options.summary = (
         summary if summary is not None else inv.default_bool("summary", DEFAULT_SUMMARY)
@@ -105,7 +111,10 @@ def _cmd_inventory(args):
             print("  [{}] {} hosts".format(group, len(names)))
         for name in inv.order:
             host = inv.get(name)
-            print("  {} role={} host={}".format(name, host.role, host.address))
+            print("  {} role={} platform={} oem={} host={}".format(
+                name, host.role, host.get("platform") or "auto", host.get("oem") or "auto",
+                host.address or "-",
+            ))
         return 0
     print("usage: nodetools inventory {init|show}", file=sys.stderr)
     return 2
@@ -123,15 +132,15 @@ def _select(args, inv, default_all=False):
 def _role_hosts(args, inv, role):
     """Resolve hosts for a role-prefixed command, filtered to that role.
 
-    With no noderange the whole role group is used; an explicit noderange is
-    resolved normally and then narrowed to the command's role.
+    With no selectors, include every inventory host with this role, including
+    hosts in custom groups. Explicit selections are narrowed to the role.
     """
     nrange = getattr(args, "noderange", None)
     selectors = [nrange] if nrange else []
     groups = list(getattr(args, "group", []))
     all_ = getattr(args, "all", False)
     if not (selectors or groups or all_):
-        groups = [ROLE_GROUPS[role]]
+        return [host for host in inv.hosts.values() if host.role == role]
     hosts = selection.select(inv, selectors=selectors, groups=groups, all_=all_)
     kept = [host for host in hosts if host.role == role]
     if len(kept) != len(hosts):
@@ -231,18 +240,35 @@ def _cmd_scan(args):
     return exit_code
 
 
-def _sensor_action(args):
-    action = (getattr(args, "action", None) or getattr(args, "action_opt", None) or "")
-    action = action.strip().lower()
-    return None if action in _READ_WORDS else action
+def _sensor_action_word(args):
+    action = getattr(args, "action", None) or getattr(args, "action_opt", None) or ""
+    return action.strip().lower()
+
+
+def _interrupt_sensor_query(signum, frame):
+    # A read-only CLI query can exit without waiting for executor teardown.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    try:
+        os.write(2, b"nodetools: interrupted\n")
+    finally:
+        os._exit(130)
 
 
 def _cmd_sensor(args):
     command = normalize_command(args.command)
     role, capability = SENSOR_COMMANDS[command]
+    action = _sensor_action_word(args)
+    if action not in _READ_WORDS:
+        if capability != "fan":
+            raise NodetoolsError("{} is read-only; use status or check".format(command))
+        if action not in ("auto", "max", "low", "opt"):
+            raise NodetoolsError("invalid fan action {!r}".format(action))
     inv = Inventory.from_file(_inventory_path(args.inventory))
     options = Options(args)
-    options.action = _sensor_action(args)
+    options.action = None if action in _READ_WORDS else action
+    fan_speeds = (
+        command == "nodefan" and action in ("", "status", "read") and not args.errors_only
+    )
     _apply_defaults(options, inv, args)
 
     hosts = _role_hosts(args, inv, role)
@@ -254,25 +280,35 @@ def _cmd_sensor(args):
 
     exit_code = 0
     runner = Runner(capability, options)
-    for result in runner.stream(hosts):
-        for line in render(
-            [result], summary=options.summary, errors_only=args.errors_only
-        ):
-            print(line, flush=True)
-        if result.get("error"):
-            exit_code = 1
+    previous_handler = None
+    if options.action is None:
+        previous_handler = signal.signal(signal.SIGINT, _interrupt_sensor_query)
+    try:
+        for result in runner.stream(hosts):
+            for line in render(
+                [result], summary=options.summary, errors_only=args.errors_only,
+                details=getattr(args, "details", False), fan_speeds=fan_speeds,
+            ):
+                print(line, flush=True)
+            if result.get("error"):
+                exit_code = 1
+    finally:
+        if previous_handler is not None:
+            signal.signal(signal.SIGINT, previous_handler)
     return exit_code
 
 
 def _cmd_info(args):
     command = normalize_command(args.command)
     role, subject = INFO_COMMANDS[command]
-    inv = Inventory.from_file(_inventory_path(args.inventory))
     options = Options(args)
     action = (
         getattr(args, "action", None) or getattr(args, "action_opt", None) or ""
     ).strip().lower()
     options.action = None if action in _READ_WORDS else action
+    if subject == "vm" and action in ("mount", "insert", "stop"):
+        image_source(options)
+    inv = Inventory.from_file(_inventory_path(args.inventory))
     _apply_defaults(options, inv, args)
 
     hosts = _role_hosts(args, inv, role)

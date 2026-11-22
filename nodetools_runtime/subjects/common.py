@@ -8,7 +8,7 @@ original scripts used.
 
 import json
 
-from ..errors import TransportError
+from ..errors import TransportError, TransportTimeout
 
 
 def resource(device, path, required=False):
@@ -20,6 +20,9 @@ def resource(device, path, required=False):
     if isinstance(data, dict) and "error" not in data:
         return data
     if required:
+        reason = getattr(device.redfish, "timeout_reason", None)
+        if reason:
+            raise TransportTimeout("{} {}".format(reason, path))
         raise TransportError("no data at {}".format(path))
     return {}
 

@@ -71,6 +71,31 @@ def test_psu_from_power_supplies():
     assert readings[0]["health"] == "OK"
 
 
+def test_avr_legacy_psu_power_and_details():
+    from nodetools_runtime.report import render
+
+    detail = {
+        "MemberId": "0",
+        "Name": "PSU_0",
+        "Manufacturer": "Great Wall",
+        "Model": "CRPS3200TW",
+        "FirmwareVersion": "00.01.02",
+        "Status": {"Health": "OK"},
+        "PowerInputWatts": 0,
+        "LastPowerOutputWatts": 303.0,
+    }
+    data = {"/redfish/v1/Chassis/1/Power": {"PowerSupplies": [detail]}}
+    device = _device(data, chassis=("1",))
+    readings = psu.collect(device)
+    device.profile = {"caps": {"1": {"Power": True, "PowerSupplies": 0}}}
+    assert psu.collect(device) == readings
+    result = {"name": "cp-01", "cap": "psu", "readings": readings}
+    assert render([result]) == ["cp-01: 0,OK,in=0W/out=303.0W"]
+    assert render([result], details=True) == [
+        "cp-01: PSU_0,Great Wall,CRPS3200TW,00.01.02,OK,0,303.0"
+    ]
+
+
 def test_psu_metrics_link_power():
     base = "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies"
     data = {
@@ -348,3 +373,16 @@ def test_inlet_probes_chassis_until_found():
     readings = inlet.collect(_device(data, chassis=("Chassis_0", "Chassis_9")))
     assert [r["id"] for r in readings] == ["Inlet_Temp"]
     assert readings[0]["health"] == "OK"
+
+
+def test_aivres_fan_uses_canonical_legacy_chassis():
+    from nodetools_runtime.oem.aivres import Aivres
+
+    fan_row = {"MemberId": "0", "Name": "Fan 0", "Reading": 0, "Status": {"Health": "OK"}}
+    data = {
+        "/redfish/v1/Chassis/1/Thermal": {"Fans": [fan_row]},
+        "/redfish/v1/Chassis/Chassis_0/Thermal": {"Fans": [{**fan_row, "Reading": 1200}]},
+    }
+    device = _device(data, chassis=("1", "Chassis_0"))
+    device.odm = Aivres()
+    assert [(row["id"], row["value"]) for row in fan.collect(device)] == [("0", 0)]

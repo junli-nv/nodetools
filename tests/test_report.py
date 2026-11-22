@@ -53,3 +53,13 @@ def test_summary_counts():
     assert render([result], summary=True) == [
         "cp-01: FAN,compute,total=2,OK=1,nonOK=1"
     ]
+
+
+def test_fan_speed_line_keeps_rpm_percent_and_unknown():
+    result = _result([
+        {"id": "1", "name": "Fan 1", "value": 1600, "unit": "RPM", "health": "OK"},
+        {"id": "2", "name": "Fan 2", "value": 50, "unit": "%", "health": "Warning"},
+        {"id": "3", "name": "Fan 3", "value": "NA", "health": "Unknown"},
+    ])
+    assert render([result], fan_speeds=True) == ["cp-01: 1600,50%,NA"]
+    assert "cp-01: 2,Fan_2,50%,Warning" in render([result])

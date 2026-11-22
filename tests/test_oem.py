@@ -1,7 +1,6 @@
 import pytest
 
 from nodetools_runtime import oem
-from nodetools_runtime.errors import CapUnsupported
 
 
 def test_known_odms_registered():
@@ -19,9 +18,77 @@ def test_unknown_falls_back_to_generic():
     assert oem.get("nope").name == "generic"
 
 
-def test_power_shelf_cycle_unsupported():
-    class Device:
-        redfish = None
+@pytest.mark.parametrize("command", ["nodepsu", "nvswpsu", "pspsu"])
+def test_psu_actions_are_rejected_before_inventory(command, capsys):
+    from nodetools_runtime import cli
 
-    with pytest.raises(CapUnsupported):
-        oem.power_shelf_control(Device(), "cycle")
+    assert cli.main([command, "-i", "/nonexistent-inventory", "cp-01", "on"]) == 1
+    assert "is read-only" in capsys.readouterr().err
+
+
+def test_fan_modes_stay_with_the_oem(monkeypatch):
+    import types
+
+    from nodetools_runtime import model, runtime
+    from nodetools_runtime.errors import NodetoolsError
+    from nodetools_runtime.inventory import Host
+
+    device = model.Device(Host("HGX390", groups=["compute"]))
+    device.identity = {"manufacturer": "KAYTUS", "model": "KR9288-X3-A0-F0-01"}
+    assert oem.for_device(device, "fan").name == "aivres"
+
+    options = types.SimpleNamespace(action="low")
+    runner = runtime.Runner("fan", options)
+    netweb = oem.get("netweb")
+    calls = []
+    monkeypatch.setattr(netweb, "fan_control", lambda device, mode: calls.append(mode))
+    runner._control(device, netweb)
+    assert calls == ["low"]
+    for mode in ("on", "off", "cycle"):
+        options.action = mode
+        with pytest.raises(NodetoolsError, match="invalid fan action"):
+            runner._control(device, netweb)
+    assert calls == ["low"]
+
+
+@pytest.mark.parametrize("platform, family", [("hgx", "hgx"), ("nvl", "nvl")])
+def test_dell_dispatch_uses_the_inventory_platform(platform, family):
+    from nodetools_runtime.model import Device
+    from nodetools_runtime.inventory import Host
+
+    host = Host("HGX999", variables={"platform": platform, "oem": "dell"}, groups=["compute"])
+    assert oem.for_device(Device(host)).family == family
+
+
+def test_dell_nvl_virtual_media_reads_links_and_rejects_writes():
+    from types import SimpleNamespace
+
+    from nodetools_runtime.errors import CapUnsupported
+    from nodetools_runtime.inventory import Host
+    from nodetools_runtime.model import Device
+    from nodetools_runtime.subjects import vm
+
+    manager = "/redfish/v1/Managers/Tray"
+    media = manager + "/VirtualMedia"
+    cd = media + "/CD"
+    responses = {
+        "/redfish/v1/Managers": {"Members": [{"@odata.id": manager}]},
+        manager: {"VirtualMedia": {"@odata.id": media}},
+        media: {"Members": [{"@odata.id": cd}]},
+        cd: {"Id": "CD", "Inserted": True, "ImageName": "boot.iso"},
+    }
+    device = Device(Host("tray-01", variables={"platform": "nvl", "oem": "dell"},
+                         groups=["compute"]))
+    requests = []
+
+    def get(path):
+        requests.append(path)
+        return responses.get(path)
+
+    device.redfish = SimpleNamespace(get=get)
+    device.odm = oem.for_device(device)
+    for action in ("mount", "insert", "enable", "eject", "umount", "stop"):
+        with pytest.raises(CapUnsupported, match="dell/nvl"):
+            vm.collect(device, action, None)
+    assert not requests
+    assert vm.collect(device, "status", None) == ["tray-01: CD\tinserted=True\timage=boot.iso"]

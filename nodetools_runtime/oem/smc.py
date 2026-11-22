@@ -1,6 +1,6 @@
 """Supermicro (FanMode control)."""
 
-from ..subjects import common
+from ..subjects import common, power, vm
 from .base import Oem, _body_lines, _jq_r
 
 _SYSTEM = "/redfish/v1/Systems/1"
@@ -37,7 +37,6 @@ class Smc(Oem):
     bootorder_sep = ","
     bootorder_expand = False
 
-    vm_image = "http://192.168.0.9/isos/ubuntu-24.04-live.iso"
 
     def fan_control(self, device, action):
         if action not in ("auto", "max"):
@@ -60,6 +59,8 @@ class Smc(Oem):
             )
             return []
         data = common.resource(device, _SYSTEM, required=True)
+        if action == "status":
+            return power.host_status(device.name, data.get("PowerState"))
         return ["{}: {}".format(device.name, common.jq(data.get("PowerState")))]
 
     def eventlog(self, device, action):
@@ -121,18 +122,22 @@ class Smc(Oem):
         return [self._label(device, line) for line in lines]
 
     # -- virtual media (nodevm.smc) -------------------------------------
+    vm_protocols = ("http", "https")
+    vm_mount_steps = ("insert",)
+    vm_extra_actions = ()
+
     def vm(self, device, action, options=None):
         action = (action or "status").strip().lower() or "status"
-        if action == "mount":
-            image = getattr(options, "image", None) if options is not None else None
-            _, body = common.post(
+        if action in ("mount", "insert"):
+            image, parsed = vm.image_source(options, "http", "https")
+            _, body = vm.post(
                 device,
                 "{}/{}/Actions/VirtualMedia.InsertMedia".format(_VM, _VM_IFACE),
                 {
-                    "Image": image or self.vm_image,
+                    "Image": image,
                     "WriteProtected": True,
                     "Inserted": True,
-                    "TransferProtocolType": "HTTP",
+                    "TransferProtocolType": parsed.scheme.upper(),
                 },
             )
             return self._label_lines(device, _body_lines(body, pretty=True))
@@ -143,7 +148,7 @@ class Smc(Oem):
                 iface = common.resource(device, oid)
                 if iface.get("Image") in (None, "null"):
                     continue
-                _, body = common.post(device, oid + "/Actions/VirtualMedia.EjectMedia", {})
+                _, body = vm.post(device, oid + "/Actions/VirtualMedia.EjectMedia", {})
                 lines += _body_lines(body, pretty=True)
             return self._label_lines(device, lines)
         lines = []

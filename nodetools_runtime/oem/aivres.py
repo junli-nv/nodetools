@@ -8,7 +8,8 @@ import json
 import time
 
 from ..errors import CapUnsupported
-from ..subjects import common
+from ..errors import NodetoolsError
+from ..subjects import common, power, vm
 from .base import Oem, _body_lines, _jq_r, _members_static
 
 _SYSTEM = "/redfish/v1/Systems/1"
@@ -46,6 +47,7 @@ class Aivres(Oem):
     name = "aivres"
     family = "hgx"
     fan_chassis = ("1", "Chassis_0")
+    fan_read_chassis = ("1",)
 
     bootorder_system = "1"
     bios_system = "1"
@@ -53,9 +55,6 @@ class Aivres(Oem):
     bootorder_sep = ","
     bootorder_expand = False
 
-    vm_server = "192.168.0.9"
-    vm_nfs_path = "/var/www/html/isos"
-    vm_iso = "ubuntu-24.04-live.iso"
 
     # -- power (nodepower.avr) ------------------------------------------
     def power(self, device, action):
@@ -70,6 +69,8 @@ class Aivres(Oem):
             )
             return [self._label(device, line) for line in _body_lines(body, pretty=True)]
         data = common.resource(device, _SYSTEM, required=True)
+        if action == "status":
+            return power.host_status(device.name, data.get("PowerState"))
         return [self._label(device, json.dumps(data.get("PowerState")))]
 
     def _reseat(self, device):
@@ -304,20 +305,27 @@ class Aivres(Oem):
         return [self._label(device, line) for line in lines]
 
     # -- virtual media (nodevm.avr) -------------------------------------
+    vm_protocols = ("nfs",)
+    vm_mount_steps = ("mount", "insert")
+    vm_extra_actions = ("media", "umount")
+
     def vm(self, device, action, options=None):
         action = (action or "status").strip().lower() or "status"
-        server, nfs_path, iso = self._vm_nfs(options)
         if action == "mount":
-            _, body = common.post(
+            _, source = vm.image_source(options, "nfs")
+            nfs_path = source.path
+            if nfs_path.lower().endswith(".iso"):
+                nfs_path = nfs_path.rpartition("/")[0] or "/"
+            _, body = vm.post(
                 device,
                 _VMM + "/RemoteMount",
-                {"Host": server, "Path": nfs_path, "Protocol": "NFS"},
+                {"Host": source.netloc, "Path": nfs_path, "Protocol": "NFS"},
             )
             lines = _body_lines(body, pretty=True)
             lines += self._vm_field(device, "RemoteMount")
             return self._label_lines(device, lines)
         if action == "umount":
-            _, body = common.post(device, _VMM + "/RemoteUmount", {"Protocol": "NFS"})
+            _, body = vm.post(device, _VMM + "/RemoteUmount", {"Protocol": "NFS"})
             lines = _body_lines(body)
             lines += self._vm_field(device, "RemoteMount")
             return self._label_lines(device, lines)
@@ -325,11 +333,15 @@ class Aivres(Oem):
             body = device.redfish.get(_VMM + "/BrowserRemoteFiles?$filter=Path eq NFS")
             return self._label_lines(device, _body_lines(body))
         if action in ("insert", "eject"):
+            _, source = vm.image_source(options, "nfs")
+            iso = source.path.rsplit("/", 1)[-1]
+            if not iso.lower().endswith(".iso"):
+                raise NodetoolsError("Aivres insert/eject requires an NFS ISO file URL")
             suffix = "RemoteMediaInsert" if action == "insert" else "RemoteMediaEject"
             payload = {"ImagePath": "NFS/{}".format(iso)}
             if action == "insert":
                 payload["FileType"] = "File"
-            _, body = common.post(device, _VMM + "/" + suffix, payload)
+            _, body = vm.post(device, _VMM + "/" + suffix, payload)
             lines = _body_lines(body)
             lines += self._vm_field(device, "VirtualMediaList", each=True)
             return self._label_lines(device, lines)
@@ -346,15 +358,3 @@ class Aivres(Oem):
                 out += _body_lines(item, pretty=True)
             return out
         return _body_lines(value, pretty=True)
-
-    def _vm_nfs(self, options):
-        server, nfs_path, iso = self.vm_server, self.vm_nfs_path, self.vm_iso
-        image = getattr(options, "image", None) if options is not None else None
-        if image:
-            rest = image[len("nfs://"):] if image.startswith("nfs://") else image
-            server, _, tail = rest.partition("/")
-            if tail:
-                nfs_path = "/" + tail
-            if nfs_path.lower().endswith(".iso"):
-                nfs_path, _, iso = nfs_path.rpartition("/")
-        return server, nfs_path, iso

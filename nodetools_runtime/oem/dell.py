@@ -2,7 +2,7 @@
 
 import re
 
-from ..subjects import common
+from ..subjects import common, vm
 from ..transport.racadm import Racadm
 from .base import Oem
 
@@ -42,7 +42,6 @@ class Dell(Oem):
     bootorder_sep = ","
     bootorder_expand = False
 
-    vm_image = "http://10.6.131.63/isos/ubuntu-24.04-live.iso"
     _LICENSE_TOKENS = (
         "License #",
         "Status",
@@ -135,6 +134,10 @@ class Dell(Oem):
         return ""
 
     # -- virtual media (nodevm.dell / racadm remoteimage) ----------------
+    vm_protocols = ("http", "https")
+    vm_eject_action = "umount"
+    vm_extra_actions = ("enable", "lic")
+
     def vm(self, device, action, options=None):
         action = (action or "status").strip().lower() or "status"
         if action == "lic":
@@ -146,9 +149,9 @@ class Dell(Oem):
             return self._label_lines(device, rows)
         if action == "enable":
             out = self._racadm(device, "set", "iDRAC.VirtualMedia.Enable", "1")
-        elif action == "mount":
-            image = getattr(options, "image", None) if options is not None else None
-            out = self._racadm(device, "remoteimage", "-c", "-l", image or self.vm_image)
+        elif action in ("mount", "insert"):
+            image, _ = vm.image_source(options, "http", "https")
+            out = self._racadm(device, "remoteimage", "-c", "-l", image)
         elif action == "umount":
             out = self._racadm(device, "remoteimage", "-d")
         else:

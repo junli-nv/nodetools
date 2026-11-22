@@ -25,16 +25,33 @@ def _metric(metrics, key):
     return None
 
 
-def _wire_value(metrics, detail):
-    """Compose ``in=<x>W/out=<y>W`` (falling back to current) for one supply."""
-    in_w = _metric(metrics, "InputPowerWatts")
-    if in_w is None:
-        in_w = common.num(metrics.get("InputWatts") or detail.get("InputWatts"))
-    out_w = _metric(metrics, "OutputPowerWatts")
-    if out_w is None:
-        out_w = common.num(
-            metrics.get("AverageConsumedWatts") or metrics.get("PowerConsumedWatts")
-        )
+def _first_numeric(*values):
+    for value in values:
+        number = common.num(value)
+        if number is not None:
+            return number
+    return None
+
+
+def _power_watts(metrics, detail):
+    return (
+        _first_numeric(
+            _metric(metrics, "InputPowerWatts"),
+            detail.get("PowerInputWatts"),
+            metrics.get("InputWatts"),
+            detail.get("InputWatts"),
+        ),
+        _first_numeric(
+            _metric(metrics, "OutputPowerWatts"),
+            detail.get("LastPowerOutputWatts"),
+            metrics.get("AverageConsumedWatts"),
+            metrics.get("PowerConsumedWatts"),
+        ),
+    )
+
+
+def _wire_value(metrics, in_w, out_w):
+    """Compose input/output power, falling back to current when absent."""
     parts = []
     if in_w is not None:
         parts.append("in={}W".format(in_w))
@@ -71,39 +88,42 @@ def _metrics_for(redfish, detail):
 
 
 def _supply_reading(redfish, detail):
+    metrics = _metrics_for(redfish, detail)
+    in_w, out_w = _power_watts(metrics, detail)
     return common.reading(
         detail.get("MemberId") or detail.get("Id"),
         detail.get("Name"),
-        _wire_value(_metrics_for(redfish, detail), detail),
+        _wire_value(metrics, in_w, out_w),
         _psu_health(detail),
+        manufacturer=detail.get("Manufacturer"),
+        model=detail.get("Model"),
+        firmware=detail.get("FirmwareVersion"),
+        input_watts=in_w,
+        output_watts=out_w,
     )
 
 
 def _from_power_supplies(device):
     rf = device.redfish
-    chassis = common.rung_chassis(device, "PowerSupplies", DEFAULT_CHASSIS)
-    if not chassis:
-        return []
-    prof = common.profile(device)
-    if prof is None:
-        use_power = not common.absent(
-            device, "/redfish/v1/Chassis/{}/Power".format(chassis[0])
-        )
-    else:
-        caps = prof.get("caps") or {}
-        use_power = any((caps.get(cid) or {}).get("Power") for cid in chassis)
+    modern = common.cached_chassis(device, "PowerSupplies")
+    legacy = common.cached_chassis(device, "Power")
+    if modern is None:
+        modern = common.chassis_list(device, DEFAULT_CHASSIS)
+        legacy = modern
+    chassis = list(dict.fromkeys(modern + legacy))
 
     def scan(cid):
         out = []
         base = "/redfish/v1/Chassis/{}".format(cid)
-        for detail in common.enumerate_collection(
-            rf, base + "/PowerSubsystem/PowerSupplies"
-        ):
-            out.append(_supply_reading(rf, detail))
-        if use_power:
-            legacy = rf.get(base + "/Power")
-            if isinstance(legacy, dict):
-                for detail in legacy.get("PowerSupplies", []) or []:
+        if cid in modern:
+            for detail in common.enumerate_collection(
+                rf, base + "/PowerSubsystem/PowerSupplies"
+            ):
+                out.append(_supply_reading(rf, detail))
+        if cid in legacy:
+            power = rf.get(base + "/Power")
+            if isinstance(power, dict):
+                for detail in power.get("PowerSupplies", []) or []:
                     if isinstance(detail, dict):
                         out.append(_supply_reading(rf, detail))
         return out

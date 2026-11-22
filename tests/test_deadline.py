@@ -23,10 +23,9 @@ def test_redfish_expired_skips_request(monkeypatch):
 def test_redfish_timeout_clamped_to_remaining():
     client = Redfish("10.0.0.1", "u", "p", timeout=10)
     client.set_deadline(time.monotonic() + 5)
-    connect, read = client._timeout()
-    assert read <= 5.001
-    assert read >= 4.5
-    assert connect <= 3.0
+    budget = client._timeout()
+    assert 4.5 <= budget.total <= 5.001
+    assert budget.connect_timeout <= 3.0
 
 
 def test_redfish_timeout_without_deadline():
@@ -87,3 +86,80 @@ def test_ipmi_counts_transport_errors(monkeypatch):
         client.run("power", "status")
     assert client.transport_errors == 1
 
+
+
+def test_status_redfish_timeout_is_reported(monkeypatch):
+    import requests
+    from nodetools_runtime.errors import TransportTimeout
+    from nodetools_runtime.subjects.common import resource
+
+    client = Redfish("10.0.0.1", "u", "p")
+
+    def silent(*args, **kwargs):
+        raise requests.ReadTimeout()
+
+    monkeypatch.setattr(client._session, "get", silent)
+    device = types.SimpleNamespace(redfish=client)
+    with pytest.raises(TransportTimeout, match="Redfish GET timed out"):
+        resource(device, "/redfish/v1/Systems/1", required=True)
+
+
+def test_status_ipmi_timeout_is_reported_without_command_args(monkeypatch):
+    import subprocess
+    from nodetools_runtime.errors import TransportTimeout
+    from nodetools_runtime.oem.base import Oem
+
+    client = Ipmi("10.0.0.1", "u", "private-example", tool="/bin/true")
+
+    def silent(argv, **kwargs):
+        raise subprocess.TimeoutExpired(argv, kwargs["timeout"])
+
+    monkeypatch.setattr("nodetools_runtime.transport.ipmi.subprocess.run", silent)
+    with pytest.raises(TransportTimeout, match="IPMI request timed out") as error:
+        Oem().power(types.SimpleNamespace(name="cp-01", ipmi=client), "status")
+    assert "private-example" not in str(error.value)
+
+
+def test_ctrl_c_exits_sensor_query_without_waiting_or_traceback(tmp_path):
+    import signal
+    import subprocess
+    import sys
+
+    inventory = tmp_path / "inventory.ini"
+    inventory.write_text("[compute]\ncp-01 127.0.0.1\n")
+    script = """
+import concurrent.futures
+import sys
+import time
+from nodetools_runtime import cli
+
+class BlockedRunner:
+    def __init__(self, capability, options):
+        pass
+
+    def stream(self, hosts):
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            future = pool.submit(time.sleep, 30)
+            print("query started", flush=True)
+            future.result()
+            yield {}
+
+cli.Runner = BlockedRunner
+sys.exit(cli.main(["nodepsu", "-i", sys.argv[1], "cp-01"]))
+"""
+    with subprocess.Popen(
+        [sys.executable, "-c", script, str(inventory)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    ) as proc:
+        try:
+            assert proc.stdout.readline().strip() == "query started"
+            proc.send_signal(signal.SIGINT)
+            output, errors = proc.communicate(timeout=2)
+            assert proc.returncode == 130
+            assert output == ""
+            assert errors == "nodetools: interrupted\n"
+        finally:
+            if proc.poll() is None:
+                proc.kill()
