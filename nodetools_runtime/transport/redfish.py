@@ -23,6 +23,7 @@ class Redfish:
         self.timeout = timeout
         self.verify = verify
         self._deadline = None
+        self._etags = {}
         self.transport_errors = 0
         self.timeout_reason = None
         self._session = requests.Session()
@@ -83,6 +84,12 @@ class Redfish:
             ):
                 self.timeout_reason = "Redfish GET timed out"
             return None, None
+        url = self.url(path)
+        etag = resp.headers.get("ETag") if resp.ok else None
+        if etag:
+            self._etags[url] = etag
+        else:
+            self._etags.pop(url, None)
         if resp.status_code in (401, 403):
             return resp.status_code, None
         text = resp.text
@@ -108,12 +115,16 @@ class Redfish:
         except ValueError:
             return resp.status_code, resp.text
 
-    def patch(self, path, body, timeout=None):
+    def patch(self, path, body, timeout=None, etag_source=None):
         if self._expired():
             raise TransportError("deadline exceeded before PATCH {}".format(path))
         try:
+            url = self.url(path)
+            source = self.url(etag_source) if etag_source else url
+            etag = self._etags.pop(source, None)
+            kwargs = {"headers": {"If-Match": etag}} if etag else {}
             resp = self._session.patch(
-                self.url(path), json=body, timeout=self._timeout(timeout)
+                url, json=body, timeout=self._timeout(timeout), **kwargs
             )
         except requests.RequestException as exc:
             self.transport_errors += 1

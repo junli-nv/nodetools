@@ -265,6 +265,14 @@ Ansible 风格 INI，见 `inventory.example.ini`。每台主机用 `host=` 带 B
 ./nodeinventory HGX390 --tasks
 ```
 
+在 Supermicro 和 Aivres/KAYTUS 上，`nodebios NODE --set KEY=VALUE`
+提交待生效设置。KR9288 的嵌套设置使用 `组.属性=值`。先用 `nodebios NODE`
+确认属性名称和类型。提交后由操作者单独安排重启。
+
+Supermicro 的 `nodenetboot NODE` 查询当前顺序，`nodenetboot NODE pxe`
+把网络启动移到持久顺序前面并保留其他启动项。KR9288 的 `pxe` 是一次性启动覆盖。
+两者均需明确指定目标后才能提交。
+
 ## 输出
 
 传感器行是 `<node>: <field>,<field>,...`，与旧脚本一致，`grep -v ,OK` 仍可用：

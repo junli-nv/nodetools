@@ -163,3 +163,33 @@ sys.exit(cli.main(["nodepsu", "-i", sys.argv[1], "cp-01"]))
         finally:
             if proc.poll() is None:
                 proc.kill()
+
+
+def test_redfish_patch_uses_the_etag_of_the_requested_parent(monkeypatch):
+    from types import SimpleNamespace
+
+    from nodetools_runtime.transport.redfish import Redfish
+
+    reads, writes = [], []
+    requests = Redfish("example.test", None, None)
+
+    def load(url, **kwargs):
+        reads.append(url)
+        headers = {"ETag": '"parent-revision"'} if url.endswith("/Bios") else {}
+        return SimpleNamespace(ok=True, status_code=200, headers=headers, text="{}", json=dict)
+
+    def patch(url, **kwargs):
+        writes.append((url, kwargs.get("headers")))
+        return SimpleNamespace(status_code=412, json=dict)
+
+    monkeypatch.setattr(requests._session, "get", load)
+    monkeypatch.setattr(requests._session, "patch", patch)
+    parent = "/redfish/v1/Systems/1/Bios"
+    settings = parent + "/Settings"
+    try:
+        requests.get(parent)
+        requests.get(settings)
+        assert requests.patch(settings, {"Attributes": {}}, etag_source=parent)[0] == 412
+        assert writes == [(requests.url(settings), {"If-Match": '"parent-revision"'})]
+    finally:
+        requests.close()

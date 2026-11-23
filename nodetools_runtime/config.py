@@ -34,7 +34,7 @@ INFO_ACTIONS = {
     "inventory": (),
     "boot": ("pxe", "disk", "bios", "cdrom"),
     "bootorder": (),
-    "netboot": ("status", "mac", "net"),
+    "netboot": ("status", "mac", "net", "pxe"),
     "macs": (),
     "bios": ("status", "base", "pending", "bf3"),
     "vm": ("status", "enable", "mount", "umount", "insert", "eject", "stop", "media", "lic"),

@@ -8,7 +8,7 @@ original scripts used.
 
 import json
 
-from ..errors import TransportError, TransportTimeout
+from ..errors import CapUnsupported, TransportError, TransportTimeout
 
 
 def resource(device, path, required=False):
@@ -109,7 +109,9 @@ def post(device, path, body=None):
     return device.redfish.post(path, body if body is not None else {})
 
 
-def patch(device, path, body):
+def patch(device, path, body, etag_source=None):
+    if etag_source:
+        return device.redfish.patch(path, body, etag_source=etag_source)
     return device.redfish.patch(path, body)
 
 
@@ -120,3 +122,32 @@ def body_text(body):
     if isinstance(body, (dict, list)):
         return json.dumps(body)
     return ""
+
+
+def require_write_success(path, result):
+    status, body = result
+    if not 200 <= status < 300 or (isinstance(body, dict) and "error" in body):
+        raise TransportError("Redfish write failed at {} (HTTP {})".format(path, status))
+    return body
+
+
+def action_target(resource, action, parent):
+    descriptor = (resource.get("Actions") or {}).get("#" + action) or {}
+    target = descriptor.get("target")
+    if not isinstance(target, str) or not target.startswith(parent.rstrip("/") + "/"):
+        raise CapUnsupported("Redfish did not advertise {} under {}".format(action, parent))
+    return target, descriptor
+
+
+def reset_system(device, system, data, preferred):
+    target, descriptor = action_target(data, "ComputerSystem.Reset", system)
+    allowable = descriptor.get("ResetType@Redfish.AllowableValues")
+    info = descriptor.get("@Redfish.ActionInfo")
+    if allowable is None and isinstance(info, str) and info.startswith(system + "/"):
+        parameters = resource(device, info, required=True).get("Parameters") or []
+        allowable = next((p.get("AllowableValues") for p in parameters if p.get("Name") == "ResetType"), None)
+    chosen = next((value for value in preferred if value in (allowable or [])), None)
+    if chosen is None:
+        raise CapUnsupported("Redfish did not advertise reset type {}".format("/".join(preferred)))
+    require_write_success(target, post(device, target, {"ResetType": chosen}))
+    return chosen

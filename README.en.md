@@ -294,6 +294,14 @@ Inventory commands list firmware by default. Select a view for hardware identifi
 ./nodeinventory HGX390 --tasks
 ```
 
+On Supermicro and Aivres/KAYTUS, `nodebios NODE --set KEY=VALUE` stages
+a pending BIOS setting. Use `Group.Attribute=value` for nested KR9288 settings.
+Check attribute names and types with `nodebios NODE`. Schedule the reboot separately.
+
+On Supermicro, `nodenetboot NODE` reads the current order and `nodenetboot NODE pxe`
+stages network first in the persistent order, retaining the other entries.
+On KR9288, `pxe` stages a one-time override. Specify the target explicitly for writes.
+
 ## Output
 
 Sensor lines are `<node>: <field>,<field>,...`, matching the legacy scripts so

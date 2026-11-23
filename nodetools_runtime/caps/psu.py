@@ -107,26 +107,40 @@ def _from_power_supplies(device):
     rf = device.redfish
     modern = common.cached_chassis(device, "PowerSupplies")
     legacy = common.cached_chassis(device, "Power")
+    selected = getattr(device, "vars", {}).get("chassis_id")
+    preferred = (selected,) if selected else getattr(getattr(device, "odm", None), "psu_read_chassis", ())
     if modern is None:
-        modern = common.chassis_list(device, DEFAULT_CHASSIS)
+        modern = list(preferred) if preferred else common.chassis_list(device, DEFAULT_CHASSIS)
         legacy = modern
+    elif preferred:
+        modern = [cid for cid in modern if cid in preferred]
+        legacy = [cid for cid in legacy if cid in preferred]
     chassis = list(dict.fromkeys(modern + legacy))
 
     def scan(cid):
-        out = []
         base = "/redfish/v1/Chassis/{}".format(cid)
-        if cid in modern:
-            for detail in common.enumerate_collection(
-                rf, base + "/PowerSubsystem/PowerSupplies"
-            ):
-                out.append(_supply_reading(rf, detail))
+        current = common.enumerate_collection(rf, base + "/PowerSubsystem/PowerSupplies") if cid in modern else []
+        old = []
         if cid in legacy:
             power = rf.get(base + "/Power")
             if isinstance(power, dict):
-                for detail in power.get("PowerSupplies", []) or []:
-                    if isinstance(detail, dict):
-                        out.append(_supply_reading(rf, detail))
+                old = [item for item in power.get("PowerSupplies", []) or [] if isinstance(item, dict)]
+        old_by_serial = {item["SerialNumber"]: item for item in old if item.get("SerialNumber")}
+        matched = set()
+        out = []
+        for detail in current:
+            serial = detail.get("SerialNumber")
+            if serial in old_by_serial:
+                matched.add(serial)
+                combined = dict(old_by_serial[serial])
+                if detail.get("Id") and "MemberId" not in detail:
+                    combined.pop("MemberId", None)
+                combined.update({key: value for key, value in detail.items() if value not in (None, "")})
+                detail = combined
+            out.append(_supply_reading(rf, detail))
+        out.extend(_supply_reading(rf, detail) for detail in old if detail.get("SerialNumber") not in matched)
         return out
+
 
     return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 

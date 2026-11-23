@@ -141,6 +141,11 @@ def _add_info_opts(parser, subject, role):
         parser.add_argument(
             "--vm-password", default=None, help="virtual-media password"
         )
+    if subject == "bios":
+        parser.add_argument(
+            "--set", dest="bios_updates", action="append", metavar="KEY=VALUE",
+            help="stage a BIOS attribute on supported OEMs without rebooting (repeatable)",
+        )
     if subject == "inventory":
         view = parser.add_mutually_exclusive_group()
         view.add_argument(

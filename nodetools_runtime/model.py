@@ -105,6 +105,13 @@ def hardware_identity(device):
 _GENERATION = re.compile(r"\b(gb|b)[ _-]?(200|300)\b", re.I)
 
 
+_MODEL_GENERATIONS = {
+    ("kaytus", "KR9288-X3-A0-F0-01"): "b300",
+    ("aivres", "KR9288-X3-A0-F0-01"): "b300",
+    ("smc", "SYS-822GS-NB3RT"): "b300",
+}
+
+
 def generation_for(device):
     override = device.vars.get("generation", "").strip().lower()
     if override == "unknown":
@@ -115,7 +122,10 @@ def generation_for(device):
     platform_generation = platform if _GENERATION.fullmatch(platform) else ""
     source = override or platform_generation or hardware_identity(device).get("model") or ""
     generations = {prefix.lower() + number for prefix, number in _GENERATION.findall(str(source))}
-    return generations.pop() if len(generations) == 1 else "unknown"
+    if len(generations) == 1:
+        return generations.pop()
+    product = str(hardware_identity(device).get("model") or "").strip().upper()
+    return _MODEL_GENERATIONS.get((odm_for(device), product), "unknown")
 
 
 def platform_for(device):

@@ -14,6 +14,7 @@ from .nvl.gb200 import Gb200
 from .hgx.gigabyte import Gigabyte
 from .redfish import ReadOnlyCompute, RedfishDiscovery
 from .nvl.inventec import Inventec
+from .hgx.kaytus import KaytusKr9288
 from .hgx.lenovo import Lenovo
 from .hgx.netweb import Netweb
 from .hgx.smc import Smc
@@ -43,6 +44,7 @@ _PLATFORM_MODULES = {
 }
 
 _GENERIC = Oem()
+_KAYTUS_KR9288 = KaytusKr9288()
 _NVL_COMPUTE = ReadOnlyCompute()
 _DISCOVERED_INFRA = RedfishDiscovery()
 
@@ -70,9 +72,11 @@ def for_device(device, capability=None):
         legacy = platform == "nvl" and odm in ("nvidia", "dgx")
         if not legacy or scoped:
             return _DISCOVERED_INFRA
-    if capability == "fan" and platform == "hgx" and odm == "kaytus":
+    if platform == "hgx" and odm in ("kaytus", "aivres") and device.role == "compute":
         product = str(model.hardware_identity(device).get("model") or "").upper()
-        if product.startswith("KR9288-X3-"):
+        if product == "KR9288-X3-A0-F0-01" and generation == "b300":
+            return _KAYTUS_KR9288
+        if capability == "fan" and odm == "kaytus" and product.startswith("KR9288-X3-"):
             return get("aivres")
     if platform == "nvl" and odm in ("nvidia", "dgx", "gb200"):
         return get("gb200")

@@ -51,6 +51,8 @@ class Aivres(Oem):
 
     bootorder_system = "1"
     bios_system = "1"
+    bios_write_target = "settings"
+    bios_parent_etag = True
     bootorder_quoted = False
     bootorder_sep = ","
     bootorder_expand = False
@@ -150,6 +152,7 @@ class Aivres(Oem):
 
     @staticmethod
     def _patch_thermal(device, body):
+        common.resource(device, _THERMAL, required=True)
         status, _ = common.patch(device, _THERMAL, body)
         if status not in (200, 202, 204):
             raise RuntimeError("Thermal PATCH returned {}".format(status))
@@ -157,7 +160,10 @@ class Aivres(Oem):
     # -- BIOS settings (nodebios.avr) -----------------------------------
     def bios(self, device, action):
         if action == "base":
-            _, body = common.patch(device, _SYSTEM + "/Bios/Settings", _BIOS_BASE)
+            parent = _SYSTEM + "/Bios"
+            path = parent + "/Settings"
+            common.resource(device, parent, required=True)
+            body = common.require_write_success(path, common.patch(device, path, _BIOS_BASE, parent))
             lines = _body_lines(body, pretty=True)
             time.sleep(2)
             if device.ipmi:
@@ -176,9 +182,11 @@ class Aivres(Oem):
         data = common.resource(device, _SYSTEM + "/Bios", required=True)
         rows = set()
         for outer, value in (data.get("Attributes") or {}).items():
-            if not isinstance(value, dict):
+            if not isinstance(value, dict) or "password" in outer.lower():
                 continue
             for inner, ivalue in value.items():
+                if "password" in inner.lower():
+                    continue
                 row = '{}."{}": {}'.format(outer, inner, json.dumps(ivalue))
                 if "BbsPriority" in row or "VLANs" in row:
                     continue
@@ -263,16 +271,30 @@ class Aivres(Oem):
     # -- NIC / MAC inventory (nodemacs.avr) -----------------------------
     def macs(self, device, action):
         lines = []
-        for adapter in self._members(device, _CHASSIS + "/NetworkAdapters"):
+        adapters = common.resource(device, _CHASSIS + "/NetworkAdapters")
+        for path in common.member_ids(adapters):
+            adapter = common.resource(device, path)
+            if not adapter:
+                continue
             pub = (adapter.get("Oem") or {}).get("Public") or {}
             card = ",".join(
                 _jq_r(pub.get(field, ""))
                 for field in ("CardModel", "DeviceLocator", "NetworkTechnology")
             )
-            for oid in common.member_ids(pub.get("NetworkPorts")):
-                port = device.redfish.get(oid)
-                if not isinstance(port, dict) or "error" in port:
+            ports = pub.get("NetworkPorts")
+            links = common.member_ids(ports)
+            if isinstance(ports, list):
+                links = [entry.get("@odata.id") for entry in ports if isinstance(entry, dict) and entry.get("@odata.id")]
+            if not links:
+                resource = adapter.get("NetworkPorts") or {}
+                collection = resource.get("@odata.id") or path + "/NetworkPorts"
+                links = common.member_ids(common.resource(device, collection))
+            port_count = 0
+            for oid in links:
+                port = common.resource(device, oid)
+                if not port.get("AssociatedNetworkAddresses"):
                     continue
+                port_count += 1
                 ppub = (port.get("Oem") or {}).get("Public") or {}
                 addresses = ",".join(
                     _jq_r(mac) for mac in port.get("AssociatedNetworkAddresses") or []
@@ -281,14 +303,24 @@ class Aivres(Oem):
                     ",".join(
                         (
                             _jq_r(ppub.get("BDF", "")).replace("-", ":"),
-                            _jq_r(port.get("VendorId", "")),
+                            _jq_r(port.get("VendorId") or pub.get("VenderID") or ""),
                             addresses,
                             _jq_r(port.get("LinkStatus", "")),
-                            _jq_r(port.get("CurrentLinkSpeedMbps", "")),
+                            _jq_r(port.get("CurrentLinkSpeedMbps") or ppub.get("LinkSpeed") or ""),
                             card,
                         )
                     )
                 )
+            if not port_count:
+                resource = adapter.get("NetworkDeviceFunctions") or {}
+                collection = resource.get("@odata.id") or path + "/NetworkDeviceFunctions"
+                functions = common.resource(device, collection)
+                for oid in common.member_ids(functions):
+                    entry = common.resource(device, oid)
+                    eth = entry.get("Ethernet") or {}
+                    mac = eth.get("PermanentMACAddress") or eth.get("MACAddress")
+                    if mac:
+                        lines.append("{},{},{},,,{}".format(entry.get("Id", ""), pub.get("VenderID", ""), mac, card))
         for iface in self._members(device, _MANAGER + "/EthernetInterfaces"):
             lines.append(
                 ",".join(

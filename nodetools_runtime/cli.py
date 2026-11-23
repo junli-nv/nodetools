@@ -59,6 +59,7 @@ class Options:
         self.details = getattr(args, "details", False)
         self.gpu = getattr(args, "gpu", False)
         self.tasks = getattr(args, "tasks", False)
+        self.bios_updates = getattr(args, "bios_updates", None)
         self.image = getattr(args, "image", None)
         self.vm_user = getattr(args, "vm_user", None)
         self.vm_password = getattr(args, "vm_password", None)
@@ -309,6 +310,11 @@ def _cmd_info(args):
         getattr(args, "action", None) or getattr(args, "action_opt", None) or ""
     ).strip().lower()
     options.action = None if action in _READ_WORDS else action
+    explicit_targets = args.noderange or args.group or args.all
+    if options.bios_updates and (action or not explicit_targets):
+        raise NodetoolsError("nodebios --set requires explicit targets and cannot be combined with an action")
+    if subject == "netboot" and action == "pxe" and not explicit_targets:
+        raise NodetoolsError("nodenetboot pxe requires explicit targets")
     if subject == "vm" and action in ("mount", "insert", "stop"):
         image_source(options)
     inv = Inventory.from_file(_inventory_path(args.inventory))

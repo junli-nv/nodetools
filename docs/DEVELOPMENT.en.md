@@ -411,6 +411,20 @@ Public BMC interface references
 - [HPE HGX B300 Redfish](https://support.hpe.com/hpesc/public/docDisplay?docId=sd00007670en_us&docLocale=en_US&page=GUID-2D1518D5-6372-401B-AE97-5F40677DFD0D.html)
 - [Supermicro Redfish API](https://www.supermicro.com/en/solutions/management-software/redfish)
 
+### HGX B300 hardware interfaces
+
+Supermicro `SYS-822GS-NB3RT` (BMC `01.12.02.03`) uses `Chassis/1` for host PSUs.
+The GPU baseboard separately exposes HSC/HSCC resources. `nodepsu` merges
+modern and legacy host PSU records by serial. Aivres/KAYTUS
+`KR9288-X3-A0-F0-01` (BMC `2.03.ef`) uses `Systems/1` and
+`Managers/1/VMMService`. `Systems/NV` provides GPU serials.
+BIOS staging, PXE settings, and fan modes were exercised on both models.
+Supermicro writes to `Bios/SD`. The KR9288 requires the parent `Bios` ETag
+when writing `Bios/Settings`. Supermicro `stop URL` detaches the slot matching
+the exact URL. Firmware may retain the configured URL after detaching.
+Mount waits for the Redfish task and checks `Inserted`. On hardware, KR9288 mounted and ejected an NFS ISO and restored its original mount. Supermicro inserted and ejected an ISO served by Apache on standard HTTP.
+Persistent boot ordering and AUX reseat on the KR9288 remain unverified.
+
 ### OEM capability checklist
 
 Use the original nodetools scripts as the baseline. Track compatibility per operation and model. Share standard Redfish reads, and override confirmed OEM differences in the adapter.

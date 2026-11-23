@@ -352,6 +352,16 @@ reachable=$(./nodeping --long vdc1-pro2-t10-gpu-cp-[01-18] \
 - [HPE HGX B300 Redfish](https://support.hpe.com/hpesc/public/docDisplay?docId=sd00007670en_us&docLocale=en_US&page=GUID-2D1518D5-6372-401B-AE97-5F40677DFD0D.html)
 - [Supermicro Redfish API](https://www.supermicro.com/en/solutions/management-software/redfish)
 
+### HGX B300 实机接口
+
+Supermicro `SYS-822GS-NB3RT`（BMC `01.12.02.03`）使用主机机箱 `Chassis/1`，
+其 GPU 底板还报告 HSC/HSCC。`nodepsu` 对主机电源按序列号合并新旧资源。
+Aivres/KAYTUS `KR9288-X3-A0-F0-01`（BMC `2.03.ef`）使用 `Systems/1`
+和 `Managers/1/VMMService`；`Systems/NV` 提供 GPU 序列号。
+两款机器已实测 BIOS 暂存、PXE 设置和风扇切换。Supermicro 写入 `Bios/SD`，
+KR9288 写入 `Bios/Settings` 时需要父 `Bios` 的 ETag。Supermicro 的介质
+`stop URL` 按精确 URL 分离指定槽，固件可能保留 URL 配置。挂载需等待 Redfish 任务成功并核对 `Inserted`。实机上，KR9288 完成了 NFS 挂载、推出和原挂载恢复，Supermicro 通过 Apache 标准 HTTP 端口完成了 ISO 插入和推出。KR9288 的持久启动顺序写入和 AUX reseat 待验证。
+
 ### OEM 能力清单
 
 以原始 nodetools 脚本为对照。每个机型按能力确认接口。标准 Redfish 查询由共用层实现，OEM 模块覆盖已确认的差异。

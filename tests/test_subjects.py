@@ -35,7 +35,7 @@ class FakeRedfish:
         self.posts[path] = body
         return self.post_results.get(path, (200, {}))
 
-    def patch(self, path, body, timeout=None):
+    def patch(self, path, body, timeout=None, etag_source=None):
         self.patches[path] = body
         return self.patch_results.get(path, (200, {}))
 
@@ -608,26 +608,6 @@ def test_netweb_bios_base_patches_system_0():
     assert "/redfish/v1/Systems/System_0/Bios/SD" in rf.patches
 
 
-def test_netboot_smc_reorders_network_first():
-    from nodetools_runtime.oem.hgx.smc import Smc
-
-    order_path = "/redfish/v1/Systems/1/Oem/Supermicro/FixedBootOrder"
-    reset_path = "/redfish/v1/Systems/1/Actions/ComputerSystem.Reset"
-    data = {order_path: {"FixedBootOrder": ["UEFI Shell", "UEFI Network", "Disk"]}}
-    rf = FakeRedfish(
-        data=data,
-        patch={order_path: (200, {"ok": 1})},
-        post={reset_path: (200, {"ResetType": "GracefulRestart"})},
-    )
-    lines = netboot.collect(_device(redfish=rf, odm=Smc()), None, None)
-    assert rf.patches[order_path] == {
-        "FixedBootOrder": ["UEFI Network", "UEFI Shell", "Disk"]
-    }
-    assert rf.posts[reset_path] == {"ResetType": "GracefulRestart"}
-    assert all(line.startswith("cp-01:") for line in lines)
-
-
-# -- nodevm ----------------------------------------------------------------
 class Opts:
     def __init__(self, image=None, vm_user=None, vm_password=None):
         self.image = image
@@ -979,3 +959,166 @@ def test_inventory_views_from_cli(monkeypatch, tmp_path, capsys):
     ):
         assert cli.main(["nodeinventory", "-i", str(path), option]) == 0
         assert expected in capsys.readouterr().out
+
+
+def test_smc_netboot_status_is_read_only_and_pxe_stages_without_reset():
+    from nodetools_runtime.oem.hgx.smc import Smc
+
+    path = "/redfish/v1/Systems/1/Oem/Supermicro/FixedBootOrder"
+    rf = FakeRedfish({path: {"FixedBootOrder": ["UEFI Hard Disk", "UEFI Network"]}})
+    device = _device(redfish=rf, odm=Smc())
+    assert netboot.collect(device, None, None) == ["cp-01: UEFI Hard Disk", "cp-01: UEFI Network"]
+    assert not rf.posts and not rf.patches
+    assert "staged" in netboot.collect(device, "pxe", None)[0]
+    assert rf.patches[path] == {"FixedBootOrder": ["UEFI Network", "UEFI Hard Disk"]}
+    assert not rf.posts
+
+
+def test_smc_fan_and_power_write_use_advertised_values():
+    from nodetools_runtime.oem.hgx.smc import Smc
+
+    system = "/redfish/v1/Systems/1"
+    info = system + "/ResetActionInfo"
+    target = system + "/Actions/ComputerSystem.Reset"
+    fan = "/redfish/v1/Managers/1/Oem/Supermicro/FanMode"
+    rf = FakeRedfish({
+        system: {"Actions": {"#ComputerSystem.Reset": {"target": target, "@Redfish.ActionInfo": info}}},
+        info: {"Parameters": [{"Name": "ResetType", "AllowableValues": ["PowerCycle"]}]},
+        fan: {"Mode@Redfish.AllowableValues": ["FullSpeed", "Optimal"]},
+    })
+    device = _device(redfish=rf, odm=Smc())
+    assert device.odm.fan_control(device, "auto") == "ok"
+    assert rf.patches[fan] == {"Mode": "Optimal"}
+    assert power.collect(device, "cycle", None) == ["cp-01: Accepted PowerCycle"]
+    assert rf.posts[target] == {"ResetType": "PowerCycle"}
+
+
+@pytest.mark.parametrize("maker, product, attr, current, changes, suffix", [
+    ("Supermicro", "SYS-822GS-NB3RT", "QuietBoot=false", {"QuietBoot": True}, {"QuietBoot": False}, "/SD"),
+    ("KAYTUS", "KR9288-X3-A0-F0-01", "Cpu.X=Disabled", {"Cpu": {"X": "Enabled"}}, {"Cpu": {"X": "Disabled"}}, "/Settings"),
+])
+def test_hgx_b300_bios_settings_are_staged(maker, product, attr, current, changes, suffix):
+    from types import SimpleNamespace
+
+    path = "/redfish/v1/Systems/1/Bios"
+    rf = FakeRedfish({
+        path: {
+            "Attributes": current,
+            "@Redfish.Settings": {"SettingsObject": {"@odata.id": path + suffix}},
+        },
+        path + suffix: {"Attributes": {}},
+    })
+    device = _device(redfish=rf)
+    device.identity = {"model": product, "manufacturer": maker}
+    device.odm = oem.for_device(device)
+    assert model.generation_for(device) == "b300"
+    assert "staged" in bios.collect(device, None, SimpleNamespace(bios_updates=[attr]))[0]
+    assert rf.patches == {path + suffix: {"Attributes": changes}}
+    assert not rf.posts and not device.ipmi.calls
+
+
+def test_smc_psu_scopes_to_primary_chassis_and_merges_same_serial():
+    from nodetools_runtime.caps import psu
+    from nodetools_runtime.oem.hgx.smc import Smc
+
+    path = "/redfish/v1/Chassis/1"
+    collection = path + "/PowerSubsystem/PowerSupplies"
+    rf = FakeRedfish({
+        collection: {"Members": [{"@odata.id": collection + "/1"}]},
+        collection + "/1": {"Id": "1", "SerialNumber": "P1"},
+        path + "/Power": {"PowerSupplies": [{"MemberId": "0", "SerialNumber": "P1", "PowerInputWatts": 15}]},
+    })
+    rows = psu.collect(_device(redfish=rf, odm=Smc()))
+    assert len(rows) == 1
+    assert (rows[0]["id"], rows[0]["input_watts"]) == ("1", 15)
+
+
+def test_kr9288_host_mac_from_network_device_function():
+    from nodetools_runtime.oem.hgx.kaytus import KaytusKr9288
+
+    adapters = "/redfish/v1/Chassis/1/NetworkAdapters"
+    card = adapters + "/card"
+    functions = card + "/NetworkDeviceFunctions"
+    function = functions + "/eth0"
+    rf = FakeRedfish({
+        adapters: {"Members": [{"@odata.id": card, "Slot": "slot 1"}]},
+        "/redfish/v1/Managers/1/EthernetInterfaces": {"Members": []},
+        card: {"Oem": {"Public": {"CardModel": "CX8", "NetworkPorts": []}}},
+        functions: {"Members": [{"@odata.id": function}]},
+        function: {"Id": "eth0", "Ethernet": {"PermanentMACAddress": "00:11:22:33:44:55"}},
+    })
+    rows = macs.collect(_device(redfish=rf, odm=KaytusKr9288()), None, None)
+    assert len(rows) == 1 and "00:11:22:33:44:55" in rows[0]
+
+
+def test_kr9288_stages_one_time_pxe_without_reset():
+    from nodetools_runtime.oem.hgx.kaytus import KaytusKr9288
+
+    system = "/redfish/v1/Systems/1"
+    rf = FakeRedfish({system: {"Boot": {"BootSourceOverrideTarget@Redfish.AllowableValues": ["Pxe"]}}})
+    device = _device(redfish=rf, odm=KaytusKr9288())
+    assert "One-time" in netboot.collect(device, "pxe", None)[0]
+    assert rf.patches[system] == {"Boot": {"BootSourceOverrideEnabled": "Once", "BootSourceOverrideTarget": "Pxe"}}
+    assert not rf.posts
+
+
+def test_smc_media_eject_falls_back_to_detach_on_missing_action():
+    from nodetools_runtime.oem.hgx.smc import Smc
+
+    virtual = "/redfish/v1/Managers/1/VirtualMedia"
+    slot = virtual + "/VirtualMedia1"
+    action = slot + "/Actions/VirtualMedia.EjectMedia"
+    rf = FakeRedfish({virtual: {"Members": [{"@odata.id": slot}]},
+                      slot: {"Image": "http://example.test/test.iso", "Inserted": False}},
+                     post={action: (404, {})})
+    device = _device(redfish=rf, odm=Smc())
+    assert "Detached" in vm.collect(device, "eject", None)[0]
+    assert rf.patches == {slot: {"Inserted": False}}
+    assert "inserted=false" in vm.collect(device, None, None)[0]
+
+
+def test_smc_media_stop_only_detaches_the_matching_url():
+    from types import SimpleNamespace
+
+    from nodetools_runtime.errors import CapUnsupported
+    from nodetools_runtime.oem.hgx.smc import Smc
+
+    collection = "/redfish/v1/Managers/1/VirtualMedia"
+    slot = collection + "/VirtualMedia1"
+    image = "http://example.test/test.iso"
+    rf = FakeRedfish({collection: {"Members": [{"@odata.id": slot}]},
+                      slot: {"Image": image, "Inserted": False}})
+    device = _device(redfish=rf, odm=Smc())
+    with pytest.raises(CapUnsupported, match="matches"):
+        vm.collect(device, "stop", SimpleNamespace(image=image + "x"))
+    assert not rf.patches
+    assert "Detached" in vm.collect(device, "stop", SimpleNamespace(image=image))[0]
+    assert rf.patches == {slot: {"Inserted": False}}
+
+
+@pytest.mark.parametrize("state, inserted, error", [
+    ("Completed", True, None),
+    ("Completed", False, "did not report inserted"),
+    ("Exception", False, "File Not Found"),
+])
+def test_smc_mount_checks_async_task_and_inserted_state(state, inserted, error):
+    from types import SimpleNamespace
+
+    from nodetools_runtime.errors import TransportError
+    from nodetools_runtime.oem.hgx.smc import Smc
+
+    slot = "/redfish/v1/Managers/1/VirtualMedia/VirtualMedia1"
+    action = slot + "/Actions/VirtualMedia.InsertMedia"
+    task = "/redfish/v1/TaskService/Tasks/4"
+    rf = FakeRedfish(
+        data={task: {"TaskState": state, "Messages": [{"Message": "File Not Found"}]},
+              slot: {"Inserted": inserted}},
+        post={action: (202, {"@odata.id": task})},
+    )
+    device = _device(redfish=rf, odm=Smc())
+    options = SimpleNamespace(image="http://example.test/test.iso")
+    if error:
+        with pytest.raises(TransportError, match=error):
+            vm.collect(device, "mount", options)
+    else:
+        assert vm.collect(device, "mount", options) == ["cp-01: Media inserted"]

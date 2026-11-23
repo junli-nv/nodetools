@@ -121,8 +121,8 @@ class Runner:
                         }
                     ],
                 )
-            if self.capability == "fan":
-                device.odm = oem.for_device(device, "fan")
+            if self.capability in ("fan", "psu"):
+                device.odm = oem.for_device(device, self.capability)
             if device.vars.get("chassis_id"):
                 device.ipmi = None
             collector = caps.collector_for(self.capability)
