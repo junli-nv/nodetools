@@ -1,4 +1,4 @@
-"""Shared read-only Redfish resource discovery."""
+"""Shared Redfish resource discovery."""
 
 from .. import model
 from ..errors import CapUnsupported
@@ -41,17 +41,40 @@ class RedfishDiscovery(Oem):
         )]
 
     def infrastructure_eventlog(self, device, action):
-        self._require_status(device, action, ("status", "bmc", "hmc"))
+        allowed = ("status", "bmc", "hmc")
+        if device.role == "powershelf" and model.odm_for(device) == "liteon":
+            allowed = ("status", "clear")
+        self._require_status(device, action, allowed)
         if device.vars.get("manager_id") or device.role == "powershelf":
             parent = self._target(device, "Managers", "manager_id")
         else:
             parent = self._target(device, "Systems", "system_id")
         services = common.resource(device, self._link(parent, "LogServices"), required=True)
+        paths = common.member_ids(services)
+        if action == "clear":
+            return self._clear_eventlog(device, paths)
         lines = []
-        for path in common.member_ids(services):
+        for path in paths:
             service = common.resource(device, path, required=True)
             lines.extend(common.log_lines(device, self._link(service, "Entries"), sep=" "))
         return self._label_lines(device, lines)
+
+    def _clear_eventlog(self, device, paths):
+        targets = set()
+        for path in paths:
+            service = common.resource(device, path, required=True)
+            action = (service.get("Actions") or {}).get("#LogService.ClearLog") or {}
+            target = action.get("target")
+            if path.startswith("/redfish/v1/") and target == path.rstrip("/") + "/Actions/LogService.ClearLog":
+                targets.add(target)
+        if len(targets) != 1:
+            raise CapUnsupported("no verified ClearLog target: expected one advertised log action")
+        target, = targets
+        result = common.post(device, target, {})
+        common.require_write_success(target, result)
+        status, _ = result
+        message = "Event log clear accepted" if status == 202 else "Event log cleared"
+        return self._label_lines(device, ["{} (HTTP {})".format(message, status)])
 
     def infrastructure_inventory(self, device):
         root = common.resource(device, "/redfish/v1", required=True)
@@ -130,6 +153,7 @@ class ReadOnlyCompute(RedfishDiscovery):
     def vm(self, device, action, options=None):
         media_paths = set()
         lines = []
+        empty_collections = {}
         for collection, field in (("Managers", "manager_id"), ("Systems", "system_id")):
             if any(device.vars.get(key) for key in ("manager_id", "system_id")) and not device.vars.get(field):
                 continue
@@ -143,7 +167,16 @@ class ReadOnlyCompute(RedfishDiscovery):
                 media = parent.get("VirtualMedia")
                 if not isinstance(media, dict) or not media.get("@odata.id"):
                     continue
-                members = common.resource(device, media["@odata.id"], required=True)
+                media_path = media["@odata.id"]
+                members = common.resource(device, media_path, required=True)
+                if (members.get("Members") == [] and not members.get("Members@odata.count")
+                        and not members.get("Members@odata.nextLink")):
+                    ami = (parent.get("Oem") or {}).get("Ami") or {}
+                    state = (ami.get("VirtualMedia") or {}).get("RMediaStatus")
+                    detail = "VirtualMedia collection is empty"
+                    if isinstance(state, str) and state:
+                        detail += " (RMediaStatus={})".format(state)
+                    empty_collections[media_path] = detail
                 for path in common.member_ids(members):
                     if path in media_paths:
                         continue
@@ -153,6 +186,6 @@ class ReadOnlyCompute(RedfishDiscovery):
                         data.get("Id") or path, data.get("Inserted", "unknown"),
                         data.get("ImageName") or data.get("Image") or "-",
                     ))
-        if not lines:
-            raise CapUnsupported("BMC did not advertise any VirtualMedia devices")
-        return self._label_lines(device, lines)
+        if not lines and not empty_collections:
+            raise CapUnsupported("BMC did not return a usable VirtualMedia collection")
+        return self._label_lines(device, lines or list(empty_collections.values()))

@@ -106,6 +106,7 @@ _GENERATION = re.compile(r"\b(gb|b)[ _-]?(200|300)\b", re.I)
 
 
 _MODEL_GENERATIONS = {
+    ("lenovo", "HG635N_V2"): "gb300",
     ("kaytus", "KR9288-X3-A0-F0-01"): "b300",
     ("aivres", "KR9288-X3-A0-F0-01"): "b300",
     ("smc", "SYS-822GS-NB3RT"): "b300",

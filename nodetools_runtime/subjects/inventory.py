@@ -1,5 +1,6 @@
 """Firmware inventory dispatched by device role and OEM."""
 
+from .. import model
 from ..errors import CapUnsupported
 from . import common
 
@@ -49,10 +50,40 @@ def _firmware(device, path=FIRMWARE):
     for oid in common.member_ids(coll):
         data = device.redfish.get(oid)
         if isinstance(data, dict) and "error" not in data:
-            rows.append([data.get("Id", ""), data.get("Version", "")])
+            rows.append([data.get("Id", ""), data.get("Version", ""), oid, "Version"])
+    if device.role == "powershelf" and model.odm_for(device) == "liteon":
+        missing = [row for row in rows if str(row[0]).startswith("FW_PSU_") and _missing_version(row[1])]
+        if missing:
+            modules = _liteon_psu_inventory(device)
+            if len(modules) >= len(missing):
+                rows = [row for row in rows if row not in missing]
+            else:
+                for row in missing:
+                    row[1] = "N/A"
+            rows.extend(modules)
+    if getattr(device.redfish, "debug_label", None):
+        for label, _, oid, field in rows:
+            device.redfish.trace_source(label, oid, field)
     return [
-        "{}: {}".format(device.name, row) for row in common.column_t(rows)
+        "{}: {}".format(device.name, row) for row in common.column_t([row[:2] for row in rows])
     ]
+
+
+def _missing_version(version):
+    return version is None or str(version).strip().lower() in ("", "null", "n/a")
+
+
+def _liteon_psu_inventory(device):
+    chassis = device.vars.get("chassis_id") or "powershelf"
+    path = "/redfish/v1/Chassis/{}/PowerSubsystem/PowerSupplies".format(chassis)
+    modules = {}
+    for oid in common.member_ids(common.resource(device, path)):
+        data = common.resource(device, oid)
+        ident, version = data.get("Id"), data.get("FirmwareVersion")
+        if ident is not None:
+            label = "PSU_{}".format(ident)
+            modules[label] = [label, "N/A" if _missing_version(version) else version, oid, "FirmwareVersion"]
+    return [modules[label] for label in sorted(modules)]
 
 
 def _gpu_serials(device):

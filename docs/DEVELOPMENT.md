@@ -477,8 +477,19 @@ BMC 的 `ThermalMetrics` 单次响应就慢（并发轰同一 BMC 还会成倍�
 
 ### 单元测试
 
+复用已有的项目虚拟环境。没有项目环境时可自行创建临时 venv，例如在 BCM 上从仓库根目录执行：
+
 ```sh
-python3 -m pytest -q          # 当前 73 passed
+test_venv=$(mktemp -d "${TMPDIR:-/tmp}/nodetools-test.XXXXXX")
+python3 -m venv "$test_venv"
+. "$test_venv/bin/activate"
+```
+
+激活项目环境后，从仓库根目录安装项目和测试依赖，再运行测试：
+
+```sh
+python -m pip install -e . pytest
+python -m pytest -q
 ```
 
 覆盖：hostlist 展开、inventory 解析/优先级/生成、选择器、输出格式与
@@ -513,7 +524,7 @@ python3 -m pytest -q          # 当前 73 passed
 
 - 只用标准库 + `requests`，不引入额外依赖（保持 `pip install .` 轻量）。
 - 不加无关注释；命名跟现有文件保持一致；新逻辑放到对应分层，不堆进 `cli.py`。
-- 提交前：`python3 -m pytest` 全绿；改接口时附真机冒烟证据。
+- 提交前，在项目虚拟环境里跑完 `python -m pytest -q`。改接口时附真机冒烟证据。
 - 提交信息用英文、祈使句、说明"为什么"。
 - 作者统一为 `junli-nv <junliz@nvidia.com>`（已写入 `pyproject.toml` 的
   `authors`，并用作 git 提交身份）；不要用其他人的姓名/邮箱署名。

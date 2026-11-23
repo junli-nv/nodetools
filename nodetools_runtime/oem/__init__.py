@@ -11,6 +11,7 @@ from .hgx.dell import Dell
 from .nvl.dell import DellNvl
 from .hgx.dgx import Dgx
 from .nvl.gb200 import Gb200
+from .nvl.lenovo import LenovoNvl
 from .hgx.gigabyte import Gigabyte
 from .redfish import ReadOnlyCompute, RedfishDiscovery
 from .nvl.inventec import Inventec
@@ -38,7 +39,7 @@ _MODULES = {
 
 _PLATFORM_MODULES = {
     ("nvl", "dell", "compute", None): DellNvl(),
-    ("nvl", "lenovo", "compute", "gb300"): ReadOnlyCompute("lenovo", "System_0"),
+    ("nvl", "lenovo", "compute", "gb300"): LenovoNvl(),
     ("nvl", "hpe", "compute", "gb300"): ReadOnlyCompute("hpe", "System_0"),
     ("hgx", "hpe", "compute", None): ReadOnlyCompute("hpe", family="hgx"),
 }

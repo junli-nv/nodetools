@@ -110,3 +110,52 @@ def test_generation_specific_adapter_takes_precedence(monkeypatch):
     assert generation_for(device) == "gb300"
     assert oem.for_device(device) is adapter
     assert scan.key_for(device.identity, device.vars) != scan.key_for(device.identity)
+
+
+def test_lenovo_gb300_detects_host_system_before_gpu_baseboard():
+    from types import SimpleNamespace
+
+    from nodetools_runtime import model, scan
+    from nodetools_runtime.inventory import Host
+
+    systems = "/redfish/v1/Systems"
+    host_system = systems + "/System_0"
+    baseboard = systems + "/HGX_Baseboard_0"
+    responses = {
+        systems: {"Members": [{"@odata.id": baseboard}, {"@odata.id": host_system}]},
+        baseboard: {"Manufacturer": "NVIDIA", "Model": "HGX"},
+        host_system: {"Manufacturer": "Lenovo", "Model": "HG635N_V2"},
+    }
+    device = model.Device(Host("tray-01", groups=["compute"]))
+    device.identity = scan.read_identity(SimpleNamespace(get=responses.get))
+
+    assert model.generation_for(device) == "gb300"
+    adapter = oem.for_device(device)
+    assert (adapter.family, adapter.name, adapter.read_system_id) == ("nvl", "lenovo", "System_0")
+
+
+def test_lenovo_nvl_reports_an_empty_virtual_media_collection():
+    from types import SimpleNamespace
+
+    from nodetools_runtime.errors import CapUnsupported
+    from nodetools_runtime.inventory import Host
+    from nodetools_runtime.model import Device
+    from nodetools_runtime.subjects import vm
+
+    manager = "/redfish/v1/Managers/BMC_0"
+    media = manager + "/VirtualMedia"
+    responses = {
+        manager: {"VirtualMedia": {"@odata.id": media},
+                  "Oem": {"Ami": {"VirtualMedia": {"RMediaStatus": "Disabled"}}}},
+        media: {"Members": [], "Members@odata.count": 0},
+    }
+    host = Host("tray-01", variables={"oem": "lenovo", "generation": "gb300", "manager_id": "BMC_0"},
+                groups=["compute"])
+    device = Device(host, redfish_factory=lambda _: SimpleNamespace(get=responses.get))
+    device.odm = oem.for_device(device)
+    assert vm.collect(device, "status", None) == [
+        "tray-01: VirtualMedia collection is empty (RMediaStatus=Disabled)",
+    ]
+    responses[manager] = {}
+    with pytest.raises(CapUnsupported, match="usable VirtualMedia collection"):
+        vm.collect(device, "status", None)

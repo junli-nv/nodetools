@@ -19,10 +19,11 @@ def _slot_order(slot):
 
 
 class MonitorCSV:
-    def __init__(self, stream, multiple_nodes=False):
+    def __init__(self, stream, multiple_nodes=False, psu_slots=()):
         self.stream = stream
         self.writer = csv.writer(stream, lineterminator="\n")
         self.multiple_nodes = multiple_nodes
+        self.psu_slots = psu_slots
         self.slots = None
 
     def write(self, result):
@@ -39,7 +40,9 @@ class MonitorCSV:
 
         if self.slots is None:
             model = (result.get("model") or "").upper()
-            if self.multiple_nodes:
+            if self.psu_slots:
+                expected = set(self.psu_slots)
+            elif self.multiple_nodes:
                 expected = {str(slot) for slots in _MODEL_PSU_SLOTS.values() for slot in slots}
             else:
                 expected = {str(slot) for slot in _MODEL_PSU_SLOTS.get(model, ())}

@@ -874,9 +874,31 @@ def test_shared_redfish_reads_the_selected_infrastructure_resources():
     ps.odm = oem.for_device(ps)
     assert power.collect(ps, "status", None) == ["shelf: S3,On"]
     assert eventlog.collect(ps, "status", None) == ["shelf: now OK test"]
+    with pytest.raises(CapUnsupported, match="uses status"):
+        eventlog.collect(ps, "bmc", None)
+    for device in (sw, ps):
+        with pytest.raises(CapUnsupported, match="only available for compute trays"):
+            eventlog.collect(device, "hmc", None)
     with pytest.raises(CapUnsupported, match="no verified"):
         eventlog.collect(ps, "clear", None)
     assert not rf.posts
+
+    target = log + "/Actions/LogService.ClearLog"
+    rf.data[log]["Actions"] = {"#LogService.ClearLog": {"target": target}}
+    calls = []
+
+    def clear(path, body):
+        calls.append((path, body))
+        return 204, None
+
+    rf.post = clear
+    assert eventlog.collect(ps, "clear", None) == ["shelf: Event log cleared (HTTP 204)"]
+    assert calls == [(target, {})]
+
+    rf.data[log]["Actions"]["#LogService.ClearLog"]["target"] = "https://other.example" + target
+    with pytest.raises(CapUnsupported, match="no verified"):
+        eventlog.collect(ps, "clear", None)
+    assert calls == [(target, {})]
 
 
 def test_infrastructure_firmware_follows_redfish_service_links():
@@ -1122,3 +1144,33 @@ def test_smc_mount_checks_async_task_and_inserted_state(state, inserted, error):
             vm.collect(device, "mount", options)
     else:
         assert vm.collect(device, "mount", options) == ["cp-01: Media inserted"]
+
+
+def test_liteon_psu_inventory_uses_hardware_ids_when_software_records_lack_versions():
+    from nodetools_runtime.subjects import inventory
+
+    firmware = inventory.FIRMWARE
+    missing = firmware + "/FW_PSU_6"
+    manager = firmware + "/FW_PMC"
+    supplies = "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies"
+    module = supplies + "/5"
+    rf = FakeRedfish({
+        firmware: {"Members": [{"@odata.id": missing}, {"@odata.id": manager}]},
+        missing: {"Id": "FW_PSU_6", "Version": "null"},
+        manager: {"Id": "FW_PMC", "Version": "3.2.9"},
+        supplies: {"Members": [{"@odata.id": module}]},
+        module: {"Id": "5", "FirmwareVersion": "0x1 / 0x1"},
+    })
+    host = Host("shelf", groups=["powershelf"], variables={"oem": "liteon"})
+    device = model.Device(host, lambda _: rf)
+
+    traced = []
+    rf.debug_label = host.name
+    rf.trace_source = lambda *args: traced.append(args)
+    rows = inventory._firmware(device)
+    assert traced == [("FW_PMC", manager, "Version"), ("PSU_5", module, "FirmwareVersion")]
+    assert [line.split() for line in rows] == [
+        ["shelf:", "FW_PMC", "3.2.9"], ["shelf:", "PSU_5", "0x1", "/", "0x1"],
+    ]
+    del rf.data[supplies]
+    assert inventory._firmware(device)[0].split() == ["shelf:", "FW_PSU_6", "N/A"]

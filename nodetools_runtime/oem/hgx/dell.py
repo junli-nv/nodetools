@@ -51,11 +51,10 @@ class Dell(Oem):
     )
 
     def fan_control(self, device, action):
-        racadm = Racadm(device.address, device.cred("bmc_user"), device.cred("bmc_password"))
         if action == "max":
-            racadm.run("set", "system.thermalsettings.ThermalProfile", "Maximum Performance")
+            self._racadm(device, "set", "system.thermalsettings.ThermalProfile", "Maximum Performance")
         elif action == "auto":
-            racadm.run("set", "system.thermalsettings.ThermalProfile", "Default Thermal Profile")
+            self._racadm(device, "set", "system.thermalsettings.ThermalProfile", "Default Thermal Profile")
         else:
             raise NotImplementedError(action)
         return "ok"
@@ -87,6 +86,8 @@ class Dell(Oem):
         racadm = Racadm(
             device.address, device.cred("bmc_user"), device.cred("bmc_password")
         )
+        if getattr(getattr(device, "options", None), "debug", False):
+            racadm.debug_label = device.name
         return racadm.run(*args)
 
     def macs(self, device, action):

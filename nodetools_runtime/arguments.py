@@ -75,8 +75,7 @@ _COMMAND_HELP = {
   reseat   Request an OEM-specific virtual reseat, where supported.""",
     "eventlog": """Read or clear hardware event logs.
   status   Read the default logs.
-  bmc/hmc  Select controller logs, where supported.
-  clear    Erase the hardware event log entries.""",
+{bmc}{hmc}  clear    Erase the hardware event log entries, where supported.""",
     "inventory": "List installed firmware versions. Select --details for hardware identity or --tasks for Redfish task status.",
     "boot": """Set the next boot device. Reboot separately.
   pxe      Boot from the network (default if ACTION is omitted).
@@ -110,7 +109,7 @@ _COMMAND_HELP = {
 class _CommandHelp(argparse.RawDescriptionHelpFormatter):
     _shared = {
         "help", "inventory", "group", "all", "jobs", "timeout", "node_timeout",
-        "action_opt", "user", "password", "ipmi_env", "no_cache", "debug",
+        "action_opt", "user", "password", "ipmi_env", "no_cache",
         "errors_only", "cipher", "reconnect", "reconnect_attempts", "reconnect_delay",
     }
 
@@ -128,6 +127,12 @@ class _CommandParser(argparse.ArgumentParser):
     def __init__(self, **kwargs):
         kwargs.setdefault("formatter_class", _CommandHelp)
         super().__init__(**kwargs)
+        _add_debug(self)
+
+
+def _add_debug(parser):
+    parser.add_argument("-x", "--debug", action="store_true", default=argparse.SUPPRESS,
+                        help="show diagnostic information on stderr")
 
 
 def normalize_command(name):
@@ -143,7 +148,6 @@ def _add_selection(parser):
     _add_inventory_opt(parser)
     parser.add_argument("--group", action="append", default=[], help="select a group")
     parser.add_argument("--all", action="store_true", help="select every host")
-    parser.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
 
 def _add_read_opts(parser):
@@ -189,7 +193,6 @@ def _add_sensor_opts(parser):
         help="pass the IPMI password via IPMI_PASSWORD (ipmitool -E)",
     )
     parser.add_argument("--no-cache", action="store_true", help="skip caches")
-    parser.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
 
 def _add_info_opts(parser, subject, role):
@@ -250,7 +253,6 @@ def _add_info_opts(parser, subject, role):
         help="pass the IPMI password via IPMI_PASSWORD (ipmitool -E)",
     )
     parser.add_argument("--no-cache", action="store_true", help="skip caches")
-    parser.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
 
 def build_parser():
@@ -259,6 +261,7 @@ def build_parser():
         description="Inspect and manage HGX and NVL nodes over Redfish and IPMI.",
         epilog="Run COMMAND --help for actions. Common inventory, authentication, and timeout options are in README.md.",
     )
+    _add_debug(parser)
     parser.add_argument("--version", action="store_true", help="print version")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND", parser_class=_CommandParser)
 
@@ -288,7 +291,13 @@ def build_parser():
 
     for name, (role, subject) in SENSOR_COMMANDS.items():
         description = _COMMAND_HELP[subject]
-        if subject == "fan" and role != "compute":
+        if role == "nvswitch":
+            description = {
+                "fan": "Read fan speeds and health over NVOS SSH, where exposed by the tray.",
+                "psu": "Read NVOS PSU telemetry, or DC input power from the tray HSC.",
+                "temp": "Read NVOS platform temperatures in Celsius over SSH.",
+            }[subject]
+        elif subject == "fan" and role != "compute":
             description = """Read fan speeds and health for the selected devices.
   status   Read fan sensors (default).
   check    Show per-fan health.
@@ -315,7 +324,17 @@ def build_parser():
             )
 
     for name, (role, subject) in INFO_COMMANDS.items():
-        info = sub.add_parser(name, help="{} {}".format(role, subject), description=_COMMAND_HELP[subject])
+        description = _COMMAND_HELP[subject]
+        if subject == "power" and role == "nvswitch":
+            description = """Read NVSwitch power state or control power on supported adapters.
+  status   Show power state (default).
+  on/off   Turn tray power on or off, where supported.
+  cycle    Power the tray off and back on, where supported."""
+        if subject == "eventlog":
+            hmc = "  hmc      Read HMC logs, where supported.\n" if role == "compute" else ""
+            bmc = "  bmc      Read BMC logs, where supported.\n" if role != "powershelf" else ""
+            description = description.format(bmc=bmc, hmc=hmc)
+        info = sub.add_parser(name, help="{} {}".format(role, subject), description=description)
         _add_info_opts(info, subject, role)
 
     mon = sub.add_parser("nodemon", help="sample node temperature and power",
@@ -332,7 +351,6 @@ def build_parser():
     mon.add_argument("--password", default=None, help="override BMC password")
     mon.add_argument("--ipmi-env", action="store_true", help="use IPMI_PASSWORD for IPMI")
     mon.add_argument("--no-cache", action="store_true", help="skip cached discovery profiles")
-    mon.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
     cs = sub.add_parser(
         "nodeconsole",
@@ -401,7 +419,6 @@ def build_parser():
         default=5.0,
         help="seconds between reconnect tries (default 5)",
     )
-    cs.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
     sc = sub.add_parser(
         "scan", help="probe and cache a Redfish resource map",

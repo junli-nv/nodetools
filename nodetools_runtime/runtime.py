@@ -5,6 +5,8 @@ import time
 from functools import lru_cache
 
 from . import caps, model, oem, scan, subjects
+from .caps import nvos
+from .diagnostics import debug
 from .errors import CapUnsupported, NodetoolsError
 from .transport.ipmi import Ipmi
 from .transport.redfish import Redfish
@@ -46,6 +48,8 @@ def build_device(host, options, apply_deadline=True, load_profile=True):
     """
     user, password = _resolve_creds(host, options)
     redfish = Redfish(host.address, user, password, timeout=options.timeout)
+    if getattr(options, "debug", False):
+        redfish.debug_label = host.name
     ipmi = Ipmi(
         host.address,
         user,
@@ -53,6 +57,8 @@ def build_device(host, options, apply_deadline=True, load_profile=True):
         use_env=options.ipmi_env,
         timeout=options.timeout,
     )
+    if getattr(options, "debug", False):
+        ipmi.debug_label = host.name
     node_timeout = getattr(options, "node_timeout", None)
     if apply_deadline and node_timeout:
         deadline = time.monotonic() + float(node_timeout)
@@ -107,10 +113,18 @@ class Runner:
         module.fan_control(device, action)
 
     def _one(self, host):
-        if not host.address:
-            return self._result(host, error="no BMC address (missing from inventory)")
         device = None
         try:
+            if host.role == "nvswitch" and self.capability in ("fan", "psu", "temp"):
+                if self.options.action:
+                    raise CapUnsupported("NVOS sensor queries are read-only")
+                readings = nvos.collect(host, self.capability, self.options)
+                result = self._result(host, readings=readings)
+                if not readings and self.capability == "fan":
+                    result["notice"] = "N/A (NVOS exposes no fan sensors)"
+                return result
+            if not host.address:
+                return self._result(host, error="no BMC address (missing from inventory)")
             device = self._device(host)
             if self.options.action:
                 module = oem.for_device(device, self.capability)
@@ -241,6 +255,8 @@ class Scanner:
             )
             if getattr(self.options, "clear", False):
                 removed = scan.clear(device)
+                debug(getattr(self.options, "debug", False), "scan:" + host.name,
+                      "cache {}".format("cleared" if removed else "absent"))
                 return self._result(
                     host,
                     readings=[
@@ -253,6 +269,8 @@ class Scanner:
                     ],
                 )
             profile = scan.refresh(device)
+            debug(getattr(self.options, "debug", False), "scan:" + host.name,
+                  "cached {} chassis resource(s)".format(len(profile["chassis"])))
             useful = sum(
                 1
                 for rec in profile["caps"].values()

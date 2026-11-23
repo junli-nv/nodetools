@@ -9,7 +9,7 @@ import sys
 import time
 from datetime import datetime, timezone
 
-from . import hostlist, reach, selection
+from . import hostlist, model, oem, reach, selection
 from .arguments import (
     INFO_COMMANDS,
     NODE_PROGRAMS,
@@ -29,6 +29,7 @@ from .config import (
     VERSION,
 )
 from . import console
+from .diagnostics import debug
 from .errors import NodetoolsError
 from .inventory import Inventory, generate_from_hostslist
 from .monitor_report import MonitorCSV
@@ -107,6 +108,7 @@ def _apply_defaults(options, inv, args):
 
 def _cmd_inventory(args):
     if args.inventory_command == "init":
+        debug(getattr(args, "debug", False), "inventory", "generate from {!r} into {!r}".format(args.source, args.output))
         text = generate_from_hostslist(args.source)
         with open(args.output, "w", encoding="utf-8") as handle:
             handle.write(text)
@@ -135,7 +137,9 @@ def _select(args, inv, default_all=False):
     all_ = getattr(args, "all", False)
     if default_all and not (selectors or groups):
         all_ = True
-    return selection.select(inv, selectors=selectors, groups=groups, all_=all_)
+    hosts = selection.select(inv, selectors=selectors, groups=groups, all_=all_)
+    debug(getattr(args, "debug", False), "selection", "selected {} host(s)".format(len(hosts)))
+    return hosts
 
 
 def _role_hosts(args, inv, role):
@@ -149,7 +153,9 @@ def _role_hosts(args, inv, role):
     groups = list(getattr(args, "group", []))
     all_ = getattr(args, "all", False)
     if not (selectors or groups or all_):
-        return [host for host in inv.hosts.values() if host.role == role]
+        kept = [host for host in inv.hosts.values() if host.role == role]
+        debug(getattr(args, "debug", False), "selection", "{}: {} host(s)".format(role, len(kept)))
+        return kept
     hosts = selection.select(inv, selectors=selectors, groups=groups, all_=all_)
     kept = [host for host in hosts if host.role == role]
     if len(kept) != len(hosts):
@@ -159,6 +165,7 @@ def _role_hosts(args, inv, role):
             ),
             file=sys.stderr,
         )
+    debug(getattr(args, "debug", False), "selection", "{}: {} host(s)".format(role, len(kept)))
     return kept
 
 
@@ -200,9 +207,10 @@ def _cmd_ping(args):
     def probe(host):
         if not host.address:
             return host, "No BMC IP found"
-        if reach.ping(host.address, timeout=args.ping_timeout):
-            return host, "BMC pingable"
-        return host, "BMC unreachable"
+        reachable = reach.ping(host.address, timeout=args.ping_timeout)
+        debug(getattr(args, "debug", False), "icmp:" + host.name,
+              "{} timeout={}s reachable={}".format(host.address, args.ping_timeout, reachable))
+        return host, "BMC pingable" if reachable else "BMC unreachable"
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
         results = list(pool.map(probe, hosts))
@@ -268,7 +276,7 @@ def _cmd_sensor(args):
     role, capability = SENSOR_COMMANDS[command]
     action = _sensor_action_word(args)
     if action not in _READ_WORDS:
-        if capability != "fan":
+        if capability != "fan" or role == "nvswitch":
             raise NodetoolsError("{} is read-only; use status or check".format(command))
         if action not in ("auto", "max", "low", "opt"):
             raise NodetoolsError("invalid fan action {!r}".format(action))
@@ -333,7 +341,14 @@ def _cmd_monitor(args):
         estimate_settings(host.vars, options)
 
     runner = Runner("monitor", options)
-    table = MonitorCSV(sys.stdout, multiple_nodes=len(hosts) > 1) if args.format != "json" else None
+    table = None
+    if args.format != "json":
+        slot_layouts = {
+            tuple(getattr(oem.for_device(model.Device(host)), "monitor_hsc_sensors", ()))
+            for host in hosts
+        }
+        slots = next(iter(slot_layouts)) if len(slot_layouts) == 1 else ()
+        table = MonitorCSV(sys.stdout, multiple_nodes=len(hosts) > 1, psu_slots=slots)
     exit_code = 0
     previous_handler = signal.signal(signal.SIGINT, _interrupt_sensor_query)
     try:
@@ -363,6 +378,10 @@ def _cmd_info(args):
     action = (
         getattr(args, "action", None) or getattr(args, "action_opt", None) or ""
     ).strip().lower()
+    if subject == "eventlog" and role != "compute" and action == "hmc":
+        raise NodetoolsError("the hmc action is only available for compute trays (nodeeventlog)")
+    if command == "pseventlog" and action == "bmc":
+        raise NodetoolsError("pseventlog uses status to read the event log")
     options.action = None if action in _READ_WORDS else action
     explicit_targets = args.noderange or args.group or args.all
     if options.bios_updates and (action or not explicit_targets):
@@ -437,6 +456,10 @@ def main(argv=None):
         except SystemExit:
             pass
         return 0
+    if getattr(args, "debug", False):
+        debug(True, "nodetools", "command={}".format(command))
+        if command != "inventory" or args.inventory_command == "show":
+            debug(True, "inventory", "load {!r}".format(_inventory_path(getattr(args, "inventory", None))))
     try:
         if command == "inventory":
             return _cmd_inventory(args)

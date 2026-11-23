@@ -66,6 +66,8 @@ nodetemp --group compute --summary
 
 `nodemon` 只读采集进风温度、整机功耗和各 PSU 的输入读数。整机和 PSU 功耗统一以 W 为单位，只在列名标单位。优先使用 BMC 直接报告的输入功耗，换算所需读数不足时填 NA。JSON 用 estimated 标记换算值。默认采样一次，CSV 每节点一行，采完立即输出。缺测填 NA，额外槽位进入 PSU_OTHER_W。用 --count 和 --interval 指定轮数和轮间等待（默认 5 秒），用 --format json 输出 JSON Lines。风扇转速用 nodefan 查询。
 
+Lenovo GB300 的 `PSU_79_W` 和 `PSU_84_W` 是 BMC 的 HSC0 和 HSC1 功耗读数。整机瞬时功耗缺测时，`POWER_NODE_W` 使用 BMC 报告的机箱平均功耗，JSON 会标记 `aggregation: average`。
+
 ```bash
 ./nodemon 'HGX[390,474]'
 ./nodemon 'HGX[390,474]' --interval 10 --count 6 --format json
@@ -90,7 +92,7 @@ nodepsu  <noderange> [status|check]
 nodetemp <noderange>
 nodemon  <noderange> [--count N] [--interval SEC] [--format csv|json]
 nodeinlet <noderange> [check] [--target C] [--tolerance D]
-nvswfan  <noderange> [status|check|auto|max]
+nvswfan  <noderange> [status|check]
 nvswpsu  <noderange> [status|check]
 nvswtemp <noderange>
 psfan    <noderange> [status|check|auto|max]
@@ -101,8 +103,8 @@ pstemp   <noderange>
 nodepower    <noderange> [status|on|off|cycle|reset|reseat]
 nodeeventlog <noderange> [status|bmc|hmc|clear]
 nodeinventory <noderange>
-nvswpower    <noderange> [status|on|off|cycle|reset|reseat]
-nvsweventlog <noderange> [status|clear]
+nvswpower    <noderange> [status|on|off|cycle]
+nvsweventlog <noderange> [status|bmc|clear]
 nvswinventory <noderange>
 pspower      <noderange> [status|on|off|cycle|reset|reseat]
 pseventlog   <noderange> [status|clear]
@@ -126,6 +128,8 @@ nodetools scan <selector> [--clear]
 nodetools inventory init [--from hosts.list] [-o inventory.ini]
 nodetools inventory show [-i inventory.ini]
 ```
+
+NVSwitch 的 `nvswfan`、`nvswpsu` 和 `nvswtemp` 通过 SSH 从 NVOS 读取。在 inventory 配置 `nvswitch_os_user`，可用 `nvswitch_os_host` 覆盖主机名。密码登录用 `nvswitch_os_password`，并需要 `sshpass`。如果交换机托盘只提供 HSC DC 输入，`nvswpsu --details` 输出 `HSC-DC-IN,电压(V),电流(A),功率(W)`。机柜电源架的 PSU 用 `pspsu` 查询。
 
 任何命令也可写成 `nodetools <command> ...`；旧短名 `list`/`ping` 是
 `nodelist`/`nodeping` 的别名。
@@ -157,6 +161,8 @@ nodetools inventory show [-i inventory.ini]
   `nvswpower`/`pspower` 是 NVIDIA 专有基础设施，默认固定走 Redfish 复位
   （`Systems/System_0` 的 `ComputerSystem.Reset`）；Compal 的 NVSwitch 走
   `Systems/Self` 且 `reseat` 为 `FullPowerCycle`。
+  通用 NVSwitch 适配器将 `cycle` 映射为 `PowerCycle`。使用资源选择器的 NVSwitch
+  通过发现型适配器读取 `status`，包括 GB300 站点中指定 `System_0` 的配置。
   `nodepower status` 将 Redfish 和 IPMI 的状态统一为 `On`、`Off` 等值，状态缺失时显示 `N/A`。
 * **eventlog** — `nodeeventlog` 默认读 `[HMC]`（`HGX_Baseboard_0` EventLog），
   `bmc` 读 `[BMC]`（IPMI SEL），`clear` 清 BMC/HMC 日志；各 OEM 覆盖各自的 Sol/
@@ -234,7 +240,7 @@ reachable=$(./nodeping --long cp[01-18] \
 | `--reconnect` / `--no-reconnect` | 断线后是否重连（`--console` 默认重连） |
 | `--reconnect-attempts` / `--reconnect-delay` | 重连次数/间隔（默认 3 / 5s） |
 | `--no-cache` | 跳过扫描映射缓存 |
-| `-x`, `--debug` | 详细日志 |
+| `-x`, `--debug` | 所有命令都支持。跟踪信息写入 stderr，包括所用后端及其请求状态。Redfish 固件库存还显示取值字段。 |
 
 ## Inventory
 

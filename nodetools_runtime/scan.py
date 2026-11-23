@@ -126,7 +126,12 @@ def read_identity(redfish, selectors=None):
             redfish.get("/redfish/v1/Systems")
         )
     if members:
-        data = redfish.get(members[0])
+        path = members[0]
+        # NVL BMCs can publish the GPU baseboard before the host system.
+        host_system = "/redfish/v1/Systems/System_0"
+        if path == "/redfish/v1/Systems/HGX_Baseboard_0" and host_system in members:
+            path = host_system
+        data = redfish.get(path)
         if isinstance(data, dict):
             identity["model"] = data.get("Model") or identity["model"]
             identity["manufacturer"] = data.get("Manufacturer") or identity["manufacturer"]

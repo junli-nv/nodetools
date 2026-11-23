@@ -22,11 +22,11 @@ def _number(value):
     return number if not isinstance(value, bool) and math.isfinite(number) else None
 
 
-def _node_power(items, field, source):
+def _node_power(items, field, source, names=_NODE_POWER):
     for item in items:
         value = _number(item.get(field))
         name = item.get("Name") or item.get("Id")
-        if value is not None and _key(name) in _NODE_POWER:
+        if value is not None and _key(name) in names:
             return dict(kind="node_power", id=item.get("Id") or name, name=name,
                         value=value, unit="W", source=item.get("@odata.id") or source)
     return None
@@ -34,14 +34,24 @@ def _node_power(items, field, source):
 
 def _power(device):
     rf = device.redfish
-    selected = device.vars.get("chassis_id")
+    selected = device.vars.get("chassis_id") or getattr(device.odm, "monitor_chassis", None)
     chassis = [selected] if selected else common.chassis_list(device, ("1",))
     suffix = getattr(device.odm, "monitor_sensor_collection", None)
+    control_name = getattr(device.odm, "monitor_power_control", None)
+    names = _NODE_POWER | {_key(control_name)} if control_name else _NODE_POWER
     for cid in chassis:
         base = "/redfish/v1/Chassis/{}".format(cid)
         path = base + "/Power"
-        value = _node_power((rf.get(path) or {}).get("PowerControl") or [],
-                            "PowerConsumedWatts", path)
+        controls = (rf.get(path) or {}).get("PowerControl") or []
+        value = _node_power(controls, "PowerConsumedWatts", path, names)
+        if value is None and control_name:
+            averages = (
+                dict(item, average=(item.get("PowerMetrics") or {}).get("AverageConsumedWatts"))
+                for item in controls if item.get("Name") == control_name
+            )
+            value = _node_power(averages, "average", path, names)
+            if value is not None:
+                value["aggregation"] = "average"
         if value is None and suffix:
             path = base + suffix
             value = _node_power((rf.get(path) or {}).get("Sensors") or [], "Reading", path)
@@ -98,7 +108,25 @@ def _estimate_watts(entry, settings):
     return None
 
 
+def _hsc_supplies(device, sensors):
+    chassis = device.vars.get("chassis_id") or device.odm.monitor_chassis
+    base = "/redfish/v1/Chassis/{}/Sensors/".format(chassis)
+    readings = []
+    for slot, (sensor_id, name) in sensors.items():
+        path = base + sensor_id
+        sensor = device.redfish.get(path) or {}
+        watts = None
+        if sensor.get("Name") == name and sensor.get("ReadingType") == "Power":
+            watts = _number(sensor.get("Reading"))
+        readings.append(dict(kind="psu", id=slot, name=name, value=watts, unit="W",
+                             estimated=False, source=path, health=common.health_of(sensor.get("Status"))))
+    return readings
+
+
 def _supplies(device):
+    sensors = getattr(getattr(device, "odm", None), "monitor_hsc_sensors", None)
+    if sensors:
+        return _hsc_supplies(device, sensors)
     settings = estimate_settings(getattr(device, "vars", {}), getattr(device, "options", None))
     slots = {}
     for entry in psu.collect(device):

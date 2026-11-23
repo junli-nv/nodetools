@@ -555,8 +555,19 @@ uniformly.
 
 ### Unit tests
 
+Reuse the project's virtual environment if one is available. Otherwise, create a temporary venv from the repository root, for example on the BCM head node:
+
 ```sh
-python3 -m pytest -q          # currently 73 passed
+test_venv=$(mktemp -d "${TMPDIR:-/tmp}/nodetools-test.XXXXXX")
+python3 -m venv "$test_venv"
+. "$test_venv/bin/activate"
+```
+
+With the project environment active, install the project and test dependencies from the repository root and run the tests:
+
+```sh
+python -m pip install -e . pytest
+python -m pytest -q
 ```
 
 Coverage: hostlist expansion, inventory parsing/precedence/generation,
@@ -595,8 +606,8 @@ state; test on a single, known-reversible machine first, never the whole batch.
   `pip install .` light).
 - No incidental comments; keep naming consistent with existing files; put new
   logic in the right layer, not piled into `cli.py`.
-- Before committing: `python3 -m pytest` all green; attach real-hardware smoke
-  evidence for interface changes.
+- Before committing, run `python -m pytest -q` in the project environment. Attach
+  hardware smoke-test results for interface changes.
 - Commit messages in English, imperative, explaining "why".
 - Author is always `junli-nv <junliz@nvidia.com>` (already in `pyproject.toml`'s
   `authors` and used as the git identity); do not sign with anyone else's

@@ -27,6 +27,7 @@ import time
 import tty
 from datetime import datetime
 
+from .diagnostics import debug
 from .runtime import build_device
 
 DEFAULT_CIPHER = 17
@@ -43,6 +44,8 @@ def _argv(device, command, cipher=None, net=()):
     ipmi = device.ipmi
     if not ipmi or not ipmi.tool:
         raise RuntimeError("ipmitool not found")
+    if getattr(ipmi, "debug_label", None):
+        debug(True, "ipmi:" + ipmi.debug_label, "SOL {} for {}".format(command[1], ipmi.address))
     argv = [ipmi.tool, "-I", "lanplus", "-H", ipmi.address]
     env = os.environ.copy()
     if ipmi.user:

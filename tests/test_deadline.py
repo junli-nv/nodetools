@@ -193,3 +193,55 @@ def test_redfish_patch_uses_the_etag_of_the_requested_parent(monkeypatch):
         assert writes == [(requests.url(settings), {"If-Match": '"parent-revision"'})]
     finally:
         requests.close()
+
+
+def test_redfish_debug_shows_status_and_path_without_credentials(monkeypatch, capsys):
+    from requests import Response
+
+    client = Redfish("example.test", "private-user", "private-password")
+    response = Response()
+    response.status_code = 200
+    response._content = b'{"Version":"private-body"}'
+    monkeypatch.setattr(client._session, "get", lambda *args, **kwargs: response)
+    path = "https://private-user:private-password@example.test/redfish/v1/Systems?secret=private-query"
+
+    try:
+        assert client.get(path) == {"Version": "private-body"}
+        assert capsys.readouterr().err == ""
+        client.debug_label = "shelf-01"
+        client.get(path)
+        client.trace_source("FW_PMC", path, "Version")
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert captured.err.splitlines() == [
+            "[redfish:shelf-01] GET '/redfish/v1/Systems' HTTP 200",
+            "[redfish:shelf-01] source 'FW_PMC' <- '/redfish/v1/Systems' field=Version",
+        ]
+    finally:
+        client.close()
+
+
+def test_command_backend_debug_does_not_log_auth_arguments(monkeypatch, capsys):
+    from types import SimpleNamespace
+
+    from nodetools_runtime import console
+    from nodetools_runtime.transport import ipmi, racadm
+
+    monkeypatch.setattr(ipmi.subprocess, "run",
+                        lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout="payload"))
+    target = "bmc.example.test"
+    auth = ("private-user", "private-password")
+    ipmi_client = ipmi.Ipmi(target, *auth, tool="ipmitool")
+    racadm_client = racadm.Racadm(target, *auth, tool="racadm")
+    ipmi_client.debug_label = racadm_client.debug_label = "tray-01"
+
+    assert ipmi_client.run("chassis", "status") == "payload"
+    assert racadm_client.run("get", "bios") == "payload"
+    console._activate_argv(SimpleNamespace(ipmi=ipmi_client))
+
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert "[ipmi:tray-01] ipmitool chassis exit=0" in output.err
+    assert "[racadm:tray-01] get exit=0" in output.err
+    assert "[ipmi:tray-01] SOL activate for bmc.example.test" in output.err
+    assert not any(secret in output.err for secret in (*auth, "payload"))

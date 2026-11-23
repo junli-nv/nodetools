@@ -69,6 +69,8 @@ Compute-node `nodefan` lists speeds on one line per node. Numbers are RPM and pe
 
 `nodemon` Reads inlet temperature, whole-node power, and per-PSU input. Whole-node and PSU power are in watts, with units in the column names. The tool prefers reported PSU input watts, uses NA when conversion inputs are insufficient, and marks calculated readings as estimated in JSON. The default is one CSV sample per node, written as soon as it finishes. Missing values are NA and additional slots appear in PSU_OTHER_W. Use --count and --interval for repeated rounds (default interval: 5 seconds) and --format json for JSON Lines. Use nodefan for fan speeds.
 
+On Lenovo GB300, `PSU_79_W` and `PSU_84_W` are the BMC's HSC0 and HSC1 power readings. If instantaneous node power is unavailable, `POWER_NODE_W` uses the BMC's chassis power average. JSON marks it with `aggregation: average`.
+
 ```bash
 ./nodemon 'HGX[390,474]'
 ./nodemon 'HGX[390,474]' --interval 10 --count 6 --format json
@@ -93,7 +95,7 @@ nodepsu  <noderange> [status|check]
 nodetemp <noderange>
 nodemon  <noderange> [--count N] [--interval SEC] [--format csv|json]
 nodeinlet <noderange> [check] [--target C] [--tolerance D]
-nvswfan  <noderange> [status|check|auto|max]
+nvswfan  <noderange> [status|check]
 nvswpsu  <noderange> [status|check]
 nvswtemp <noderange>
 psfan    <noderange> [status|check|auto|max]
@@ -104,8 +106,8 @@ pstemp   <noderange>
 nodepower    <noderange> [status|on|off|cycle|reset|reseat]
 nodeeventlog <noderange> [status|bmc|hmc|clear]
 nodeinventory <noderange>
-nvswpower    <noderange> [status|on|off|cycle|reset|reseat]
-nvsweventlog <noderange> [status|clear]
+nvswpower    <noderange> [status|on|off|cycle]
+nvsweventlog <noderange> [status|bmc|clear]
 nvswinventory <noderange>
 pspower      <noderange> [status|on|off|cycle|reset|reseat]
 pseventlog   <noderange> [status|clear]
@@ -129,6 +131,8 @@ nodetools scan <selector> [--clear]
 nodetools inventory init [--from hosts.list] [-o inventory.ini]
 nodetools inventory show [-i inventory.ini]
 ```
+
+`nvswfan`, `nvswpsu`, and `nvswtemp` use SSH to read NVOS telemetry. Set `nvswitch_os_user` in inventory and optionally override the hostname with `nvswitch_os_host`. Password login uses `nvswitch_os_password` and requires `sshpass`. For trays with HSC DC input, `nvswpsu --details` reports `HSC-DC-IN,volts,amps,watts`. Use `pspsu` for rack power-shelf PSU modules.
 
 Any command also works as `nodetools <command> ...`, and the legacy short
 names `list`/`ping` are aliases for `nodelist`/`nodeping`.
@@ -167,6 +171,9 @@ output verbatim:
   infrastructure, using the Redfish reset (`Systems/System_0`
   `ComputerSystem.Reset`) by default; Compal NVSwitch uses `Systems/Self` with
   `reseat` as `FullPowerCycle`.
+  The legacy NVSwitch adapter maps `cycle` to `PowerCycle`. The discovery
+  adapter provides `status` for NVSwitches with resource selectors, including
+  GB300 site inventory with `system_id=System_0`.
   `nodepower status` displays consistent Redfish and IPMI states such as `On` and `Off`, with `N/A` when unavailable.
 * **eventlog** — `nodeeventlog` reads `[HMC]` by default
   (`HGX_Baseboard_0` EventLog), `bmc` reads `[BMC]` (IPMI SEL), `clear` clears
@@ -256,7 +263,7 @@ reachable=$(./nodeping --long cp[01-18] \
 | `--reconnect` / `--no-reconnect` | reconnect after a drop (`--console`: on) |
 | `--reconnect-attempts` / `--reconnect-delay` | tries/interval (default 3 / 5s) |
 | `--no-cache` | skip the scan-map cache |
-| `-x`, `--debug` | verbose logging |
+| `-x`, `--debug` | Available on every command. Trace the backend and request status on stderr. Redfish firmware inventory also shows source fields. |
 
 ## Inventory
 

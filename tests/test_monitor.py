@@ -3,7 +3,8 @@ import io
 import json
 from types import SimpleNamespace
 
-from nodetools_runtime import cli
+from nodetools_runtime import cli, model, oem
+from nodetools_runtime.inventory import Host
 from nodetools_runtime.caps import monitor, psu
 from nodetools_runtime.monitor_report import MonitorCSV
 
@@ -61,7 +62,8 @@ def test_monitor_psus_report_only_watts(monkeypatch):
 
 
 def test_monitor_csv_outputs_fast_node_before_slow_node_finishes(monkeypatch, capsys):
-    hosts = [SimpleNamespace(name=name, vars={}) for name in ("slow", "fast")]
+    hosts = [Host(name, variables={"oem": "lenovo", "generation": "gb300"}, groups=["compute"])
+             for name in ("slow", "fast")]
     inventory = SimpleNamespace(default=lambda key, value: value,
                                 default_bool=lambda key, value: value)
     monkeypatch.setattr(cli.Inventory, "from_file", lambda _: inventory)
@@ -71,6 +73,7 @@ def test_monitor_csv_outputs_fast_node_before_slow_node_finishes(monkeypatch, ca
         yield dict(name="fast", readings=[], error=None)
         first = list(csv.reader(io.StringIO(capsys.readouterr().out)))
         assert first[0][:3] == ["TIMESTAMP", "NODE", "MODEL"]
+        assert first[0][5:] == ["PSU_79_W", "PSU_84_W", "PSU_OTHER_W"]
         assert len(first) == 2 and first[1][1] == "fast"
         yield dict(name="slow", readings=[], error=None)
 
@@ -100,3 +103,26 @@ def test_detected_nominal_voltage_can_be_used_when_sensor_is_missing():
     assert monitor._estimate_watts({
         "input_voltage_type": "AC230V", "input_amps": 4,
     }, (None, 0.95)) == 874
+
+
+def test_lenovo_gb300_monitor_reads_chassis_power_and_hsc_sensors():
+    base = "/redfish/v1/Chassis/Chassis_0"
+    control = {"Name": "Chassis Power Control", "PowerConsumedWatts": None,
+               "PowerMetrics": {"AverageConsumedWatts": 1195}}
+    data = {
+        base + "/Power": {"PowerControl": [control]},
+        base + "/Sensors/79_0": {"Name": "HSC0_Power", "ReadingType": "Power", "Reading": 686.4},
+        base + "/Sensors/84_0": {"Name": "HSC1_Power", "ReadingType": "Current", "Reading": 12},
+    }
+    host = Host("tray-01", variables={"oem": "lenovo", "generation": "gb300"}, groups=["compute"])
+    device = model.Device(host, redfish_factory=lambda _: SimpleNamespace(get=data.get))
+    device.odm = oem.for_device(device)
+
+    power, = monitor._power(device)
+    assert (power["value"], power["aggregation"]) == (1195, "average")
+    control["PowerConsumedWatts"] = 0
+    power, = monitor._power(device)
+    assert power["value"] == 0 and "aggregation" not in power
+    assert [(row["id"], row["value"]) for row in monitor._supplies(device)] == [
+        ("79", 686.4), ("84", None),
+    ]

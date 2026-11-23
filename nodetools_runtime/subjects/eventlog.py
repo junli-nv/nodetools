@@ -1,5 +1,6 @@
 """Event log operations dispatched by device role and OEM."""
 
+from ..errors import CapUnsupported
 from . import common
 
 NVSW_LOG = "/redfish/v1/Systems/System_0/LogServices/EventLog"
@@ -11,7 +12,11 @@ def collect(device, action, options):
     action = (action or "").strip().lower()
     if action in _READ:
         action = "status"
+    if device.role == "powershelf" and action == "bmc":
+        raise CapUnsupported("pseventlog uses status to read the event log")
     if device.role in ("nvswitch", "powershelf"):
+        if action == "hmc":
+            raise CapUnsupported("the hmc action is only available for compute trays")
         return device.odm.infrastructure_eventlog(device, action)
     return device.odm.eventlog(device, action)
 

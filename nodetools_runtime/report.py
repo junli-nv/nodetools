@@ -56,7 +56,9 @@ def format_readings(result, details=False):
     for reading in result["readings"]:
         if result["cap"] == "fan" and reading.get("unit") == "%":
             reading = {**reading, "value": _fan_speed(reading)}
-        if details and result["cap"] == "psu":
+        if details and result["cap"] == "psu" and reading["id"] == "HSC-DC-IN":
+            cells = _csv_fields(reading, ("id", "input_volts", "input_amps", "input_watts"))
+        elif details and result["cap"] == "psu":
             cells = _csv_fields(reading, (
                 "name", "manufacturer", "model", "firmware", "health", "input_watts", "output_watts",
             ))
@@ -122,6 +124,8 @@ def render(results, summary=False, errors_only=False, details=False, fan_speeds=
     for result in results:
         if "lines" in result:
             block = format_lines(result)
+        elif result.get("notice"):
+            block = [] if errors_only else ["{}: {}".format(result["name"], result["notice"])]
         elif summary:
             block = format_summary(result)
         elif fan_speeds:

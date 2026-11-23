@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import time
 
+from ..diagnostics import debug
 from ..errors import TransportError, TransportTimeout
 
 _FALLBACK_TOOL = "/cm/local/apps/ipmitool/1.8.19/ipmitool"
@@ -39,6 +40,7 @@ def env_mode_default():
 class Ipmi:
     def __init__(self, address, user, password, use_env=None, timeout=10, tool=None):
         self.address = address
+        self.debug_label = None
         self.user = user
         self.password = password
         self.timeout = timeout
@@ -68,6 +70,9 @@ class Ipmi:
         return argv + list(command)
 
     def _run(self, command):
+        label = "ipmi:" + (self.debug_label or "")
+        operation = command[0]
+        debug(self.debug_label, label, "ipmitool {} requested".format(operation))
         if not self.tool:
             raise TransportError("ipmitool not found")
         remaining = self._remaining()
@@ -88,11 +93,13 @@ class Ipmi:
                 env=env,
             )
         except subprocess.TimeoutExpired:
+            debug(self.debug_label, label, "ipmitool {} timed out".format(operation))
             self.transport_errors += 1
             raise TransportTimeout("IPMI request timed out after {:.2g}s".format(timeout)) from None
         except OSError as exc:
             self.transport_errors += 1
             raise TransportError("ipmitool failed to start: {}".format(exc)) from exc
+        debug(self.debug_label, label, "ipmitool {} exit={}".format(operation, proc.returncode))
         if proc.returncode != 0:
             self.transport_errors += 1
             raise TransportError(

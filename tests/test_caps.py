@@ -386,3 +386,39 @@ def test_aivres_fan_uses_canonical_legacy_chassis():
     device = _device(data, chassis=("1", "Chassis_0"))
     device.odm = Aivres()
     assert [(row["id"], row["value"]) for row in fan.collect(device)] == [("0", 0)]
+
+
+def test_nvswitch_sensors_use_nvos_without_a_bmc_address(monkeypatch):
+    from types import SimpleNamespace
+
+    from nodetools_runtime import runtime
+    from nodetools_runtime.caps import nvos
+    from nodetools_runtime.inventory import Host
+
+    host = Host("switch-01", groups=["nvswitch"])
+    options = SimpleNamespace(action=None, timeout=5, node_timeout=10)
+    replies = {
+        "nv show platform environment temperature -o json": (0, '{"ASIC1":{"current":"50.00","state":"ok"}}', ""),
+        "nv show platform environment psu -o json": (2, "", "'psu' is not one of ['temperature']"),
+        "nv show platform environment fan -o json": (2, "", "'fan' is not one of ['temperature']"),
+        nvos._HSC: (0, "49932\n3873\n191651969\n0\n0\n0\n0\n0\n0\n0\n", ""),
+    }
+
+    def query(host, options, command, deadline):
+        code, stdout, stderr = replies[command]
+        return SimpleNamespace(returncode=code, stdout=stdout, stderr=stderr)
+
+    monkeypatch.setattr(nvos, "_ssh", query)
+    temp = runtime.Runner("temp", options)._one(host)
+    assert temp["error"] is None and temp["readings"][0]["value"] == "50.00"
+    psu = runtime.Runner("psu", options)._one(host)
+    reading, = psu["readings"]
+    assert (reading["id"], reading["input_volts"], reading["input_amps"], reading["input_watts"]) == (
+        "HSC-DC-IN", 49.932, 3.873, 191.65,
+    )
+    fan = runtime.Runner("fan", options)._one(host)
+    assert reading["health"] == "OK"
+    assert fan["error"] is None
+    assert fan["notice"] == "N/A (NVOS exposes no fan sensors)"
+    replies["nv show platform environment fan -o json"] = (255, "", "Permission denied")
+    assert "SSH exit 255" in runtime.Runner("fan", options)._one(host)["error"]
