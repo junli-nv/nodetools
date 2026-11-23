@@ -22,7 +22,7 @@ def _metric(metrics, key):
         return None
     if isinstance(entry, list) and entry and isinstance(entry[0], dict):
         return common.num(entry[0].get("Reading"))
-    return None
+    return common.num(entry)
 
 
 def _first_numeric(*values):
@@ -90,6 +90,11 @@ def _metrics_for(redfish, detail):
 def _supply_reading(redfish, detail):
     metrics = _metrics_for(redfish, detail)
     in_w, out_w = _power_watts(metrics, detail)
+    input_power = metrics.get("InputPowerWatts")
+    if not isinstance(input_power, dict):
+        input_power = {}
+    nominal = str(detail.get("InputNominalVoltageType") or "").upper()
+    input_type = str(detail.get("PowerSupplyType") or "").upper()
     return common.reading(
         detail.get("MemberId") or detail.get("Id"),
         detail.get("Name"),
@@ -98,6 +103,14 @@ def _supply_reading(redfish, detail):
         manufacturer=detail.get("Manufacturer"),
         model=detail.get("Model"),
         firmware=detail.get("FirmwareVersion"),
+        source=detail.get("@odata.id"),
+        input_amps=_first_numeric(_metric(metrics, "InputCurrentAmps"), detail.get("InputCurrentAmps")),
+        input_volts=_first_numeric(_metric(metrics, "InputVoltage"), detail.get("LineInputVoltage")),
+        input_apparent_va=common.num(input_power.get("ApparentVA")),
+        input_power_factor=common.num(input_power.get("PowerFactor")),
+        input_is_dc=nominal.startswith("DC") or (not nominal and input_type == "DC"),
+        input_voltage_type=nominal,
+        input_phase_wiring=detail.get("PhaseWiringType"),
         input_watts=in_w,
         output_watts=out_w,
     )
@@ -161,6 +174,8 @@ def _from_sensors(device):
                     sensor.get("Name"),
                     common.num(sensor.get("Reading")),
                     common.health_of(sensor.get("Status")),
+                    unit=sensor.get("ReadingUnits"),
+                    source=sensor.get("@odata.id"),
                 )
             )
         return out

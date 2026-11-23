@@ -16,6 +16,7 @@ dependencies = ["requests>=2.20"]
 nodetools = "nodetools_runtime.cli:main"
 nodelist = "nodetools_runtime.cli:main"
 nodeping = "nodetools_runtime.cli:main"
+nodemon = "nodetools_runtime.cli:main"
 nodefan = "nodetools_runtime.cli:main"
 nodepsu = "nodetools_runtime.cli:main"
 nodetemp = "nodetools_runtime.cli:main"

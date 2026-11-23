@@ -62,7 +62,23 @@ nodetemp --group compute --summary
 命令名 = 前缀 + 对象，与旧脚本一致：`node` = compute tray，`nvsw` = NVSwitch，
 `ps` = power shelf。GBXX 三个前缀都要；BXX 只用 `node*`。
 
-计算节点 `nodefan` 默认每节点一行列出转速。数字单位为 RPM，百分比带 `%`。`check` 逐风扇显示健康状态，配合 `--errors-only` 可只看异常。`auto` 和 `max` 由 OEM 适配器处理，Netweb 还支持 `low` 和 `opt`。
+计算节点 `nodefan` 默认每节点一行列出转速。数字单位为 RPM，百分比带 `%`。`check` 逐风扇显示健康状态，配合 `--errors-only` 可只看异常。`auto` 和 `max` 由 OEM 适配器处理，Netweb 的 `low` 和 `opt` 分别固定为 50% 和 80% PWM。用各工具的 `--help` 查看动作含义，通用参数见下文。
+
+`nodemon` 只读采集进风温度、整机功耗和各 PSU 的输入读数。整机和 PSU 功耗统一以 W 为单位，只在列名标单位。优先使用 BMC 直接报告的输入功耗，换算所需读数不足时填 NA。JSON 用 estimated 标记换算值。默认采样一次，CSV 每节点一行，采完立即输出。缺测填 NA，额外槽位进入 PSU_OTHER_W。用 --count 和 --interval 指定轮数和轮间等待（默认 5 秒），用 --format json 输出 JSON Lines。风扇转速用 nodefan 查询。
+
+```bash
+./nodemon 'HGX[390,474]'
+./nodemon 'HGX[390,474]' --interval 10 --count 6 --format json
+```
+
+只上报电流的单相 PSU 可以用现场电压和功率因数估算。示例中的 230 V 和 0.95 要换成现场参数。
+
+```bash
+./nodemon HGX390 --psu-voltage 230 --psu-power-factor 0.95
+```
+
+也可在 inventory 的主机或组变量中设置 PSU 输入电压 `psu_input_volts` 和功率因数 `psu_input_power_factor`。命令行参数覆盖 inventory。实测输入电压和功率因数优先。
+
 
 PSU 默认输出 `ID,Health,Reading`。用 `nodepsu --details HGX390` 查看名称、厂商、型号、固件、健康状态、输入功率（W）和输出功率（W）。未提供的字段显示 `NA`。
 只读传感器查询按 Ctrl-C 立即退出，返回退出码 130。
@@ -72,7 +88,8 @@ PSU 默认输出 `ID,Health,Reading`。用 `nodepsu --details HGX390` 查看名�
 nodefan  <noderange> [status|check|auto|max|low|opt]
 nodepsu  <noderange> [status|check]
 nodetemp <noderange>
-nodeinlet <noderange> [--target C] [--tolerance D]
+nodemon  <noderange> [--count N] [--interval SEC] [--format csv|json]
+nodeinlet <noderange> [check] [--target C] [--tolerance D]
 nvswfan  <noderange> [status|check|auto|max]
 nvswpsu  <noderange> [status|check]
 nvswtemp <noderange>
@@ -121,6 +138,8 @@ nodetools inventory show [-i inventory.ini]
   命令的角色）。
 * 传感器默认读取状态。风扇的调速动作由 OEM 决定；PSU 查询为只读。设备电源动作通过 `power` 命令执行。
 * 传感器输出为逗号分隔字段；信息命令原样逐行输出 `<node>: <line>`（见下文）。
+* `nodetemp` 逐传感器显示 `ID,名称,状态,读数`。
+* `nodeinlet` 默认每台一行，例如 `HGX390: 22`。用 `check` 查看阈值判定。
 * `nodeinlet`（仅 compute）取机箱进风温度（GB200 为 `Chassis_0_Front_IO_Temp_0`，
   其他 ODM 为 `Inlet_Temp`/`Ambient_Temp` 等），排除处理器模块/PDB 等内部进风点；
   读数按目标值判定 `OK`/`HIGH`/`LOW`（默认目标 25℃、容差 ±5，即 20–30℃ 为 OK，

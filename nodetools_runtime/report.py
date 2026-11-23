@@ -4,7 +4,7 @@ Sensor lines are ``<node>: <field>,<field>,...`` so ``grep -v ,OK`` still works:
 
 * ``nodefan``/``nodesensors`` fans: ``Id,Name,SpeedRPM,Health``
 * ``nodepsu``:                        ``Id,Health,Reading``
-* ``nodetemp``:                       ``Id,Health,Reading``
+* ``nodetemp``:                       ``Id,Name,Health,Reading``
 
 ``--summary`` collapses to one ``total/OK/nonOK`` line per node.
 """
@@ -18,7 +18,7 @@ _OK = ("ok", "on", "enabled", "true")
 _FIELDS = {
     "fan": ("id", "name", "value", "health"),
     "psu": ("id", "health", "value"),
-    "temp": ("id", "health", "value"),
+    "temp": ("id", "name", "health", "value"),
     "inlet": ("id", "health", "value"),
 }
 _DEFAULT_FIELDS = ("id", "name", "value", "health")
@@ -36,9 +36,7 @@ def _fields(cap):
     return _FIELDS.get(str(cap).lower(), _DEFAULT_FIELDS)
 
 
-def _psu_details(reading):
-    fields = ("name", "manufacturer", "model", "firmware", "health",
-              "input_watts", "output_watts")
+def _csv_fields(reading, fields):
     row = [reading.get(field) for field in fields]
     cells = [
         str(value).replace("\r", " ").replace("\n", " ") if value not in (None, "") else "NA"
@@ -59,11 +57,24 @@ def format_readings(result, details=False):
         if result["cap"] == "fan" and reading.get("unit") == "%":
             reading = {**reading, "value": _fan_speed(reading)}
         if details and result["cap"] == "psu":
-            cells = _psu_details(reading)
+            cells = _csv_fields(reading, (
+                "name", "manufacturer", "model", "firmware", "health", "input_watts", "output_watts",
+            ))
+        elif result["cap"] == "temp":
+            cells = _csv_fields(reading, fields)
         else:
             cells = ",".join(_clean(reading.get(field, "")) for field in fields)
         lines.append("{}: {}".format(result["name"], cells))
     return lines
+
+
+def format_inlet_temperature(result):
+    for reading in result["readings"]:
+        value = reading.get("value")
+        if value not in (None, "", "NA"):
+            temperature = format(value, "g") if isinstance(value, (int, float)) else value
+            return "{}: {}".format(result["name"], temperature)
+    return "{}: NA".format(result["name"])
 
 
 def _fan_speed(reading):

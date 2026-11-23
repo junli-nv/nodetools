@@ -2,6 +2,7 @@
 
 import concurrent.futures
 import time
+from functools import lru_cache
 
 from . import caps, model, oem, scan, subjects
 from .errors import CapUnsupported, NodetoolsError
@@ -83,8 +84,8 @@ class Runner:
             load_profile=self.capability not in _PROFILELESS_CAPS,
         )
 
-    def _result(self, host, readings=None, error=None):
-        return {
+    def _result(self, host, readings=None, error=None, device=None):
+        result = {
             "name": host.name,
             "role": host.role,
             "address": host.address,
@@ -92,6 +93,10 @@ class Runner:
             "readings": readings or [],
             "error": error,
         }
+        if self.capability == "monitor":
+            identity = model.hardware_identity(device)
+            result["model"] = str(identity.get("model") or "").strip() or None
+        return result
 
     def _control(self, device, module):
         action = self.options.action
@@ -121,7 +126,9 @@ class Runner:
                         }
                     ],
                 )
-            if self.capability in ("fan", "psu"):
+            if self.capability == "monitor":
+                device.redfish.get = lru_cache(maxsize=None)(device.redfish.get)
+            if self.capability in ("fan", "psu", "monitor"):
                 device.odm = oem.for_device(device, self.capability)
             if device.vars.get("chassis_id"):
                 device.ipmi = None
@@ -129,11 +136,11 @@ class Runner:
             readings = collector(device)
             if not readings:
                 return self._result(
-                    host, error="no readings (BMC unreachable or backend mismatch)"
+                    host, error="no readings (BMC unreachable or backend mismatch)", device=device
                 )
-            return self._result(host, readings=readings)
+            return self._result(host, readings=readings, device=device)
         except Exception as exc:  # noqa: BLE001 - reported per node
-            return self._result(host, error="{}: {}".format(type(exc).__name__, exc))
+            return self._result(host, error="{}: {}".format(type(exc).__name__, exc), device=device)
         finally:
             if device:
                 device.close()

@@ -65,7 +65,23 @@ The prefix names the node role and the suffix names the subject, exactly like
 the legacy scripts: `node` = compute tray, `nvsw` = NVSwitch, `ps` = power shelf.
 GBXX uses all three prefixes; BXX only needs `node*`.
 
-Compute-node `nodefan` lists speeds on one line per node. Numbers are RPM and percentage readings carry `%`. Use `check` for per-fan health and `--errors-only` to show exceptions. OEM adapters handle `auto` and `max`. Netweb also supports `low` and `opt`.
+Compute-node `nodefan` lists speeds on one line per node. Numbers are RPM and percentage readings carry `%`. Use `check` for per-fan health and `--errors-only` to show exceptions. OEM adapters handle `auto` and `max`. On Netweb, `low` and `opt` set fixed 50% and 80% PWM, respectively. Run each tool with `--help` for action descriptions. Common options are listed below.
+
+`nodemon` Reads inlet temperature, whole-node power, and per-PSU input. Whole-node and PSU power are in watts, with units in the column names. The tool prefers reported PSU input watts, uses NA when conversion inputs are insufficient, and marks calculated readings as estimated in JSON. The default is one CSV sample per node, written as soon as it finishes. Missing values are NA and additional slots appear in PSU_OTHER_W. Use --count and --interval for repeated rounds (default interval: 5 seconds) and --format json for JSON Lines. Use nodefan for fan speeds.
+
+```bash
+./nodemon 'HGX[390,474]'
+./nodemon 'HGX[390,474]' --interval 10 --count 6 --format json
+```
+
+For single-phase PSUs that report only current, supply the site voltage and power factor. Replace the example values with those of your feed.
+
+```bash
+./nodemon HGX390 --psu-voltage 230 --psu-power-factor 0.95
+```
+
+You can also set `psu_input_volts` and `psu_input_power_factor` as host or group variables in the inventory. CLI flags override the inventory. Measured voltage and power factor take precedence.
+
 
 PSU output defaults to `ID,Health,Reading`. Use `nodepsu --details HGX390` for name, manufacturer, model, firmware, health, input watts and output watts. Missing fields appear as `NA`.
 Ctrl-C exits read-only sensor queries immediately with status 130.
@@ -75,7 +91,8 @@ Ctrl-C exits read-only sensor queries immediately with status 130.
 nodefan  <noderange> [status|check|auto|max|low|opt]
 nodepsu  <noderange> [status|check]
 nodetemp <noderange>
-nodeinlet <noderange> [--target C] [--tolerance D]
+nodemon  <noderange> [--count N] [--interval SEC] [--format csv|json]
+nodeinlet <noderange> [check] [--target C] [--tolerance D]
 nvswfan  <noderange> [status|check|auto|max]
 nvswpsu  <noderange> [status|check]
 nvswtemp <noderange>
@@ -126,6 +143,8 @@ group; select the whole role explicitly with `--all` (or `--group G`).
 * Sensor commands read status by default. Fan modes depend on the OEM. PSU queries are read-only. Device power actions use the `power` commands.
 * Sensor output is comma-separated fields; info commands print verbatim
   `<node>: <line>` lines (see below).
+* `nodetemp` displays `ID,Name,Health,Reading` for each sensor.
+* `nodeinlet` defaults to one line per node, for example `HGX390: 22`. Use `check` to see the threshold verdict.
 * `nodeinlet` (compute only) reports the chassis air intake (on GB200 the
   `Chassis_0_Front_IO_Temp_0` sensor; other ODMs use `Inlet_Temp`/`Ambient_Temp`
   and so on), excluding internal inlets such as processor modules and the PDB.

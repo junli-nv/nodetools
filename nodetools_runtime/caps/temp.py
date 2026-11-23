@@ -23,8 +23,10 @@ def _from_thermal(device):
                 common.reading(
                     temp.get("MemberId") or temp.get("SensorNumber") or temp.get("Id"),
                     temp.get("Name") or temp.get("SensorName"),
-                    common.num(temp.get("ReadingCelsius") or temp.get("Reading")),
+                    common.num(temp.get("ReadingCelsius") if temp.get("ReadingCelsius") is not None
+                               else temp.get("Reading")),
                     common.health_of(temp.get("Status")),
+                    source=temp.get("@odata.id") or "/redfish/v1/Chassis/{}/Thermal".format(cid),
                 )
             )
         return out
@@ -58,6 +60,7 @@ def chassis_thermal_metrics(device, cid):
                 entry.get("Name") or source.rsplit("/", 1)[-1],
                 common.num(entry.get("Reading")),
                 "OK",
+                source=source or "/redfish/v1/Chassis/{}/ThermalSubsystem/ThermalMetrics".format(cid),
             )
         )
     return out
@@ -90,6 +93,7 @@ def _from_telemetry(device):
                     prop,
                     common.num(entry.get("MetricValue")),
                     entry.get("MetricState") or "OK",
+                    source=prop,
                 )
             )
     return out
@@ -111,6 +115,7 @@ def _from_sensors(device):
                     name,
                     common.num(sensor.get("Reading")),
                     common.health_of(sensor.get("Status")),
+                    source=sensor.get("@odata.id") or "/redfish/v1/Chassis/{}/Sensors".format(cid),
                 )
             )
         return out
@@ -124,7 +129,7 @@ def _from_ipmi(device):
         return []
     out = []
     for name, value in device.ipmi.sdr("Temperature").items():
-        out.append(common.reading(name, name, common.num(value)))
+        out.append(common.reading(name, name, common.num(value), source="ipmi:sdr:Temperature"))
     return out
 
 

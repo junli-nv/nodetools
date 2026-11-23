@@ -1,10 +1,13 @@
 """Entry point wiring: parse args, load inventory, run capabilities."""
 
 import concurrent.futures
+import json
 import math
 import os
 import signal
 import sys
+import time
+from datetime import datetime, timezone
 
 from . import hostlist, reach, selection
 from .arguments import (
@@ -14,6 +17,7 @@ from .arguments import (
     normalize_command,
     parse_args,
 )
+from .caps.monitor import estimate_settings
 from .config import (
     DEFAULT_INVENTORY,
     DEFAULT_JOBS,
@@ -27,7 +31,8 @@ from .config import (
 from . import console
 from .errors import NodetoolsError
 from .inventory import Inventory, generate_from_hostslist
-from .report import render
+from .monitor_report import MonitorCSV
+from .report import format_inlet_temperature, render
 from .subjects.vm import image_source
 from .runtime import InfoRunner, Runner, Scanner
 
@@ -275,6 +280,11 @@ def _cmd_sensor(args):
     )
     _apply_defaults(options, inv, args)
 
+    simple_inlet = (
+        capability == "inlet" and action in ("", "status", "read")
+        and not (options.summary or args.errors_only)
+    )
+
     hosts = _role_hosts(args, inv, role)
     if not hosts:
         print(
@@ -289,16 +299,60 @@ def _cmd_sensor(args):
         previous_handler = signal.signal(signal.SIGINT, _interrupt_sensor_query)
     try:
         for result in runner.stream(hosts):
-            for line in render(
-                [result], summary=options.summary, errors_only=args.errors_only,
-                details=getattr(args, "details", False), fan_speeds=fan_speeds,
-            ):
-                print(line, flush=True)
+            if simple_inlet:
+                print(format_inlet_temperature(result), flush=True)
+                if result.get("error"):
+                    print("{}: ERROR {}".format(result["name"], result["error"]), file=sys.stderr)
+            else:
+                for line in render(
+                    [result], summary=options.summary, errors_only=args.errors_only,
+                    details=getattr(args, "details", False), fan_speeds=fan_speeds,
+                ):
+                    print(line, flush=True)
             if result.get("error"):
                 exit_code = 1
     finally:
         if previous_handler is not None:
             signal.signal(signal.SIGINT, previous_handler)
+    return exit_code
+
+
+def _cmd_monitor(args):
+    if args.count < 1 or not math.isfinite(args.interval) or args.interval <= 0:
+        raise NodetoolsError("--count and --interval must be positive and finite")
+    inv = Inventory.from_file(_inventory_path(args.inventory))
+    options = Options(args)
+    _apply_defaults(options, inv, args)
+    hosts = _role_hosts(args, inv, "compute")
+    if not hosts:
+        raise NodetoolsError("no compute hosts selected")
+
+    options.psu_voltage = args.psu_voltage
+    options.psu_power_factor = args.psu_power_factor
+    for host in hosts:
+        estimate_settings(host.vars, options)
+
+    runner = Runner("monitor", options)
+    table = MonitorCSV(sys.stdout, multiple_nodes=len(hosts) > 1) if args.format != "json" else None
+    exit_code = 0
+    previous_handler = signal.signal(signal.SIGINT, _interrupt_sensor_query)
+    try:
+        for index in range(args.count):
+            timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            for result in runner.stream(hosts):
+                result.update(timestamp=timestamp, sample=index + 1)
+                if table is None:
+                    print(json.dumps(result, ensure_ascii=False, allow_nan=False), flush=True)
+                else:
+                    table.write(result)
+                if result["error"]:
+                    exit_code = 1
+                    if table is not None:
+                        print("{}: {}".format(result["name"], result["error"]), file=sys.stderr)
+            if index + 1 < args.count:
+                time.sleep(args.interval)
+    finally:
+        signal.signal(signal.SIGINT, previous_handler)
     return exit_code
 
 
@@ -394,6 +448,8 @@ def main(argv=None):
             return _cmd_scan(args)
         if command == "nodeconsole":
             return _cmd_console(args)
+        if command == "nodemon":
+            return _cmd_monitor(args)
         if command in INFO_COMMANDS:
             return _cmd_info(args)
         if command in SENSOR_COMMANDS:

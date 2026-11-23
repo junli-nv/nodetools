@@ -20,7 +20,6 @@ from .config import (
     DEFAULT_INVENTORY,
     DEFAULT_JOBS,
     DEFAULT_TIMEOUT,
-    INFO_ACTIONS,
     INFO_SUBJECTS,
     ROLE_PREFIXES,
 )
@@ -53,8 +52,82 @@ COMMAND_ALIASES = {"list": "nodelist", "ping": "nodeping"}
 NODE_PROGRAMS = (
     tuple(SENSOR_COMMANDS)
     + tuple(INFO_COMMANDS)
-    + ("nodelist", "nodeping", "nodeconsole")
+    + ("nodelist", "nodeping", "nodeconsole", "nodemon")
 )
+
+
+_COMMAND_HELP = {
+    "fan": """Read fan speeds or set an OEM fan mode.
+  status   Show speeds (default).
+  check    Show each fan's speed and health.
+  auto     Restore BMC fan control (Supermicro: Optimal or Standard).
+  max      Select the highest supported fan mode.
+  low      Netweb: fixed 50% PWM on all fan channels.
+  opt      Netweb: fixed 80% PWM on all fan channels.""",
+    "psu": "Read each PSU's health and available power readings. Use --details for identification and input/output watts.",
+    "temp": "Read temperatures by sensor ID and name, with health and the reading in Celsius.",
+    "inlet": "Show one intake temperature per node. Use check for threshold status.",
+    "power": """Read or control power.
+  status   Show power state (default).
+  on/off   Power on or off. Off can be forced.
+  cycle    Power off and back on.
+  reset    Restart without a full power cycle, where supported.
+  reseat   Request an OEM-specific virtual reseat, where supported.""",
+    "eventlog": """Read or clear hardware event logs.
+  status   Read the default logs.
+  bmc/hmc  Select controller logs, where supported.
+  clear    Erase the hardware event log entries.""",
+    "inventory": "List installed firmware versions. Select --details for hardware identity or --tasks for Redfish task status.",
+    "boot": """Set the next boot device. Reboot separately.
+  pxe      Boot from the network (default if ACTION is omitted).
+  disk     Boot from local storage.
+  bios     Enter firmware setup.
+  cdrom    Boot from an optical or virtual-media device, where supported.""",
+    "bootorder": "Read the current boot device order.",
+    "netboot": """Inspect or configure network boot. Behavior depends on the OEM.
+  status/mac/net  Inspect boot state, MACs, or network boot entries on supported models.
+  pxe             Set network boot priority or an override. KAYTUS KR9288: one boot.
+                  Supermicro: persistent boot order. Some legacy OEMs write
+                  boot settings even without ACTION. For a read, use nodebootorder.""",
+    "macs": "List Ethernet interface MAC addresses exposed by the BMC.",
+    "bios": """Read or change BIOS settings.
+  status   Read active settings (default).
+  pending  Read staged settings, where supported.
+  base     Write the nodetools OEM preset. Supermicro disables SNC and Intel
+           virtualization. Aivres disables SNC and VMX and enables x2APIC,
+           VT-d and interrupt remapping. Both may restart the node immediately.
+  bf3      Stage a BlueField-3 BIOS preset (EGM and PCIe option-ROM settings),
+           where supported.""",
+    "vm": """Inspect or control BMC virtual media.
+  status            Show the selected or mounted image (default).
+  mount/insert URL  Attach an ISO. Supported URL schemes depend on the OEM.
+  eject/umount      Detach the image.
+  stop URL          Request OEM-specific forced detach for the matching image.
+  enable/media/lic  OEM-specific enablement, media information or license view.""",
+}
+
+
+class _CommandHelp(argparse.RawDescriptionHelpFormatter):
+    _shared = {
+        "help", "inventory", "group", "all", "jobs", "timeout", "node_timeout",
+        "action_opt", "user", "password", "ipmi_env", "no_cache", "debug",
+        "errors_only", "cipher", "reconnect", "reconnect_attempts", "reconnect_delay",
+    }
+
+    def add_usage(self, usage, actions, groups, prefix=None):
+        actions = [action for action in actions if action.dest not in self._shared]
+        super().add_usage(usage, actions, groups, prefix)
+
+    def add_argument(self, action):
+        if action.dest in self._shared or action.dest in ("noderange", "selector", "action"):
+            return
+        super().add_argument(action)
+
+
+class _CommandParser(argparse.ArgumentParser):
+    def __init__(self, **kwargs):
+        kwargs.setdefault("formatter_class", _CommandHelp)
+        super().__init__(**kwargs)
 
 
 def normalize_command(name):
@@ -66,41 +139,41 @@ def _add_inventory_opt(parser):
 
 
 def _add_selection(parser):
-    parser.add_argument("selector", nargs="*", help="hostlist expression / group")
+    parser.add_argument("selector", nargs="*", metavar="HOSTS", help="hostlist expression / group")
     _add_inventory_opt(parser)
     parser.add_argument("--group", action="append", default=[], help="select a group")
     parser.add_argument("--all", action="store_true", help="select every host")
     parser.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
 
-def _add_sensor_opts(parser, subject):
-    actions = {
-        "fan": "status (default) | check (per-fan health) | auto/max (OEM) | low/opt (Netweb)",
-    }
-    parser.add_argument(
-        "noderange",
-        nargs="?",
-        help="nodelist expression (defaults to every host of the role)",
-    )
-    parser.add_argument(
-        "action",
-        nargs="?",
-        default=None,
-        help=actions.get(subject, "status/check (read, default)"),
-    )
+def _add_read_opts(parser):
     _add_inventory_opt(parser)
     parser.add_argument("--group", action="append", default=[], help="select a group")
     parser.add_argument("--all", action="store_true", help="select every host")
-    parser.add_argument(
-        "--summary", action="store_true", default=None, help="per-node summary"
-    )
-    parser.add_argument("--errors-only", action="store_true", help="only non-OK lines")
     parser.add_argument("--jobs", type=int, default=None, help="parallel workers")
     parser.add_argument("--timeout", type=float, default=None, help="per-request timeout")
     parser.add_argument(
         "--node-timeout", type=float, default=None,
         help="total request budget per node, including identification (default 30 seconds)",
     )
+
+
+def _add_sensor_opts(parser):
+    parser.add_argument(
+        "noderange",
+        metavar="HOSTS",
+        nargs="?",
+        help="nodelist expression (defaults to every host of the role)",
+    )
+    parser.add_argument(
+        "action",
+        metavar="ACTION",
+        nargs="?",
+        default=None,
+    )
+    _add_read_opts(parser)
+    parser.add_argument("--summary", action="store_true", default=None, help="per-node summary")
+    parser.add_argument("--errors-only", action="store_true", help="only non-OK lines")
     parser.add_argument(
         "-a",
         "--action",
@@ -122,14 +195,11 @@ def _add_sensor_opts(parser, subject):
 def _add_info_opts(parser, subject, role):
     parser.add_argument(
         "noderange",
+        metavar="HOSTS",
         nargs="?",
         help="nodelist expression (defaults to every host of the role)",
     )
-    actions = [a for a in INFO_ACTIONS.get(subject, ()) if a != "status"]
-    help_text = "read (default) | " + " | ".join(actions) if actions else "read-only"
-    if subject == "vm":
-        help_text = "status (default) | mount/insert URL | eject | stop URL (OEM) | enable/umount/media/lic (OEM)"
-    parser.add_argument("action", nargs="?", default=None, help=help_text)
+    parser.add_argument("action", nargs="?", metavar="ACTION")
     if subject == "vm":
         parser.add_argument(
             "image",
@@ -186,10 +256,11 @@ def _add_info_opts(parser, subject, role):
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="nodetools",
-        description="Inspect GB200/GB300 nodes over Redfish and IPMI.",
+        description="Inspect and manage HGX and NVL nodes over Redfish and IPMI.",
+        epilog="Run COMMAND --help for actions. Common inventory, authentication, and timeout options are in README.md.",
     )
     parser.add_argument("--version", action="store_true", help="print version")
-    sub = parser.add_subparsers(dest="command")
+    sub = parser.add_subparsers(dest="command", metavar="COMMAND", parser_class=_CommandParser)
 
     inv = sub.add_parser("inventory", help="inventory management")
     inv_sub = inv.add_subparsers(dest="inventory_command")
@@ -199,13 +270,15 @@ def build_parser():
     show = inv_sub.add_parser("show", help="show parsed inventory")
     show.add_argument("-i", "--inventory", default=None)
 
-    lst = sub.add_parser("nodelist", aliases=["list"], help="list hosts (aggregated)")
+    lst = sub.add_parser("nodelist", aliases=["list"], help="list hosts",
+                         description="List selected inventory hosts as compact ranges. With no HOSTS, list all hosts.")
     _add_selection(lst)
     lst.add_argument(
         "--long", action="store_true", help="one line per host (role and BMC address)"
     )
 
-    pg = sub.add_parser("nodeping", aliases=["ping"], help="ping BMC addresses")
+    pg = sub.add_parser("nodeping", aliases=["ping"], help="ping BMC addresses",
+                        description="Check BMC reachability over ICMP. Output reachable and unreachable host ranges.")
     _add_selection(pg)
     pg.add_argument("--jobs", type=int, default=None, help="parallel workers")
     pg.add_argument(
@@ -214,10 +287,14 @@ def build_parser():
     pg.add_argument("--long", action="store_true", help="one line per host")
 
     for name, (role, subject) in SENSOR_COMMANDS.items():
-        sensor = sub.add_parser(
-            name, help="{} {} readings/control".format(role, subject)
-        )
-        _add_sensor_opts(sensor, subject)
+        description = _COMMAND_HELP[subject]
+        if subject == "fan" and role != "compute":
+            description = """Read fan speeds and health for the selected devices.
+  status   Read fan sensors (default).
+  check    Show per-fan health.
+  auto/max Request automatic or maximum speed, where supported."""
+        sensor = sub.add_parser(name, help="{} {}".format(role, subject), description=description)
+        _add_sensor_opts(sensor)
         if subject == "psu":
             sensor.add_argument(
                 "--details", action="store_true",
@@ -238,20 +315,41 @@ def build_parser():
             )
 
     for name, (role, subject) in INFO_COMMANDS.items():
-        info = sub.add_parser(name, help="{} {}".format(role, subject))
+        info = sub.add_parser(name, help="{} {}".format(role, subject), description=_COMMAND_HELP[subject])
         _add_info_opts(info, subject, role)
+
+    mon = sub.add_parser("nodemon", help="sample node temperature and power",
+                         description="Read inlet temperature, whole-node power, and per-PSU input watts.\n"
+                                     "Each completed node is printed immediately. The default is one CSV sample.")
+    mon.add_argument("noderange", nargs="?", metavar="HOSTS", help="hostlist expression (defaults to every compute host)")
+    _add_read_opts(mon)
+    mon.add_argument("--count", type=int, default=1, help="number of samples (default 1)")
+    mon.add_argument("--interval", type=float, default=5, help="seconds between rounds (default 5)")
+    mon.add_argument("--format", choices=("csv", "json", "text"), default="csv", help="CSV (default; text is an alias) or JSON Lines")
+    mon.add_argument("--psu-voltage", type=float, help="fallback PSU input voltage for watt estimates")
+    mon.add_argument("--psu-power-factor", type=float, help="fallback power factor for single-phase PSU input")
+    mon.add_argument("--user", default=None, help="override BMC username")
+    mon.add_argument("--password", default=None, help="override BMC password")
+    mon.add_argument("--ipmi-env", action="store_true", help="use IPMI_PASSWORD for IPMI")
+    mon.add_argument("--no-cache", action="store_true", help="skip cached discovery profiles")
+    mon.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
     cs = sub.add_parser(
         "nodeconsole",
-        help="compute SOL console (open/close, or --console for an attached session)",
+        help="access the compute-node serial console",
+        description="Manage IPMI Serial over LAN sessions.\n"
+                    "  open      Attach to one node (default).\n"
+                    "  close     Deactivate SOL sessions on the selected nodes.",
     )
     cs.add_argument(
         "noderange",
+        metavar="HOSTS",
         nargs="?",
         help="nodelist expression (defaults to every compute host)",
     )
     cs.add_argument(
         "action",
+        metavar="ACTION",
         nargs="?",
         default="open",
         choices=["open", "close"],
@@ -306,7 +404,8 @@ def build_parser():
     cs.add_argument("-x", "--debug", action="store_true", help="verbose logging")
 
     sc = sub.add_parser(
-        "scan", help="probe and cache a machine type's Redfish map (re-run to refresh)"
+        "scan", help="probe and cache a Redfish resource map",
+        description="Discover Redfish resource paths and cache them per machine type. Re-run to refresh."
     )
     _add_selection(sc)
     sc.add_argument("--jobs", type=int, default=None, help="parallel workers")
