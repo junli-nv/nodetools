@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import time
 
-from ..diagnostics import debug
+from ..diagnostics import debug, debug_connection
 from ..errors import TransportError, TransportTimeout
 
 _FALLBACK_TOOL = "/cm/local/apps/ipmitool/1.8.19/ipmitool"
@@ -72,7 +72,8 @@ class Ipmi:
     def _run(self, command):
         label = "ipmi:" + (self.debug_label or "")
         operation = command[0]
-        debug(self.debug_label, label, "ipmitool {} requested".format(operation))
+        debug_connection(self.debug_label, label, f"ipmitool {operation}", self.address,
+                         self.user, (self.password or "") if self.use_env else self.password)
         if not self.tool:
             raise TransportError("ipmitool not found")
         remaining = self._remaining()

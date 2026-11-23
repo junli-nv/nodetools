@@ -34,8 +34,8 @@ Recommended order (step 0 once; step 2 optional):
 ./nodeping --long               # per-node BMC reachability
 
 # 2) optional: scan once to cache the Redfish map per machine type (speeds up fan/psu/temp)
-#    scanning one representative node covers every node of the same type
-./nodetools scan cp01
+#    for GB300, select one compute tray, one NVSwitch and one power shelf
+./nodetools scan cp01 nvl01 pwr01 --timeout 5
 
 # 3) start using it
 ./nodetemp  cp[01-18] --summary # one summary line per node
@@ -127,12 +127,12 @@ nodeconsole   <noderange> [open|close]        # SOL serial console
 # general
 nodelist [selector] [--long]
 nodeping [selector] [--long] [--ping-timeout S]
-nodetools scan <selector> [--clear]
+nodetools scan <host> [<host> ...] [--timeout S] [--clear]
 nodetools inventory init [--from hosts.list] [-o inventory.ini]
 nodetools inventory show [-i inventory.ini]
 ```
 
-`nvswfan`, `nvswpsu`, and `nvswtemp` use SSH to read NVOS telemetry. Set `nvswitch_os_user` in inventory and optionally override the hostname with `nvswitch_os_host`. Password login uses `nvswitch_os_password` and requires `sshpass`. For trays with HSC DC input, `nvswpsu --details` reports `HSC-DC-IN,volts,amps,watts`. Use `pspsu` for rack power-shelf PSU modules.
+`nvswfan`, `nvswpsu`, and `nvswtemp` use SSH to read NVOS telemetry. Set `nvswitch_os_user` in inventory and optionally override the hostname with `nvswitch_os_host`. Password login requires `sshpass` and uses `nvswitch_os_password` when set, falling back to the legacy `nvswitch_os_pass` field. For trays with HSC DC input, `nvswpsu --details` reports `HSC-DC-IN,volts,amps,watts`. Use `pspsu` for rack power-shelf PSU modules. `-x` shows the NVOS SSH hostname, connection IP, username, plaintext password, and password source.
 
 Any command also works as `nodetools <command> ...`, and the legacy short
 names `list`/`ping` are aliases for `nodelist`/`nodeping`.
@@ -263,7 +263,8 @@ reachable=$(./nodeping --long cp[01-18] \
 | `--reconnect` / `--no-reconnect` | reconnect after a drop (`--console`: on) |
 | `--reconnect-attempts` / `--reconnect-delay` | tries/interval (default 3 / 5s) |
 | `--no-cache` | skip the scan-map cache |
-| `-x`, `--debug` | Available on every command. Trace the backend and request status on stderr. Redfish firmware inventory also shows source fields. |
+| `--help-full` | Show full help for the current command, including common options hidden in concise help. |
+| `-x`, `--debug` | Available on every command. Show the backend, endpoint, username, plaintext password, and request status on stderr. Redfish firmware inventory also shows source fields. |
 
 ## Inventory
 
@@ -352,15 +353,20 @@ verbatim (eventlog tags BMC/HMC with `[BMC]`/`[HMC]`), see "Info commands".
 
 ## Scanning and caching
 
+Select one representative with a reachable BMC for each hardware type. The example uses a compute tray, an NVSwitch and a power shelf. Substitute their inventory hostnames and separate them with spaces.
+
+```bash
+./nodetools scan cp01 nvl01 pwr01 --timeout 5
+```
+
+This scans the listed devices. `--timeout 5` limits each request. After a successful scan, the CLI prints the cache file path for each device. Select an additional representative for each different model or firmware version.
+
 A GB200 BMC fans out over dozens of chassis, and which chassis holds what is
 vendor-specific and not always advertised (Wistron exposes a `Sensors`
 collection that its chassis detail never lists), so `scan` probes the
 collection endpoints directly and records, per chassis, how many
 `Sensors`/`Fans`/`PowerSupplies`/`Temperatures` it exposes plus whether the
-legacy `Thermal`/`Power` objects exist. The map is keyed **by machine type**
-(vendor + manufacturer + model) under
-`~/.cache/nodetools/scan/<vendor>__<model>.json`, so one scanned node of a type
-serves every node of that type.
+legacy `Thermal`/`Power` objects exist. Cache keys include vendor, manufacturer, model, reported BIOS and BMC firmware versions, and explicit inventory overrides. Matching devices share the map under `${XDG_CACHE_HOME:-~/.cache}/nodetools/scan/`.
 
 `fan`/`psu`/`temp` read that map and only walk the chassis that can answer
 (measurements: compute `fan` 0.9 s vs 11 s live, `psu` 8 s vs 22 s, `temp`

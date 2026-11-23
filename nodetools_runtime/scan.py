@@ -256,5 +256,5 @@ def probe(device, workers=common.SCAN_WORKERS):
 def refresh(device, workers=common.SCAN_WORKERS):
     """Probe and write/update the cached template for this machine type."""
     profile = probe(device, workers=workers)
-    store(profile)
+    profile["cache_path"] = store(profile)
     return profile

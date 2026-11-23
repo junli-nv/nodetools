@@ -3,7 +3,7 @@
 import shutil
 import subprocess
 
-from ..diagnostics import debug
+from ..diagnostics import debug, debug_connection
 from ..errors import TransportError
 
 
@@ -22,7 +22,7 @@ class Racadm:
     def run(self, *args):
         label = "racadm:" + (self.debug_label or "")
         action = args[0] if args else ""
-        debug(self.debug_label, label, "{} requested".format(action))
+        debug_connection(self.debug_label, label, action, self.address, self.user, self.password)
         if not self.tool:
             raise TransportError("racadm not found")
         argv = [

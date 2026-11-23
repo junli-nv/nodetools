@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 
 import urllib3
 
+from ..diagnostics import debug_connection
 from ..errors import AuthError, TransportError
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -22,6 +23,7 @@ class Redfish:
     def __init__(self, address, user, password, timeout=10, verify=False):
         self.address = address
         self.debug_label = None
+        self._debug_endpoints = set()
         self.user = user
         self.timeout = timeout
         self.verify = verify
@@ -42,6 +44,19 @@ class Redfish:
                 resource = "<invalid path>"
             print("[redfish:{}] {} {!r} {}".format(self.debug_label, action, resource, detail),
                   file=sys.stderr, flush=True)
+
+    def _debug_connection(self, url):
+        if not self.debug_label:
+            return
+        try:
+            parsed = urlsplit(url)
+        except ValueError:
+            return
+        endpoint = parsed.netloc.rsplit("@", 1)[-1]
+        if endpoint not in self._debug_endpoints:
+            user, password = self._session.auth or (parsed.username, parsed.password)
+            debug_connection(True, "redfish:" + self.debug_label, parsed.scheme.upper(), endpoint, user, password)
+            self._debug_endpoints.add(endpoint)
 
     def trace_source(self, label, path, field):
         self._debug("source {!r} <-".format(label), path, "field=" + field)
@@ -89,10 +104,10 @@ class Redfish:
             self._debug("GET", path, "deadline exceeded")
             self.timeout_reason = "node deadline exceeded before Redfish GET"
             return None, None
+        url = self.url(path)
+        self._debug_connection(url)
         try:
-            resp = self._session.get(
-                self.url(path), timeout=self._timeout(timeout)
-            )
+            resp = self._session.get(url, timeout=self._timeout(timeout))
         except requests.RequestException as exc:
             self.transport_errors += 1
             self._debug("GET", path, type(exc).__name__)
@@ -102,7 +117,6 @@ class Redfish:
                 self.timeout_reason = "Redfish GET timed out"
             return None, None
         self._debug("GET", path, "HTTP {}".format(resp.status_code))
-        url = self.url(path)
         etag = resp.headers.get("ETag") if resp.ok else None
         if etag:
             self._etags[url] = etag
@@ -120,10 +134,10 @@ class Redfish:
         if self._expired():
             self._debug("POST", path, "deadline exceeded")
             raise TransportError("deadline exceeded before POST {}".format(path))
+        url = self.url(path)
+        self._debug_connection(url)
         try:
-            resp = self._session.post(
-                self.url(path), json=body, timeout=self._timeout(timeout)
-            )
+            resp = self._session.post(url, json=body, timeout=self._timeout(timeout))
         except requests.RequestException as exc:
             self.transport_errors += 1
             self._debug("POST", path, type(exc).__name__)
@@ -142,6 +156,7 @@ class Redfish:
             raise TransportError("deadline exceeded before PATCH {}".format(path))
         try:
             url = self.url(path)
+            self._debug_connection(url)
             source = self.url(etag_source) if etag_source else url
             etag = self._etags.pop(source, None)
             kwargs = {"headers": {"If-Match": etag}} if etag else {}

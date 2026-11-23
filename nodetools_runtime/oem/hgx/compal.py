@@ -6,6 +6,7 @@ Endpoints are pinned to ``Systems/Self`` / ``Managers/BMC`` / ``Chassis/Self``.
 import re
 import time
 
+from ...diagnostics import debug_connection
 from ...errors import NodetoolsError, TransportError
 from ...subjects import common, vm
 from ..base import Oem, _body_lines, _jq_r, firmware_name_lines
@@ -197,13 +198,14 @@ class Compal(Oem):
         url = "https://{}/api".format(device.address)
         session = requests.Session()
         session.verify = False
+        user = device.cred("bmc_user") or ""
+        password = device.cred("bmc_password") or ""
+        debug_connection(getattr(options, "debug", False), "compal:" + device.name,
+                         "HTTPS login", device.address, user, password)
         try:
             login = session.post(
                 url + "/session",
-                data={
-                    "username": device.cred("bmc_user") or "",
-                    "password": device.cred("bmc_password") or "",
-                },
+                data={"username": user, "password": password},
                 timeout=20,
             )
             login.raise_for_status()

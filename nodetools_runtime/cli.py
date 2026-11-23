@@ -9,7 +9,7 @@ import sys
 import time
 from datetime import datetime, timezone
 
-from . import hostlist, model, oem, reach, selection
+from . import bak, hostlist, model, oem, reach, selection
 from .arguments import (
     INFO_COMMANDS,
     NODE_PROGRAMS,
@@ -39,10 +39,8 @@ from .runtime import InfoRunner, Runner, Scanner
 
 _READ_WORDS = ("", "status", "check", "read")
 
-# The only command that needs no argument: ``nodelist`` takes no action, so a
-# bare call lists everything. Every other command requires arguments, and a bare
-# call prints its help (exit 0) rather than an error.
-_DEFAULT_ALL_COMMANDS = ("nodelist",)
+# These commands have useful behavior with no arguments.
+_BARE_COMMANDS = ("nodelist", "bak")
 
 
 def _inventory_path(explicit):
@@ -74,7 +72,6 @@ class Options:
         self.ipmi_env = getattr(args, "ipmi_env", False)
         self.no_cache = getattr(args, "no_cache", False)
         self.clear = getattr(args, "clear", False)
-        self.one_per_type = getattr(args, "one_per_type", False)
         self.debug = getattr(args, "debug", False)
         self.console = getattr(args, "console", False)
         self.cipher = getattr(args, "cipher", None)
@@ -230,9 +227,31 @@ def _cmd_ping(args):
     return 0
 
 
+def _cmd_bak(args):
+    def display(stream):
+        if args.key_value and args.bak_mode is None:
+            bak.compare_fields(stream)
+        elif args.bak_mode is None or args.key_value:
+            lines = list(stream)
+            bak.collect_text(lines, args.bak_mode or "similar")
+            bak.compare_fields(lines, table=True, autodetect=not args.key_value)
+        else:
+            bak.collect_text(stream, args.bak_mode)
+
+    try:
+        if args.file == "-":
+            display(sys.stdin)
+        else:
+            with open(args.file, encoding="utf-8") as stream:
+                display(stream)
+    except (OSError, UnicodeError) as exc:
+        raise NodetoolsError(f"bak: {exc}") from exc
+    return 0
+
+
 def _cmd_scan(args):
     if not (args.selector or args.group or args.all):
-        print("usage: nodetools scan <selector> [--clear]", file=sys.stderr)
+        print("usage: nodetools scan <host> [<host> ...] [--clear]", file=sys.stderr)
         return 2
     inv = Inventory.from_file(_inventory_path(args.inventory))
     options = Options(args)
@@ -252,6 +271,10 @@ def _cmd_scan(args):
     for result in Scanner(options).stream(hosts):
         for line in render([result], summary=False, errors_only=False):
             print(line, flush=True)
+        if "cache_path" in result:
+            path = result["cache_path"]
+            message = "cache saved to " + path if path else "cache not written (device identity unavailable)"
+            print("{}: {}".format(result["name"], message), flush=True)
         if result.get("error"):
             exit_code = 1
     return exit_code
@@ -449,7 +472,7 @@ def main(argv=None):
         parse_args(["--help"])
         return 2
     command = normalize_command(args.command)
-    if len(argv) == 1 and command not in _DEFAULT_ALL_COMMANDS:
+    if len(argv) == 1 and command not in _BARE_COMMANDS:
         # Bare call: show this command's help and exit 0 (help, not an error).
         try:
             parse_args([args.command, "--help"])
@@ -458,7 +481,7 @@ def main(argv=None):
         return 0
     if getattr(args, "debug", False):
         debug(True, "nodetools", "command={}".format(command))
-        if command != "inventory" or args.inventory_command == "show":
+        if command != "bak" and (command != "inventory" or args.inventory_command == "show"):
             debug(True, "inventory", "load {!r}".format(_inventory_path(getattr(args, "inventory", None))))
     try:
         if command == "inventory":
@@ -467,6 +490,8 @@ def main(argv=None):
             return _cmd_list(args)
         if command == "nodeping":
             return _cmd_ping(args)
+        if command == "bak":
+            return _cmd_bak(args)
         if command == "scan":
             return _cmd_scan(args)
         if command == "nodeconsole":

@@ -7,6 +7,7 @@ back to the NVIDIA/AMI ``AMIVirtualMedia`` behaviour.
 
 from urllib.parse import urlsplit
 
+from ..diagnostics import debug_connection
 from ..errors import CapUnsupported, NodetoolsError, TransportError
 
 
@@ -32,6 +33,10 @@ def image_source(options, *schemes):
 
 
 def post(device, path, body):
+    if getattr(getattr(device, "options", None), "debug", False) and body.get("Image"):
+        source = urlsplit(body["Image"])
+        debug_connection(True, "media:" + device.name, source.scheme.upper(), source.netloc,
+                         body.get("UserName"), body.get("Password"))
     status, response = device.redfish.post(path, body)
     if not 200 <= status < 300 or (isinstance(response, dict) and "error" in response):
         raise TransportError("virtual media action {} failed (HTTP {})".format(path, status))

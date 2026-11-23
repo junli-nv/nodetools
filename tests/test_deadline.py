@@ -195,7 +195,7 @@ def test_redfish_patch_uses_the_etag_of_the_requested_parent(monkeypatch):
         requests.close()
 
 
-def test_redfish_debug_shows_status_and_path_without_credentials(monkeypatch, capsys):
+def test_redfish_debug_shows_connection_status_and_path(monkeypatch, capsys):
     from requests import Response
 
     client = Redfish("example.test", "private-user", "private-password")
@@ -214,6 +214,7 @@ def test_redfish_debug_shows_status_and_path_without_credentials(monkeypatch, ca
         captured = capsys.readouterr()
         assert captured.out == ""
         assert captured.err.splitlines() == [
+            "[redfish:shelf-01] HTTPS address='example.test' user='private-user' password='private-password'",
             "[redfish:shelf-01] GET '/redfish/v1/Systems' HTTP 200",
             "[redfish:shelf-01] source 'FW_PMC' <- '/redfish/v1/Systems' field=Version",
         ]
@@ -221,7 +222,7 @@ def test_redfish_debug_shows_status_and_path_without_credentials(monkeypatch, ca
         client.close()
 
 
-def test_command_backend_debug_does_not_log_auth_arguments(monkeypatch, capsys):
+def test_command_backend_debug_shows_credentials(monkeypatch, capsys):
     from types import SimpleNamespace
 
     from nodetools_runtime import console
@@ -243,5 +244,8 @@ def test_command_backend_debug_does_not_log_auth_arguments(monkeypatch, capsys):
     assert output.out == ""
     assert "[ipmi:tray-01] ipmitool chassis exit=0" in output.err
     assert "[racadm:tray-01] get exit=0" in output.err
-    assert "[ipmi:tray-01] SOL activate for bmc.example.test" in output.err
-    assert not any(secret in output.err for secret in (*auth, "payload"))
+    credentials = f"address={target!r} user={auth[0]!r} password={auth[1]!r}"
+    assert f"[ipmi:tray-01] ipmitool chassis {credentials}" in output.err
+    assert f"[racadm:tray-01] get {credentials}" in output.err
+    assert f"[ipmi:tray-01] SOL activate {credentials}" in output.err
+    assert "payload" not in output.err

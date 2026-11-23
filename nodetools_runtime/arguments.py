@@ -123,14 +123,27 @@ class _CommandHelp(argparse.RawDescriptionHelpFormatter):
         super().add_argument(action)
 
 
+class _FullHelpAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        formatter = parser.formatter_class
+        try:
+            parser.formatter_class = argparse.RawDescriptionHelpFormatter
+            parser.print_help()
+        finally:
+            parser.formatter_class = formatter
+        parser.exit()
+
+
 class _CommandParser(argparse.ArgumentParser):
     def __init__(self, **kwargs):
         kwargs.setdefault("formatter_class", _CommandHelp)
         super().__init__(**kwargs)
-        _add_debug(self)
+        _add_common_flags(self)
 
 
-def _add_debug(parser):
+def _add_common_flags(parser):
+    parser.add_argument("--help-full", action=_FullHelpAction, nargs=0,
+                        help="show all options, including common options")
     parser.add_argument("-x", "--debug", action="store_true", default=argparse.SUPPRESS,
                         help="show diagnostic information on stderr")
 
@@ -261,7 +274,7 @@ def build_parser():
         description="Inspect and manage HGX and NVL nodes over Redfish and IPMI.",
         epilog="Run COMMAND --help for actions. Common inventory, authentication, and timeout options are in README.md.",
     )
-    _add_debug(parser)
+    _add_common_flags(parser)
     parser.add_argument("--version", action="store_true", help="print version")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND", parser_class=_CommandParser)
 
@@ -420,6 +433,20 @@ def build_parser():
         help="seconds between reconnect tries (default 5)",
     )
 
+    bak = sub.add_parser(
+        "bak", help="group and compare host-prefixed output",
+        description="Group HOST:OUTPUT lines, show differences, and summarize recognized fields.",
+    )
+    bak.add_argument("file", nargs="?", default="-", metavar="FILE",
+                     help="input file (default: read stdin)")
+    mode = bak.add_mutually_exclusive_group()
+    mode.add_argument("-c", "--collect", dest="bak_mode", action="store_const", const="collect",
+                      help="merge hosts with identical output")
+    mode.add_argument("-C", "--collect-similar", dest="bak_mode", action="store_const", const="similar",
+                      help="group identical output and show differences from the largest group")
+    bak.add_argument("--key-value", action="store_true",
+                     help="force field comparison for HOST:KEY=VALUE or HOST:KEY VALUE")
+
     sc = sub.add_parser(
         "scan", help="probe and cache a Redfish resource map",
         description="Discover Redfish resource paths and cache them per machine type. Re-run to refresh."
@@ -431,12 +458,6 @@ def build_parser():
     sc.add_argument("--password", default=None, help="override BMC password")
     sc.add_argument(
         "--clear", action="store_true", help="delete cached maps instead of writing"
-    )
-    sc.add_argument(
-        "--one-per-type",
-        dest="one_per_type",
-        action="store_true",
-        help="scan one representative per machine type, skip the identical rest",
     )
     return parser
 

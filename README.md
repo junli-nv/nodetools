@@ -32,8 +32,8 @@
 ./nodeping --long               # 逐节点 BMC 可达性
 
 # 2) 可选：扫描一次并缓存每种机型的 Redfish 映射（fan/psu/temp 提速）
-#    同机型取一台做模版，其余同机型节点自动复用
-./nodetools scan cp01
+#    GB300 各选一台 compute tray、NVSwitch、power shelf
+./nodetools scan cp01 nvl01 pwr01 --timeout 5
 
 # 3) 开始用
 ./nodetemp  cp[01-18] --summary # 每个节点一行汇总
@@ -124,12 +124,12 @@ nodeconsole   <noderange> [open|close]        # SOL 串口控制台
 # 通用
 nodelist [selector] [--long]
 nodeping [selector] [--long] [--ping-timeout S]
-nodetools scan <selector> [--clear]
+nodetools scan <host> [<host> ...] [--timeout S] [--clear]
 nodetools inventory init [--from hosts.list] [-o inventory.ini]
 nodetools inventory show [-i inventory.ini]
 ```
 
-NVSwitch 的 `nvswfan`、`nvswpsu` 和 `nvswtemp` 通过 SSH 从 NVOS 读取。在 inventory 配置 `nvswitch_os_user`，可用 `nvswitch_os_host` 覆盖主机名。密码登录用 `nvswitch_os_password`，并需要 `sshpass`。如果交换机托盘只提供 HSC DC 输入，`nvswpsu --details` 输出 `HSC-DC-IN,电压(V),电流(A),功率(W)`。机柜电源架的 PSU 用 `pspsu` 查询。
+NVSwitch 的 `nvswfan`、`nvswpsu` 和 `nvswtemp` 通过 SSH 从 NVOS 读取。在 inventory 配置 `nvswitch_os_user`，可用 `nvswitch_os_host` 覆盖主机名。密码登录优先读取 `nvswitch_os_password`，未设置时读取旧字段 `nvswitch_os_pass`，并需要 `sshpass`。如果交换机托盘只提供 HSC DC 输入，`nvswpsu --details` 输出 `HSC-DC-IN,电压(V),电流(A),功率(W)`。机柜电源架的 PSU 用 `pspsu` 查询。 `-x` 显示 NVOS 的 SSH 主机名、连接 IP、用户名、明文密码及其配置来源。
 
 任何命令也可写成 `nodetools <command> ...`；旧短名 `list`/`ping` 是
 `nodelist`/`nodeping` 的别名。
@@ -240,7 +240,8 @@ reachable=$(./nodeping --long cp[01-18] \
 | `--reconnect` / `--no-reconnect` | 断线后是否重连（`--console` 默认重连） |
 | `--reconnect-attempts` / `--reconnect-delay` | 重连次数/间隔（默认 3 / 5s） |
 | `--no-cache` | 跳过扫描映射缓存 |
-| `-x`, `--debug` | 所有命令都支持。跟踪信息写入 stderr，包括所用后端及其请求状态。Redfish 固件库存还显示取值字段。 |
+| `--help-full` | 显示当前命令的完整帮助，包括简洁版隐藏的通用参数。 |
+| `-x`, `--debug` | 所有命令都支持。跟踪信息写入 stderr，包括所用后端、连接目标、实际使用的用户名和明文密码，以及请求状态。Redfish 固件库存还显示取值字段。 |
 
 ## Inventory
 
@@ -321,12 +322,18 @@ vdc1-pro2-t10-gpu-cp-01: PSU_1,OK,1318.8
 
 ## 扫描与缓存
 
+为每种设备选择一台 BMC 可达的代表机。下例的三个名称分别对应 compute tray、NVSwitch 和 power shelf，请换成实际 inventory 里的主机名。主机名用空格分隔。
+
+```bash
+./nodetools scan cp01 nvl01 pwr01 --timeout 5
+```
+
+只扫描点名的设备。`--timeout 5` 是单次请求的超时，每台扫描成功后会打印实际缓存文件路径。型号或固件不同的设备各选一台。
+
 一个 GB200 BMC 会摊开几十个 chassis，哪个 chassis 有什么**因厂商而异且不一定声明**
 （Wistron 暴露了 `Sensors` 集合，但其 chassis detail 从不列出），因此 `scan` 直接探测
 集合端点，按 chassis 记录它暴露了多少 `Sensors`/`Fans`/`PowerSupplies`/
-`Temperatures`，以及旧式 `Thermal`/`Power` 对象是否存在。映射**按机型**
-（厂商+制造商+型号）存到 `~/.cache/nodetools/scan/<vendor>__<model>.json`，
-所以同机型只需扫一台做模版，其余节点读同一份。
+`Temperatures`，以及旧式 `Thermal`/`Power` 对象是否存在。缓存按厂商、制造商、型号、可读到的 BIOS/BMC 固件版本和显式 inventory 覆盖值匹配。同类型设备可复用同一份映射。文件位于 `${XDG_CACHE_HOME:-~/.cache}/nodetools/scan/`。
 
 `fan`/`psu`/`temp` 读该映射，只遍历"能回答"的 chassis（实测 compute：`fan` 0.9s
 vs 实时 11s，`psu` 8s vs 22s，`temp` 7s vs 17s）。没有映射时回退到实时发现，所以
