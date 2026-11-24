@@ -13,7 +13,7 @@ from .nvl.dell import DellNvl
 from .nvl.delta import DeltaPowerShelf, legacy_psu_readings
 from .hgx.dgx import Dgx, DgxBlackwell
 from .hgx.hpe import HpeHgx
-from .nvl.gb200 import Gb200
+from .nvl.nvidia import NvidiaNvl
 from .nvl.hpe import HpeNvl
 from .nvl.lenovo import LenovoNvl
 from .nvl.liteon import LiteOnPowerShelf
@@ -33,7 +33,7 @@ from .nvl.flex import FlexPowerShelf
 from .nvl.wistron import Wistron
 
 _MODULES = {
-    "gb200": Gb200(),
+    "gb200": NvidiaNvl(),
     "dell": Dell(),
     "lenovo": Lenovo(),
     "smc": Smc(),

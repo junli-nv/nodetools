@@ -4,7 +4,7 @@ from ...subjects import common, power
 from ..base import Oem
 
 
-class Gb200(Oem):
+class NvidiaNvl(Oem):
     name = "gb200"
     family = "nvl"
     fan_profile = "gb200-nvl"

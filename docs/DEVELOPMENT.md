@@ -367,6 +367,7 @@ reachable=$(./nodeping --long vdc1-pro2-t10-gpu-cp-[01-18] \
 | --- | --- |
 | NVIDIA DGX B200/B300 | 归于 HGX。活动启动顺序缺失时读取 `Systems/DGX/SD`。 |
 | HPE XD685 / XD690 HGX | XD685 优先 iLO `Systems/1`。XD690 走 OpenBMC 发现。 |
+| NVIDIA GB200/GB300 NVL | 共用 `oem/nvl/nvidia.py`，保留 `gb200` 兼容路由。 |
 | HPE GB200/GB300 NVL72 | `oem/nvl/hpe.py` 优先 `Systems/System_0`，支持 inventory 覆盖。 |
 | Cisco UCS C880A M8 HGX B300 | 优先读取 `Systems/DGX`。 |
 | Dell XE9712 NVL | AMI 与 iDRAC 使用标准资源发现。仅凭机型名确定平台，代际以实际报告为准。 |

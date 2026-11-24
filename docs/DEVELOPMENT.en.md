@@ -432,6 +432,7 @@ and the [RMS compatibility list](https://docs.nvidia.com/rms/documentation/refer
 | --- | --- |
 | NVIDIA DGX B200/B300 | HGX routing. Use `Systems/DGX/SD` if active boot order is missing. |
 | HPE XD685 / XD690 HGX | Prefer iLO `Systems/1` on XD685. Discover OpenBMC resources on XD690. |
+| NVIDIA GB200/GB300 NVL | Share `oem/nvl/nvidia.py` and retain `gb200` compatibility routing. |
 | HPE GB200/GB300 NVL72 | `oem/nvl/hpe.py` prefers `Systems/System_0` and honors inventory overrides. |
 | Cisco UCS C880A M8 HGX B300 | Prefer `Systems/DGX` for reads. |
 | Dell XE9712 NVL | Discover AMI and iDRAC resources. Use reported identity to resolve generation. |
