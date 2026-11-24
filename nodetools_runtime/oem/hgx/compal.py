@@ -31,12 +31,6 @@ _BIOS_BASE = {
 }
 _BIOS_EXCLUDES = ("BootOrder", "MAPIDS", "UefiPriorities")
 _EVENT_TYPE = re.compile(r"Event.*Event_Type")
-_NVSW_RESET = {
-    "on": "On",
-    "off": "ForceOff",
-    "cycle": "PowerCycle",
-    "reseat": "FullPowerCycle",
-}
 
 
 class Compal(Oem):
@@ -51,24 +45,6 @@ class Compal(Oem):
     bootorder_quoted = False
     bootorder_sep = ","
     bootorder_expand = False
-
-    # -- nvswitch power (nvswpower.cpl) ---------------------------------
-    # Compal NVSwitch uses ``Systems/Self`` and adds a ``reseat`` reset type
-    # (``FullPowerCycle``); the generic handler pins ``System_0``.
-    def nvswitch_power(self, device, action):
-        base = "/redfish/v1/Systems/Self"
-        reset = _NVSW_RESET.get(action)
-        if reset is not None:
-            _, body = common.post(
-                device,
-                base + "/Actions/ComputerSystem.Reset",
-                {"ResetType": reset},
-            )
-            text = common.jq_out(body)
-            return ["{}: {}".format(device.name, text)] if text else []
-        data = common.resource(device, base, required=True)
-        return ["{}: {}".format(device.name, common.jq(data.get("PowerState")))]
-
 
     # -- BIOS settings (nodebios.cpl) -----------------------------------
     def bios(self, device, action):

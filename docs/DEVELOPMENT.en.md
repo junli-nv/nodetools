@@ -170,19 +170,13 @@ is to match the legacy scripts verbatim so existing pipes like `grep -v ,OK` and
 
 Dispatch rules (`subjects/{power,eventlog,inventory}.py`):
 
-- `nvsw*` dispatches by **ODM** to `nvswitch_power` (`runtime.InfoRunner` now reads
-  the scan-profile ODM for every role): the base class pins `Systems/System_0`;
-  Compal overrides it to `Systems/Self` with `reseat` as `FullPowerCycle`. `ps*`
-  stays on fixed NVIDIA paths, never dispatch by vendor:
-  - power: `Systems/{System_0|system}/Actions/ComputerSystem.Reset`, state read
-    from `PowerState`;
-  - eventlog: `Systems/System_0/LogServices/EventLog` (nvsw),
-    `Managers/PMC_0/LogServices/EventLog` (ps);
-  - inventory: `UpdateService/FirmwareInventory` (`Id` + `Version`).
-- `node*` (compute) dispatches by **ODM**: `runtime.InfoRunner` reads the ODM from
-  the scan profile (`model.odm_for`), sets `device.odm = oem.get(...)`, then calls
-  `device.odm.<subject>(device, action)`; uncached nodes fall back to the base
-  (GBXX) class.
+- `runtime.InfoRunner` selects an adapter by platform, OEM, device role, and generation.
+- NVSwitches and power shelves dispatch independently. The base adapter keeps
+  the legacy NVIDIA paths. Other devices use Redfish discovery, with
+  `system_id`, `manager_id`, or `chassis_id` to scope a shared BMC.
+- On Compal NVSwitches, discovery can read power status from `Systems/Self`.
+  The legacy `nvswpower.cpl` mapping `reseat=FullPowerCycle` is an NVL interface
+  reference. Qualify writes on the actual model before enabling them.
 - The `Oem` base class is the **NVIDIA GBXX reference implementation** (legacy
   top-level scripts + `func.sh`):
   - `power`: IPMI `power <action>`, printing `N/A` on failure (matching the
@@ -190,9 +184,7 @@ Dispatch rules (`subjects/{power,eventlog,inventory}.py`):
     (`nodereseat`/`func.sh`), while DGX overrides it to `Chassis/BMC`
     `AuxPowerCycleForce`, Aivres to IPMI `raw 0x3c 0x28`, and SMC/Lenovo
     implement their own;
-  - `nvswitch_power`: `Systems/System_0` `ComputerSystem.Reset` (`on/off/cycle`;
-    any other action, including `reseat`, falls through to `status`); Compal
-    overrides it to `Systems/Self` with `reseat=FullPowerCycle`;
+  - `nvswitch_power`: the legacy NVIDIA `Systems/System_0` `ComputerSystem.Reset` supports `on/off/cycle`.
   - `eventlog`: reads
     `HGX_Baseboard_0/LogServices/EventLog/Entries` by default (`[HMC]`), `bmc`
     uses IPMI `sel list` (`[BMC]`), `clear` clears `Systems/system`, the BMC

@@ -149,24 +149,17 @@ eventlog 的 BMC/HMC 带 `[BMC]`/`[HMC]` 前缀），`report.render` 检测到�
 
 派发规则（`subjects/{power,eventlog,inventory}.py`）：
 
-- `nvsw*` 按 **ODM** 派发 `nvswitch_power`（`runtime.InfoRunner` 现在对所有角色都读
-  scan profile 的 ODM）：基类固定 `Systems/System_0`；Compal 覆盖为 `Systems/Self`
-  且 `reseat` 用 `FullPowerCycle`。`ps*` 仍是固定 NVIDIA 路径，不按厂商派发：
-  - power：`Systems/{System_0|system}/Actions/ComputerSystem.Reset`，状态读 `PowerState`；
-  - eventlog：`Systems/System_0/LogServices/EventLog`（nvsw）、
-    `Managers/PMC_0/LogServices/EventLog`（ps）；
-  - inventory：`UpdateService/FirmwareInventory`（`Id`+`Version`）。
-- `node*`（compute）按 **ODM** 派发：`runtime.InfoRunner` 读 scan profile 的 ODM
-  （`model.odm_for`），`device.odm = oem.get(...)`，
-  再调 `device.odm.<subject>(device, action)`；无缓存回退基类（GBXX）。
+- `runtime.InfoRunner` 按平台、OEM、设备角色和代际选择适配器。
+- NVSwitch 和 Power Shelf 各自分派。NVIDIA 旧版路径保留在基础适配器里，其他设备按
+  Redfish 资源发现。共享 BMC 时可用 `system_id`、`manager_id` 或 `chassis_id` 指定设备。
+- Compal NVSwitch 可从 `Systems` 发现 `Systems/Self` 并读取电源状态。旧 `nvswpower.cpl`
+  的 `reseat=FullPowerCycle` 是 NVL 接口参考，启用写操作前需按实际机型验收。
 - `Oem` 基类就是 **NVIDIA GBXX 参考实现**（旧顶层脚本 + `func.sh`）：
   - `power`：IPMI `power <action>`，失败输出 `N/A`（对应旧脚本 `|| echo 'N/A'`）；
     `reseat` 走 GBXX 辅助电源环（`nodereseat`/`func.sh`）；DGX 覆盖为
     `Chassis/BMC` 的 `AuxPowerCycleForce`，Aivres 覆盖为 IPMI `raw 0x3c 0x28`，
     SMC/Lenovo 各自实现；
-  - `nvswitch_power`：`Systems/System_0` 的 `ComputerSystem.Reset`（`on/off/cycle`，
-    其余动作含 `reseat` 落 `status`），Compal 覆盖为 `Systems/Self` +
-    `reseat=FullPowerCycle`；
+  - `nvswitch_power`：旧版 NVIDIA 使用 `Systems/System_0` 的 `ComputerSystem.Reset`，支持 `on/off/cycle`。
   - `eventlog`：默认读 `HGX_Baseboard_0/LogServices/EventLog/Entries`（`[HMC]`），
     `bmc` 走 IPMI `sel list`（`[BMC]`），`clear` 清 `Systems/system`、BMC SEL/EventLog
     与 HGX EventLog；

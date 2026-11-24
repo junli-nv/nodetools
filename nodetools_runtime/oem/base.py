@@ -160,8 +160,7 @@ class Oem:
         return ["{}: {}".format(device.name, out or "N/A")]
 
     # -- nvswitch power (nvswpower) -------------------------------------
-    # NVIDIA NVSwitch trays: ``Systems/System_0`` fixed path. Compal vendors
-    # override this with their own ``Systems/Self`` handler.
+    # Legacy NVIDIA NVSwitch trays use ``Systems/System_0``.
     def nvswitch_power(self, device, action):
         base = "/redfish/v1/Systems/" + self.nvswitch_system
         if action in _NVSW_RESET:

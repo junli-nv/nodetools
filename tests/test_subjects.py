@@ -150,16 +150,33 @@ def test_power_nvsw_reseat_defaults_to_status():
     assert rf.posts == {}
 
 
-def test_power_nvsw_compal_uses_self_and_full_power_cycle():
-    from nodetools_runtime.oem.hgx.compal import Compal
+@pytest.mark.parametrize("system_id", [None, "Self"])
+def test_power_nvsw_compal_uses_independent_read_only_discovery(system_id):
+    from nodetools_runtime.errors import CapUnsupported
+    from nodetools_runtime.oem.redfish import RedfishDiscovery
 
-    rf = FakeRedfish(post={"/redfish/v1/Systems/Self/Actions/ComputerSystem.Reset": (200, {})})
-    device = _device("nvswitch", redfish=rf, odm=Compal())
-    lines = power.collect(device, "reseat", None)
-    assert lines == ["cp-01: {}"]
-    assert rf.posts["/redfish/v1/Systems/Self/Actions/ComputerSystem.Reset"] == {
-        "ResetType": "FullPowerCycle"
-    }
+    path = "/redfish/v1/Systems/Self"
+    rf = FakeRedfish({
+        "/redfish/v1/Systems": {"Members": [{"@odata.id": path}]},
+        path: {
+            "PowerState": "On",
+            "Actions": {"#ComputerSystem.Reset": {
+                "target": path + "/Actions/ComputerSystem.Reset",
+                "ResetType@Redfish.AllowableValues": ["FullPowerCycle"],
+            }},
+        },
+    })
+    variables = {"platform": "nvl", "oem": "compal"}
+    if system_id:
+        variables["system_id"] = system_id
+    device = model.Device(Host("fabric-01", variables=variables, groups=["nvswitch"]))
+    device.redfish = rf
+    device.odm = oem.for_device(device)
+    assert isinstance(device.odm, RedfishDiscovery)
+    assert power.collect(device, "status", None) == ["fabric-01: On"]
+    with pytest.raises(CapUnsupported, match="no verified nvswitch adapter"):
+        power.collect(device, "reseat", None)
+    assert rf.posts == {}
 
 
 def test_power_dgx_reseat_uses_aux_power_cycle_force():
