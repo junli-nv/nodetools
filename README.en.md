@@ -368,6 +368,22 @@ powered-off host. Use `--reflash` to write the installed version again.
 After `ACCEPTED`, confirm completion with `status` and read back the installed
 version with `show`.
 
+### IPMI fan presets
+
+Fixed IPMI raw sequences are bundled in `nodetools_runtime/fan-profiles.ini` and
+use the existing OEM dispatch rules. OEM adapters handle modes selected dynamically.
+
+```bash
+./nodefan NODE max --dry-run
+./nodefan NODE max --fan-profiles ./local-fan-profiles.ini --dry-run
+```
+
+Each local `[profile:name]` requires `platform`, `oem`, `role`, and the full
+`model` reported by the BMC. Define actions such as `auto` and `max` with one
+space-separated raw sequence per line. Hexadecimal and decimal bytes are
+accepted. With a local file, each target must match a profile with the requested
+action. Remove `--dry-run` to execute the sequence after reviewing the plan.
+
 ## Output
 
 Sensor lines are `<node>: <field>,<field>,...`, matching the legacy scripts so

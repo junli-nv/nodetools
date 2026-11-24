@@ -362,6 +362,18 @@ Aivres/KAYTUS `KR9288-X3-A0-F0-01`（BMC `2.03.ef`）使用 `Systems/1`
 KR9288 写入 `Bios/Settings` 时需要父 `Bios` 的 ETag。Supermicro 的介质
 `stop URL` 按精确 URL 分离指定槽，固件可能保留 URL 配置。挂载需等待 Redfish 任务成功并核对 `Inserted`。实机上，KR9288 完成了 NFS 挂载、推出和原挂载恢复，Supermicro 通过 Apache 标准 HTTP 端口完成了 ISO 插入和推出。KR9288 的持久启动顺序写入和 AUX reseat 待验证。
 
+### 按机型和角色实现命令
+
+| 平台 | 应覆盖的命令 |
+| --- | --- |
+| HGX | 每个机型实现计算节点适用的 `node*` 命令和动作。 |
+| NVL | 每种机柜方案覆盖计算托盘的 `node*`、配套 NVSwitch 的 `nvsw*`、配套 Power Shelf 的 `ps*`。 |
+
+用下面的 OEM 能力清单和对应角色的现有命令核对覆盖范围，逐项记录已实现、
+待实现和设备不支持的命令或动作，并单独记录实机验证状态。NVL 按配套设备各自的
+OEM、型号及接口选择实现。同一 OEM 的不同代际或机型如有接口差异，分别适配。
+接口一致时复用标准 Redfish、IPMI 或 NVOS 路径。实现后按第 7 节完成只读实机验收。
+
 ### OEM 能力清单
 
 以原始 nodetools 脚本为对照。每个机型按能力确认接口。标准 Redfish 查询由共用层实现，OEM 模块覆盖已确认的差异。
@@ -370,14 +382,14 @@ KR9288 写入 `Bios/Settings` 时需要父 `Bios` 的 ETag。Supermicro 的介�
 | --- | --- | --- |
 | BIOS | `nodebios` 当前值，`pending` 待读取的设置 | 已有 OEM 动作保留。逐项写入、应用时机和重启条件按机型补齐 |
 | 启动 | `nodebootorder` 持久顺序，`nodenetboot` 启动与 PXE 信息 | `nodeboot` 一次性覆盖。持久重排、网口绑定按 OEM 补齐 |
-| 资产和固件 | `*inventory` 版本，`--details` 厂商/型号/序列号，计算节点 `--gpu` | 完整 FRU、部件号、固件更新和回滚按机型补齐 |
+| 资产和固件 | `*inventory` 版本，`--details` 厂商/型号/序列号，计算节点 `--gpu`、`nodefru`、`nodefw show` | 完整 FRU、部件号、固件更新和回滚按机型补齐 |
 | MAC 和网络 | `nodemacs` 主机 MAC，部分旧 OEM 适配可读 BMC/PXE MAC | BMC/PXE 通用查询、网络配置和连线诊断按接口补齐 |
 | 温度、风扇、PSU | `*temp`、`*fan`、`*psu`，含健康状态 | 风扇调速走 OEM。PSU 和温度只读 |
 | 虚拟介质 | `nodevm` 查询 | 已有 OEM 支持挂载、推出等动作。新机型按介质协议、启用和插入流程补齐 |
-| 日志与任务 | `*eventlog`，`*inventory --tasks` | 部分适配支持清日志。任务取消与诊断包待补 |
+| 日志与任务 | `*eventlog`、`nodetask`、`*inventory --tasks` | 部分适配支持清日志。任务取消与诊断包待补 |
 | 电源与控制台 | `*power` 状态，`nodeconsole` SOL | 按机型区分主电源、AUX 与 BMC 重启。NVSwitch/PowerShelf 单独验证 |
 | 额外旧工具 | 健康监控、NVLink/UPHY、机箱与平台传感器盘点 | 阈值、遥测周期和告警规则需逐工具对照 |
-| 管理控制面 | BMC 身份、固件和健康查询 | BMC 重置、账户管理、时间和网络配置继续按机型补齐 |
+| 管理控制面 | `nodebmc` 查询 BMC 身份、固件和时钟 | `reset`、`time --set` 按机型支持。账户和网络配置继续按机型补齐 |
 
 
 `scan` 还会探测 chassis 端点并写入能力映射。缓存键使用厂商、制造商、型号、可用的固件版本以及显式库存覆盖值。普通命令只读映射；没有映射或指定 `--no-cache` 时仍读取设备身份，传感器使用实时发现。

@@ -6,6 +6,7 @@ from ..base import Oem
 class Byd(Oem):
     name = "byd"
     family = "hgx"
+    fan_profile = "byd-hgx"
     fan_chassis = ("1", "Chassis_0")
 
     bootorder_system = "Self"
@@ -23,14 +24,6 @@ class Byd(Oem):
         rows = self._bios_rows(device, self._BIOS_EXCLUDES, sort=True)
         return [self._label(device, row) for row in rows]
 
-    def fan_control(self, device, action):
-        if action == "auto":
-            self._ipmi_raw(device, 0x3C, 0x06)
-        elif action == "max":
-            self._ipmi_raw(device, 0x3C, 0x03)
-        else:
-            raise NotImplementedError(action)
-        return "ok"
 
     # nodeeventlog.byd reads the IPMI SEL list.
     def eventlog(self, device, action):

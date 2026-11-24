@@ -12,6 +12,7 @@ import json
 import re
 import time
 
+from .. import fan_profiles
 from ..errors import CapUnsupported, TransportTimeout
 from ..subjects import common, eventlog, inventory, power, vm
 
@@ -133,8 +134,11 @@ class Oem:
 
     # -- controls --------------------------------------------------------
     fan_actions = ("auto", "max")
+    fan_profile = None
 
     def fan_control(self, device, action):
+        if self.fan_profile:
+            return fan_profiles.execute(device, fan_profiles.bundled()[self.fan_profile], action)
         raise CapUnsupported(
             "fan action {!r} not supported for ODM {!r}".format(action, self.name)
         )

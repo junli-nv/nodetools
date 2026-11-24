@@ -318,6 +318,9 @@ def build_parser():
   auto/max Request automatic or maximum speed, where supported."""
         sensor = sub.add_parser(name, help="{} {}".format(role, subject), description=description)
         _add_sensor_opts(sensor)
+        if subject == "fan" and role != "nvswitch":
+            sensor.add_argument("--fan-profiles", metavar="FILE", help="use exact-model IPMI fan profiles from an INI file")
+            sensor.add_argument("--dry-run", action="store_true", help="show the fan control plan without writing")
         if subject == "psu":
             sensor.add_argument(
                 "--details", action="store_true",

@@ -9,7 +9,7 @@ import sys
 import time
 from datetime import datetime, timezone
 
-from . import bak, hostlist, model, oem, reach, selection
+from . import bak, fan_profiles, hostlist, model, oem, reach, selection
 from .arguments import (
     INFO_COMMANDS,
     NODE_PROGRAMS,
@@ -301,11 +301,16 @@ def _cmd_sensor(args):
     if action not in _READ_WORDS:
         if capability != "fan" or role == "nvswitch":
             raise NodetoolsError("{} is read-only; use status or check".format(command))
-        if action not in ("auto", "max", "low", "opt"):
+        if action not in fan_profiles.ACTIONS:
             raise NodetoolsError("invalid fan action {!r}".format(action))
     inv = Inventory.from_file(_inventory_path(args.inventory))
     options = Options(args)
     options.action = None if action in _READ_WORDS else action
+    options.fan_dry_run = getattr(args, "dry_run", False)
+    profile_path = getattr(args, "fan_profiles", None)
+    if (options.fan_dry_run or profile_path) and options.action is None:
+        raise NodetoolsError("--fan-profiles and --dry-run require a fan control action")
+    options.fan_profiles = fan_profiles.load(profile_path, local=True) if profile_path else None
     fan_speeds = (
         command == "nodefan" and action in ("", "status", "read") and not args.errors_only
     )
@@ -326,11 +331,14 @@ def _cmd_sensor(args):
     exit_code = 0
     runner = Runner(capability, options)
     previous_handler = None
-    if options.action is None:
+    if options.action is None or options.fan_dry_run:
         previous_handler = signal.signal(signal.SIGINT, _interrupt_sensor_query)
     try:
         for result in runner.stream(hosts):
-            if simple_inlet:
+            if result.get("fan_plan"):
+                for line in result["fan_plan"]:
+                    print("{}: {}".format(result["name"], line), flush=True)
+            elif simple_inlet:
                 print(format_inlet_temperature(result), flush=True)
                 if result.get("error"):
                     print("{}: ERROR {}".format(result["name"], result["error"]), file=sys.stderr)

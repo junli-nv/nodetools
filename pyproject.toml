@@ -50,5 +50,8 @@ nodeconsole = "nodetools_runtime.cli:main"
 [tool.setuptools]
 packages = ["nodetools_runtime", "nodetools_runtime.transport", "nodetools_runtime.caps", "nodetools_runtime.oem", "nodetools_runtime.oem.hgx", "nodetools_runtime.oem.nvl", "nodetools_runtime.subjects"]
 
+[tool.setuptools.package-data]
+nodetools_runtime = ["fan-profiles.ini"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

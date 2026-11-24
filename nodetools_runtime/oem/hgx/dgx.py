@@ -11,6 +11,7 @@ _AC_CYCLE = "/redfish/v1/Chassis/BMC/Actions/Oem/NvidiaChassis.AuxPowerReset"
 class Dgx(Oem):
     name = "dgx"
     family = "hgx"
+    fan_profile = "dgx-hgx"
     fan_chassis = ("DGX", "1")
 
     bootorder_system = "DGX"
@@ -28,15 +29,6 @@ class Dgx(Oem):
         rows = self._bios_rows(device, self._BIOS_EXCLUDES, sort=True)
         return [self._label(device, row) for row in rows]
 
-    def fan_control(self, device, action):
-        if action == "auto":
-            self._ipmi_raw(device, 0x3C, 0x73, 0)
-        elif action == "max":
-            self._ipmi_raw(device, 0x3C, 0x73, 0x01)
-            self._ipmi_raw(device, 0x3C, 0x74, 100)
-        else:
-            raise NotImplementedError(action)
-        return "ok"
 
     def _reseat(self, device):
         """func-dgx.sh ``power_ac_cycle``: ``Chassis/BMC`` AuxPowerReset with

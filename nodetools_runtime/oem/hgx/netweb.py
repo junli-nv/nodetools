@@ -27,14 +27,10 @@ _BIOS_BASE = {
 _BIOS_EXCLUDES = ("MAPIDS", "SETUP")
 
 
-def _duty(value):
-    """``raw 0x3a 0xd0 0x0e``-style payload repeated over the 16 fan channels."""
-    return [value] * 16
-
-
 class Netweb(Oem):
     name = "netweb"
     family = "hgx"
+    fan_profile = "netweb-hgx"
     bios_base_preset = True
     fan_chassis = ("BMC_0", "System_0")
 
@@ -44,24 +40,8 @@ class Netweb(Oem):
     bootorder_sep = ","
     bootorder_expand = False
 
-    # -- fan control (nodefan.nw) ---------------------------------------
     fan_actions = ("auto", "low", "opt", "max")
 
-    def fan_control(self, device, action):
-        if action == "auto":
-            self._ipmi_raw(device, 0x3A, 0xD0, 0x11, *_duty(0x00))
-        elif action == "low":
-            self._ipmi_raw(device, 0x3A, 0xD0, 0x11, *_duty(0x02))
-            self._ipmi_raw(device, 0x3A, 0xD0, 0x0E, *_duty(0x32))
-        elif action == "opt":
-            self._ipmi_raw(device, 0x3A, 0xD0, 0x11, *_duty(0x02))
-            self._ipmi_raw(device, 0x3A, 0xD0, 0x0E, *_duty(0x50))
-        elif action == "max":
-            self._ipmi_raw(device, 0x3A, 0xD0, 0x11, *_duty(0x02))
-            self._ipmi_raw(device, 0x3A, 0xD0, 0x0E, *_duty(0x64))
-        else:
-            raise NotImplementedError(action)
-        return "ok"
 
     # -- BIOS settings (nodebios.nw) ------------------------------------
     def bios(self, device, action):

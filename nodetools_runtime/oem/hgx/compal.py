@@ -42,6 +42,7 @@ _NVSW_RESET = {
 class Compal(Oem):
     name = "compal"
     family = "hgx"
+    fan_profile = "compal-hgx"
     bios_base_preset = True
     fan_chassis = ("Self", "1")
 
@@ -68,18 +69,6 @@ class Compal(Oem):
         data = common.resource(device, base, required=True)
         return ["{}: {}".format(device.name, common.jq(data.get("PowerState")))]
 
-    # -- fan control (nodefan.cpl) --------------------------------------
-    def fan_control(self, device, action):
-        if action == "auto":
-            self._ipmi_raw(device, 0x3C, 0x73, 0x00)
-        elif action == "max":
-            self._ipmi_raw(device, 0x3C, 0x73, 0x01)
-            self._ipmi_raw(device, 0x3C, 0x75, 0x00, 100)
-            self._ipmi_raw(device, 0x3C, 0x75, 0x01, 100)
-            self._ipmi_raw(device, 0x3C, 0x75, 0x02, 100)
-        else:
-            raise NotImplementedError(action)
-        return "ok"
 
     # -- BIOS settings (nodebios.cpl) -----------------------------------
     def bios(self, device, action):

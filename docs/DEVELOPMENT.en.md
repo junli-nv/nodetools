@@ -425,6 +425,21 @@ the exact URL. Firmware may retain the configured URL after detaching.
 Mount waits for the Redfish task and checks `Inserted`. On hardware, KR9288 mounted and ejected an NFS ISO and restored its original mount. Supermicro inserted and ejected an ISO served by Apache on standard HTTP.
 Persistent boot ordering and AUX reseat on the KR9288 remain unverified.
 
+### Command implementation by model and role
+
+| Platform | Required command coverage |
+| --- | --- |
+| HGX | Implement the applicable compute-node `node*` commands and actions for each model. |
+| NVL | For each rack design, cover compute-tray `node*`, NVSwitch `nvsw*`, and power-shelf `ps*`. |
+
+Use the OEM capability checklist below and the existing commands for each role
+to track implemented, pending, and unsupported commands or actions. Track
+hardware verification separately. For NVL, choose the implementation based on
+each rack device's own OEM, model, and management interface. Adapt generations
+or models separately when their interfaces differ, including within one OEM.
+Reuse standard Redfish, IPMI, or NVOS paths where the interface matches.
+Follow section 7 for read-only hardware validation after implementation.
+
 ### OEM capability checklist
 
 Use the original nodetools scripts as the baseline. Track compatibility per operation and model. Share standard Redfish reads, and override confirmed OEM differences in the adapter.
@@ -433,14 +448,14 @@ Use the original nodetools scripts as the baseline. Track compatibility per oper
 | --- | --- | --- |
 | BIOS | `nodebios` current values and `pending` settings | Keep existing OEM actions. Qualify individual writes, apply timing, and reboot requirements |
 | Boot | `nodebootorder` persistent order, `nodenetboot` boot and PXE data | `nodeboot` one-time override. Qualify persistent ordering and port selection by OEM |
-| Assets and firmware | `*inventory` versions, `--details` identity, compute `--gpu` | Qualify full FRU, part numbers, firmware updates, and rollback by model |
+| Assets and firmware | `*inventory` versions, `--details` identity, compute `--gpu`, `nodefru`, `nodefw show` | Qualify full FRU, part numbers, firmware updates, and rollback by model |
 | MAC and network | `nodemacs` host MACs, BMC/PXE for some legacy adapters | Extend BMC/PXE discovery, network settings, and cable diagnostics by interface |
 | Temperature, fan, PSU | `*temp`, `*fan`, `*psu`, including health | Fan control is OEM-specific. PSU and temperature are read-only |
 | Virtual media | `nodevm` status | Existing OEM mount/eject. Qualify media protocols, enable, and insert per model |
-| Logs and tasks | `*eventlog`, `*inventory --tasks` | Clear on supported adapters. Task cancellation and diagnostic bundles remain open |
+| Logs and tasks | `*eventlog`, `nodetask`, `*inventory --tasks` | Clear on supported adapters. Task cancellation and diagnostic bundles remain open |
 | Power and console | `*power` state, `nodeconsole` SOL | Qualify main power, AUX power, and BMC restart separately, including rack devices |
 | Additional legacy tools | Health monitoring, NVLink/UPHY, chassis and platform sensors | Compare thresholds, telemetry schedules, and alarms per tool |
-| Management plane | BMC identity, firmware, and health | Qualify BMC reset, user management, time, and network settings per model |
+| Management plane | `nodebmc` identity, firmware, and clock | Qualify `reset` and `time --set` per model. Extend account and network settings per model |
 
 
 `scan` also probes chassis endpoints and writes a capability map. Its cache key uses vendor, manufacturer, model, available firmware versions and explicit inventory overrides. Normal commands only read the map. With no map or `--no-cache`, they still read device identity and discover sensors live.

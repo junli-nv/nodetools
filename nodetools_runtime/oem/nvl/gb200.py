@@ -7,6 +7,7 @@ from ..base import Oem
 class Gb200(Oem):
     name = "gb200"
     family = "nvl"
+    fan_profile = "gb200-nvl"
     fan_chassis = ("Chassis_0", "BMC_0")
 
     def power(self, device, action):
@@ -17,13 +18,3 @@ class Gb200(Oem):
             if state or selected:
                 return power.host_status(device.name, state)
         return super().power(device, action)
-
-    def fan_control(self, device, action):
-        if action == "auto":
-            self._ipmi_raw(device, 0x3C, 0x73, 0)
-        elif action == "max":
-            self._ipmi_raw(device, 0x3C, 0x73, 0x01)
-            self._ipmi_raw(device, 0x3C, 0x74, 100)
-        else:
-            raise NotImplementedError(action)
-        return "ok"

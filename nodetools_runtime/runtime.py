@@ -4,7 +4,7 @@ import concurrent.futures
 import time
 from functools import lru_cache
 
-from . import caps, model, oem, scan, subjects
+from . import caps, fan_profiles, model, oem, scan, subjects
 from .caps import nvos
 from .diagnostics import debug
 from .errors import CapUnsupported, NodetoolsError
@@ -108,8 +108,25 @@ class Runner:
         action = self.options.action
         if self.capability != "fan":
             raise NodetoolsError("action not supported for capability {!r}".format(self.capability))
+        local = getattr(self.options, "fan_profiles", None)
+        dry_run = getattr(self.options, "fan_dry_run", False)
+        if local is not None:
+            profile = fan_profiles.for_model(device, local)
+            if profile is None:
+                raise CapUnsupported("no local fan profile matches the detected model")
+            if dry_run:
+                return fan_profiles.preview(profile, action)
+            fan_profiles.execute(device, profile, action)
+            return None
         if action not in module.fan_actions:
             raise NodetoolsError("invalid fan action {!r}".format(action))
+        if dry_run:
+            if module.fan_profile:
+                profile = fan_profiles.bundled()[module.fan_profile]
+                return fan_profiles.preview(profile, action)
+            if type(module).fan_control is oem.Oem.fan_control:
+                raise CapUnsupported("fan control is not supported by " + module.name)
+            return ["{} {}: OEM adapter selects the mode at execution".format(module.name, action)]
         module.fan_control(device, action)
 
     def _one(self, host):
@@ -128,7 +145,9 @@ class Runner:
             device = self._device(host)
             if self.options.action:
                 module = oem.for_device(device, self.capability)
-                self._control(device, module)
+                plan = self._control(device, module)
+                if plan is not None:
+                    return dict(self._result(host), fan_plan=plan)
                 return self._result(
                     host,
                     readings=[

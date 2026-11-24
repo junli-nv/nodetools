@@ -335,6 +335,20 @@ SYS-822GS-NB3RT 的官方 BMC `01.12.05.00` 和 BIOS `2.0` 配套 ZIP。
 BIOS 要求配套 BMC 已就绪且主机已关机。同版本重刷需要 `--reflash`。
 收到 `ACCEPTED` 后，用 `status` 确认任务完成，再用 `show` 回读版本。
 
+### IPMI 风扇预设
+
+内置固定 IPMI raw 序列集中在 `nodetools_runtime/fan-profiles.ini`，沿用已有 OEM 的
+适用范围。需要动态读取、选择模式的厂商仍走各自的 OEM 适配器。
+
+```bash
+./nodefan NODE max --dry-run
+./nodefan NODE max --fan-profiles ./local-fan-profiles.ini --dry-run
+```
+
+本地配置 `[profile:名称]` 须填写 `platform`、`oem`、`role` 和 BMC 报告的完整 `model`。
+动作如 `auto` 或 `max`，每行写一条由空格分隔的十六进制或十进制 IPMI raw 序列。
+显式选择本地文件时，目标须匹配其中的配置和动作。预览通过后，去掉 `--dry-run` 即可执行。
+
 ## 输出
 
 传感器行是 `<node>: <field>,<field>,...`，与旧脚本一致，`grep -v ,OK` 仍可用：
