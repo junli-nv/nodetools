@@ -432,10 +432,11 @@ and the [RMS compatibility list](https://docs.nvidia.com/rms/documentation/refer
 | --- | --- |
 | NVIDIA DGX B200/B300 | HGX routing. Use `Systems/DGX/SD` if active boot order is missing. |
 | HPE XD685 / XD690 HGX | Prefer iLO `Systems/1` on XD685. Discover OpenBMC resources on XD690. |
-| HPE GB200/GB300 NVL72 | Prefer `Systems/System_0`; honor inventory overrides. |
+| HPE GB200/GB300 NVL72 | `oem/nvl/hpe.py` prefers `Systems/System_0` and honors inventory overrides. |
 | Cisco UCS C880A M8 HGX B300 | Prefer `Systems/DGX` for reads. |
 | Dell XE9712 NVL | Discover AMI and iDRAC resources. Use reported identity to resolve generation. |
-| Supermicro, Wiwynn, Aivres, KAYTUS NVL | OEM and generation registration points with standard read-only discovery. |
+| Supermicro NVL | `oem/nvl/smc.py` uses standard read-only discovery. |
+| Wiwynn, Aivres, KAYTUS NVL | `oem/nvl/wiwynn.py`, `aivres.py`, and `kaytus.py` use standard read-only discovery. |
 | Wistron NVL | Existing Wistron adapter. |
 
 Aivres `KRS8000` / `KRS8000V3` are GB200 and `KRS8500V3` is GB300. Aivres and
@@ -476,9 +477,9 @@ Follow section 7 for read-only hardware validation after implementation.
 
 Use the identity reported by the PMC, or set `oem=liteon`, `oem=delta`,
 `oem=megmeet`, or `oem=flex` in inventory. Lite-On and Delta each have a
-dedicated adapter. Megmeet, Flex, and unidentified vendors use existing
-generic discovery, with fields and capabilities determined by the device
-response. Older shelves that report only NVIDIA/DGX or no known OEM retain
+dedicated adapter. Megmeet and Flex use standard discovery through
+`oem/nvl/megmeet.py` and `oem/nvl/flex.py`. Unidentified vendors use the generic
+adapter. Fields and capabilities depend on the device response. Older shelves that report only NVIDIA/DGX or no known OEM retain
 the existing read-only Delta PSU sensor fallback.
 
 For a new PMC, verify standard Redfish resources first. Register a

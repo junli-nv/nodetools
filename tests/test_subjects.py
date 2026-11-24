@@ -1365,7 +1365,9 @@ def test_powershelf_oem_recognition_uses_standard_adapter(identity, vendor):
     device = model.Device(Host("shelf", groups=["powershelf"]))
     device.identity = identity
     assert model.odm_for(device) == vendor
-    assert type(oem.for_device(device)) is RedfishDiscovery
+    adapter = oem.for_device(device)
+    assert isinstance(adapter, RedfishDiscovery)
+    assert type(adapter).__module__ == f'nodetools_runtime.oem.nvl.{vendor}'
 
 
 @pytest.mark.parametrize("pending_snc", ["Disabled", "Enabled", None])

@@ -367,10 +367,11 @@ reachable=$(./nodeping --long vdc1-pro2-t10-gpu-cp-[01-18] \
 | --- | --- |
 | NVIDIA DGX B200/B300 | 归于 HGX。活动启动顺序缺失时读取 `Systems/DGX/SD`。 |
 | HPE XD685 / XD690 HGX | XD685 优先 iLO `Systems/1`。XD690 走 OpenBMC 发现。 |
-| HPE GB200/GB300 NVL72 | 优先 `Systems/System_0`，支持 inventory 覆盖。 |
+| HPE GB200/GB300 NVL72 | `oem/nvl/hpe.py` 优先 `Systems/System_0`，支持 inventory 覆盖。 |
 | Cisco UCS C880A M8 HGX B300 | 优先读取 `Systems/DGX`。 |
 | Dell XE9712 NVL | AMI 与 iDRAC 使用标准资源发现。仅凭机型名确定平台，代际以实际报告为准。 |
-| Supermicro、Wiwynn、Aivres、KAYTUS NVL | 预留 OEM/代际注册入口。当前使用标准只读发现。 |
+| Supermicro NVL | `oem/nvl/smc.py` 使用标准只读发现。 |
+| Wiwynn、Aivres、KAYTUS NVL | `oem/nvl/wiwynn.py`、`aivres.py`、`kaytus.py` 使用标准只读发现。 |
 | Wistron NVL | 沿用现有 Wistron 适配器。 |
 
 Aivres `KRS8000` / `KRS8000V3` 为 GB200，`KRS8500V3` 为 GB300。Aivres 和
@@ -403,7 +404,8 @@ OEM、型号及接口选择实现。同一 OEM 的不同代际或机型如有接
 
 Power Shelf 的 OEM 以 PMC 报告的身份为准，必要时用 inventory 的 `oem=liteon`、
 `oem=delta`、`oem=megmeet` 或 `oem=flex` 覆盖。Lite-On 和 Delta 各用专用适配器。
-Megmeet、Flex 及未识别厂商走既有的通用发现逻辑，具体字段和能力以设备实际响应为准。
+Megmeet 和 Flex 分别在 `oem/nvl/megmeet.py` 和 `oem/nvl/flex.py` 接入通用发现。
+未识别厂商使用通用适配器，具体字段和能力以设备实际响应为准。
 旧设备未识别 OEM 或只报告 NVIDIA/DGX 时，保留现有 Delta PSU 传感器的只读回退。
 
 新增 PMC 时，先验证标准 Redfish 资源，再按需要在 `oem/__init__.py` 注册

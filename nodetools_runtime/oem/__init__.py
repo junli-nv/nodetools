@@ -14,6 +14,7 @@ from .nvl.delta import DeltaPowerShelf, legacy_psu_readings
 from .hgx.dgx import Dgx, DgxBlackwell
 from .hgx.hpe import HpeHgx
 from .nvl.gb200 import Gb200
+from .nvl.hpe import HpeNvl
 from .nvl.lenovo import LenovoNvl
 from .nvl.liteon import LiteOnPowerShelf
 from .hgx.gigabyte import Gigabyte
@@ -23,6 +24,12 @@ from .hgx.kaytus import KaytusKr9288
 from .hgx.lenovo import Lenovo
 from .hgx.netweb import Netweb
 from .hgx.smc import Smc
+from .nvl.smc import SmcNvl
+from .nvl.aivres import AivresNvl
+from .nvl.kaytus import KaytusNvl
+from .nvl.wiwynn import WiwynnNvl
+from .nvl.megmeet import MegmeetPowerShelf
+from .nvl.flex import FlexPowerShelf
 from .nvl.wistron import Wistron
 
 _MODULES = {
@@ -42,7 +49,7 @@ _MODULES = {
 }
 
 _NVL_COMPUTE = ReadOnlyCompute()
-_HPE_NVL = ReadOnlyCompute("hpe", "System_0")
+_HPE_NVL = HpeNvl()
 _DGX_BLACKWELL = DgxBlackwell()
 
 _PLATFORM_MODULES = {
@@ -54,15 +61,17 @@ _PLATFORM_MODULES = {
     ("hgx", "cisco", "compute", None): CiscoHgx(),
     ("hgx", "dgx", "compute", "b200"): _DGX_BLACKWELL,
     ("hgx", "dgx", "compute", "b300"): _DGX_BLACKWELL,
-    ("nvl", "smc", "compute", None): _NVL_COMPUTE,
-    ("nvl", "wiwynn", "compute", None): _NVL_COMPUTE,
-    ("nvl", "aivres", "compute", None): _NVL_COMPUTE,
-    ("nvl", "kaytus", "compute", None): _NVL_COMPUTE,
+    ("nvl", "smc", "compute", None): SmcNvl(),
+    ("nvl", "wiwynn", "compute", None): WiwynnNvl(),
+    ("nvl", "aivres", "compute", None): AivresNvl(),
+    ("nvl", "kaytus", "compute", None): KaytusNvl(),
 }
 
 _ROLE_MODULES = {
     ("liteon", "powershelf"): LiteOnPowerShelf(),
     ("delta", "powershelf"): DeltaPowerShelf(),
+    ("flex", "powershelf"): FlexPowerShelf(),
+    ("megmeet", "powershelf"): MegmeetPowerShelf(),
 }
 
 # Older shelves may report only the platform vendor or no vendor at all.
