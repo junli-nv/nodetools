@@ -6,12 +6,16 @@ from .hgx.aivres import Aivres
 from .hgx.ami import Ami
 from .base import Oem
 from .hgx.byd import Byd
+from .hgx.cisco import CiscoHgx
 from .hgx.compal import Compal
 from .hgx.dell import Dell
 from .nvl.dell import DellNvl
-from .hgx.dgx import Dgx
+from .nvl.delta import DeltaPowerShelf, legacy_psu_readings
+from .hgx.dgx import Dgx, DgxBlackwell
+from .hgx.hpe import HpeHgx
 from .nvl.gb200 import Gb200
 from .nvl.lenovo import LenovoNvl
+from .nvl.liteon import LiteOnPowerShelf
 from .hgx.gigabyte import Gigabyte
 from .redfish import ReadOnlyCompute, RedfishDiscovery
 from .nvl.inventec import Inventec
@@ -37,16 +41,37 @@ _MODULES = {
     "netweb": Netweb(),
 }
 
+_NVL_COMPUTE = ReadOnlyCompute()
+_HPE_NVL = ReadOnlyCompute("hpe", "System_0")
+_DGX_BLACKWELL = DgxBlackwell()
+
 _PLATFORM_MODULES = {
     ("nvl", "dell", "compute", None): DellNvl(),
     ("nvl", "lenovo", "compute", "gb300"): LenovoNvl(),
-    ("nvl", "hpe", "compute", "gb300"): ReadOnlyCompute("hpe", "System_0"),
-    ("hgx", "hpe", "compute", None): ReadOnlyCompute("hpe", family="hgx"),
+    ("nvl", "hpe", "compute", "gb200"): _HPE_NVL,
+    ("nvl", "hpe", "compute", "gb300"): _HPE_NVL,
+    ("hgx", "hpe", "compute", None): HpeHgx(),
+    ("hgx", "cisco", "compute", None): CiscoHgx(),
+    ("hgx", "dgx", "compute", "b200"): _DGX_BLACKWELL,
+    ("hgx", "dgx", "compute", "b300"): _DGX_BLACKWELL,
+    ("nvl", "smc", "compute", None): _NVL_COMPUTE,
+    ("nvl", "wiwynn", "compute", None): _NVL_COMPUTE,
+    ("nvl", "aivres", "compute", None): _NVL_COMPUTE,
+    ("nvl", "kaytus", "compute", None): _NVL_COMPUTE,
 }
+
+_ROLE_MODULES = {
+    ("liteon", "powershelf"): LiteOnPowerShelf(),
+    ("delta", "powershelf"): DeltaPowerShelf(),
+}
+
+# Older shelves may report only the platform vendor or no vendor at all.
+_POWER_SHELF_PSU_FALLBACKS = dict.fromkeys(
+    ("delta", "unknown", "nvidia", "dgx"), legacy_psu_readings
+)
 
 _GENERIC = Oem()
 _KAYTUS_KR9288 = KaytusKr9288()
-_NVL_COMPUTE = ReadOnlyCompute()
 _DISCOVERED_INFRA = RedfishDiscovery()
 
 # ODM tokens as returned by model.classify, including aliases.
@@ -66,6 +91,9 @@ def for_device(device, capability=None):
     key = (platform, odm, device.role)
     generation = model.generation_for(device)
     module = _PLATFORM_MODULES.get((*key, generation)) or _PLATFORM_MODULES.get((*key, None))
+    if module is not None:
+        return module
+    module = _ROLE_MODULES.get((odm, device.role))
     if module is not None:
         return module
     if device.role in ("nvswitch", "powershelf"):
@@ -89,6 +117,11 @@ def for_device(device, capability=None):
     if platform == "hgx" and adapter.family != "hgx":
         return _GENERIC
     return adapter
+
+
+def powershelf_psu_fallback(device):
+    reader = _POWER_SHELF_PSU_FALLBACKS.get(model.odm_for(device))
+    return reader(device) if reader else []
 
 
 def names():

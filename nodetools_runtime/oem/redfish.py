@@ -7,6 +7,7 @@ from .base import Oem
 
 
 class RedfishDiscovery(Oem):
+    _infrastructure_eventlog_actions = ("status", "bmc", "hmc")
     def _target(self, device, collection, field):
         base = "/redfish/v1/" + collection
         ident = device.vars.get(field)
@@ -41,10 +42,7 @@ class RedfishDiscovery(Oem):
         )]
 
     def infrastructure_eventlog(self, device, action):
-        allowed = ("status", "bmc", "hmc")
-        if device.role == "powershelf" and model.odm_for(device) == "liteon":
-            allowed = ("status", "clear")
-        self._require_status(device, action, allowed)
+        self._require_status(device, action, self._infrastructure_eventlog_actions)
         if device.vars.get("manager_id") or device.role == "powershelf":
             parent = self._target(device, "Managers", "manager_id")
         else:
@@ -77,9 +75,12 @@ class RedfishDiscovery(Oem):
         return self._label_lines(device, ["{} (HTTP {})".format(message, status)])
 
     def infrastructure_inventory(self, device):
+        return inventory._firmware(device, self._firmware_inventory_path(device))
+
+    def _firmware_inventory_path(self, device):
         root = common.resource(device, "/redfish/v1", required=True)
         service = common.resource(device, self._link(root, "UpdateService"), required=True)
-        return inventory._firmware(device, self._link(service, "FirmwareInventory"))
+        return self._link(service, "FirmwareInventory")
 
     @staticmethod
     def _link(resource, name):

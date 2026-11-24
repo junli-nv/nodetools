@@ -252,6 +252,20 @@ eventlog 的 BMC/HMC 带 `[BMC]`/`[HMC]` 前缀），`report.render` 检测到�
 - **hostlist 双向往返**：既要 SLURM 风格**展开**（`expand`，喂给操作），
   也要 SLURM 风格**合并**（`compact`，`list` 默认输出），且 `expand(compact(x)) == x`。
 
+### 公共框架与厂商适配
+
+- **公共层定义兼容性契约。** 命令派发、适配器基类、共享传输和数据模型构成框架。
+  已有的参数和默认值、适配器入参与返回值、输出结构、错误和回退语义都属于契约。
+  新增厂商或机型时，沿用这些接口与规范。
+- **厂商差异放在适配器。** 通过现有扩展点处理厂商专用端点、字段映射、固件差异和能力判断。
+  按平台、OEM、角色和代际注册适配器，并让实现遵循公共契约。
+  例如，Lenovo GB300 从 `BootOptions` 补充 `nodebootorder` 名称和路径的逻辑
+  放在 `oem/nvl/lenovo.py`，影响范围限于该适配器。
+- **公共接口变更须说明理由并验证兼容性。** 先说明现有扩展点为何不足，列出受影响的
+  调用方、适配器和外部行为。优先采用向后兼容的扩展。确需破坏兼容性时，明确迁移路径。
+  除验证目标机型外，还要为受影响的现有实现补充或运行回归测试，按第 7 节做代表性实机验证，
+  并记录缺少实机的组合。单一厂商的验证结果只覆盖该厂商的被测机型。
+
 ### inventory 语法与优先级
 
 ```
@@ -343,6 +357,26 @@ reachable=$(./nodeping --long vdc1-pro2-t10-gpu-cp-[01-18] \
 - [HPE HGX B300 Redfish](https://support.hpe.com/hpesc/public/docDisplay?docId=sd00007670en_us&docLocale=en_US&page=GUID-2D1518D5-6372-401B-AE97-5F40677DFD0D.html)
 - [Supermicro Redfish API](https://www.supermicro.com/en/solutions/management-software/redfish)
 
+### Blackwell 计算机型接入范围
+
+核对 [HGX 认证机型](https://docs.nvidia.com/certification-technology/certified-systems/nvidia-certified-systems/)、
+[NVL Qualified Systems](https://marketplace.nvidia.com/en-us/enterprise/qualified-system-catalog/) 和
+[RMS 管理兼容表](https://docs.nvidia.com/rms/documentation/reference/hardware-compatibility-list/)。
+
+| 机型 | 接入范围 |
+| --- | --- |
+| NVIDIA DGX B200/B300 | 归于 HGX。活动启动顺序缺失时读取 `Systems/DGX/SD`。 |
+| HPE XD685 / XD690 HGX | XD685 优先 iLO `Systems/1`。XD690 走 OpenBMC 发现。 |
+| HPE GB200/GB300 NVL72 | 优先 `Systems/System_0`，支持 inventory 覆盖。 |
+| Cisco UCS C880A M8 HGX B300 | 优先读取 `Systems/DGX`。 |
+| Dell XE9712 NVL | AMI 与 iDRAC 使用标准资源发现。仅凭机型名确定平台，代际以实际报告为准。 |
+| Supermicro、Wiwynn、Aivres、KAYTUS NVL | 预留 OEM/代际注册入口。当前使用标准只读发现。 |
+| Wistron NVL | 沿用现有 Wistron 适配器。 |
+
+Aivres `KRS8000` / `KRS8000V3` 为 GB200，`KRS8500V3` 为 GB300。Aivres 和
+KAYTUS 保留独立 OEM 标识。必要时用 `platform=`、`oem=`、`generation=`、`system_id=`
+指定设备。新路径待实机验收，写能力按第 7 节单独验证。
+
 ### HGX B300 实机接口
 
 Supermicro `SYS-822GS-NB3RT`（BMC `01.12.02.03`）使用主机机箱 `Chassis/1`，
@@ -364,6 +398,20 @@ KR9288 写入 `Bios/Settings` 时需要父 `Bios` 的 ETag。Supermicro 的介�
 待实现和设备不支持的命令或动作，并单独记录实机验证状态。NVL 按配套设备各自的
 OEM、型号及接口选择实现。同一 OEM 的不同代际或机型如有接口差异，分别适配。
 接口一致时复用标准 Redfish、IPMI 或 NVOS 路径。实现后按第 7 节完成只读实机验收。
+
+### Power Shelf PMC 接入
+
+Power Shelf 的 OEM 以 PMC 报告的身份为准，必要时用 inventory 的 `oem=liteon`、
+`oem=delta`、`oem=megmeet` 或 `oem=flex` 覆盖。Lite-On 和 Delta 各用专用适配器。
+Megmeet、Flex 及未识别厂商走既有的通用发现逻辑，具体字段和能力以设备实际响应为准。
+旧设备未识别 OEM 或只报告 NVIDIA/DGX 时，保留现有 Delta PSU 传感器的只读回退。
+
+新增 PMC 时，先验证标准 Redfish 资源，再按需要在 `oem/__init__.py` 注册
+平台/代际适配器或 OEM/角色适配器。专用 PSU 读取在 OEM 回退表注册。
+记录 PMC 型号、固件和实际接口，保留 `ps*` 命令契约。写操作需单独验证。
+Delta 的固件清单回退有公开文档依据，Delta、Megmeet、Flex 仍待本站实机验证。
+
+[NVIDIA Power Shelf 厂商与机型资料](https://docs.nvidia.com/multi-node-nvlink-systems/nvfupd-guide/examples/powershelf.html)
 
 ### OEM 能力清单
 
@@ -557,8 +605,6 @@ NVSwitch 和 Power Shelf 选至少一台代表设备，各跑一遍适用的只�
 
 - B200/B300（BXX 普通 HGX 机型）**本期未做**；BXX 只需 `node*` 前缀，后续加 BXX 的
   命名/来源与对应阶梯即可。
-- powershelf ODM 目前多归为 `unknown`（Delta 电源），只在内部影响控制动作，不影响
-  读 psu。
 - `Switch` 组里非 `-gpu-nvl-` 的交换机暂归 `switch` 组，尚无对应能力（无 `nvsw*`
   命令命中）。
 - 控制动作（`--action`）只覆盖已确证的几条 IPMI raw / Redfish PATCH / racadm；

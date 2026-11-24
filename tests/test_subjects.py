@@ -374,6 +374,36 @@ def test_bootorder_dell_two_fields():
     assert bootorder.collect(device, None, None) == ["cp-01: Boot0001,NIC PXE"]
 
 
+def test_lenovo_nvl_bootorder_resolves_names_and_preserves_unknown_references():
+    from nodetools_runtime.oem.nvl.lenovo import LenovoNvl
+
+    system = "/redfish/v1/Systems/System_0"
+    options = system + "/BootOptions"
+    rf = FakeRedfish({
+        system: {
+            "Boot": {
+                "BootOrder": ["Boot0002", "Boot000A", "Boot0001"],
+                "BootOptions": {"@odata.id": options},
+            },
+        },
+        options: {"Members": [
+            {"@odata.id": options + "/1"},
+            {"@odata.id": options + "/7"},
+        ]},
+        options + "/1": {"Id": "1", "DisplayName": "UEFI Shell"},
+        options + "/7": {
+            "Id": "7", "BootOptionReference": "Boot0002", "DisplayName": "UEFI PXE IPv4",
+            "UefiDevicePath": "PciRoot(0x0)/MAC(A088C2123456,0x1)/IPv4()",
+        },
+    })
+    device = _device(redfish=rf, odm=LenovoNvl())
+    assert bootorder.collect(device, None, None) == [
+        "cp-01: Boot0002  UEFI PXE IPv4  PciRoot(0x0)/MAC(A088C2123456,0x1)/IPv4()",
+        "cp-01: Boot000A",
+        "cp-01: Boot0001  UEFI Shell",
+    ]
+
+
 # -- macs ------------------------------------------------------------------
 def test_macs_base_os_and_bmc():
     expand = "/redfish/v1/Systems/system/BootOptions?$expand=."
@@ -972,6 +1002,70 @@ def test_documented_redfish_power_state_routes(maker, product, ident):
     assert not device.ipmi.calls
 
 
+@pytest.mark.parametrize("maker, product, ident, discover", [
+    ("HPE", "ProLiant Compute XD685", "1", False),
+    ("Cisco", "UCSC-C880A-M8", "DGX", False),
+    ("HPE", "Compute XD690", "XD690-host", True),
+    ("HPE", "GB200 NVL72", "System_0", False),
+    ("HPE", "GB300 NVL72", "System_0", False),
+    ("Dell Inc.", "PowerEdge XE9712", "System_0", True),
+    ("Dell Inc.", "PowerEdge XE9712", "System.Embedded.1", True),
+    ("Supermicro", "SRS-GB300-NVL72", "TrayA", True),
+    ("Wiwynn", "GB200 NVL72", "TrayB", True),
+    ("Aivres", "KRS8000V3", "TrayC", True),
+    ("Aivres", "KRS8500V3", "TrayD", True),
+    ("KAYTUS", "GB300 NVL72", "TrayE", True),
+])
+def test_partner_compute_power_uses_platform_specific_read_routes(maker, product, ident, discover):
+    systems = "/redfish/v1/Systems"
+    host = systems + "/" + ident
+    members = [{"@odata.id": host}]
+    if not discover:
+        members.insert(0, {"@odata.id": systems + "/GPU-baseboard"})
+    rf = FakeRedfish({systems: {"Members": members}, host: {"PowerState": "On"}})
+    device = _device(redfish=rf)
+    device.identity = {"manufacturer": maker, "model": product}
+    device.odm = oem.for_device(device)
+    assert power.collect(device, "status", None) == ["cp-01: On"]
+    assert not rf.posts and not rf.patches and not device.ipmi.calls
+
+
+def test_wistron_nvl_retains_its_existing_adapter():
+    from nodetools_runtime.oem.nvl.wistron import Wistron
+
+    device = _device()
+    device.identity = {"manufacturer": "Wistron", "model": "GB300 NVL72"}
+    adapter = oem.for_device(device, "fan")
+    assert isinstance(adapter, Wistron)
+    assert adapter.fan_profile == "wistron-nvl"
+
+
+@pytest.mark.parametrize("product", ["DGX B200", "DGX B300"])
+def test_dgx_blackwell_bootorder_uses_active_order_before_settings(product):
+    system = "/redfish/v1/Systems/DGX"
+    options = system + "/BootOptions"
+    active = system + "?$select=Boot/BootOrder"
+    rf = FakeRedfish({
+        options: {
+            "Members": [
+                {"Id": "0004", "DisplayName": "Local disk", "UefiDevicePath": "disk"},
+                {"Id": "000F", "DisplayName": "PXE IPv4", "UefiDevicePath": "network"},
+            ],
+        },
+        active: {"Boot": {}},
+        system + "/SD": {"Boot": {"BootOrder": ["Boot000F", "Boot0004"]}},
+    })
+    device = _device(redfish=rf)
+    device.identity = {"manufacturer": "NVIDIA", "model": product}
+    device.odm = oem.for_device(device)
+    assert bootorder.collect(device, None, None) == [
+        "cp-01: 000F,PXE IPv4,network", "cp-01: 0004,Local disk,disk",
+    ]
+    rf.data[active]["Boot"]["BootOrder"] = ["Boot0004", "Boot000F"]
+    assert bootorder.collect(device, None, None)[0] == "cp-01: 0004,Local disk,disk"
+    assert not rf.posts and not rf.patches
+
+
 def test_generic_nvl_reads_boot_bios_and_macs():
     system = "/redfish/v1/Systems/OEM-Tray"
     rf = FakeRedfish({
@@ -1197,7 +1291,10 @@ def test_liteon_psu_inventory_uses_hardware_ids_when_software_records_lack_versi
     manager = firmware + "/FW_PMC"
     supplies = "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies"
     module = supplies + "/5"
+    update_service = "/redfish/v1/UpdateService"
     rf = FakeRedfish({
+        "/redfish/v1": {"UpdateService": {"@odata.id": update_service}},
+        update_service: {"FirmwareInventory": {"@odata.id": firmware}},
         firmware: {"Members": [{"@odata.id": missing}, {"@odata.id": manager}]},
         missing: {"Id": "FW_PSU_6", "Version": "null"},
         manager: {"Id": "FW_PMC", "Version": "3.2.9"},
@@ -1206,17 +1303,69 @@ def test_liteon_psu_inventory_uses_hardware_ids_when_software_records_lack_versi
     })
     host = Host("shelf", groups=["powershelf"], variables={"oem": "liteon"})
     device = model.Device(host, lambda _: rf)
+    device.odm = oem.for_device(device)
 
     traced = []
     rf.debug_label = host.name
     rf.trace_source = lambda *args: traced.append(args)
-    rows = inventory._firmware(device)
+    rows = inventory.collect(device, None, None)
     assert traced == [("FW_PMC", manager, "Version"), ("PSU_5", module, "FirmwareVersion")]
     assert [line.split() for line in rows] == [
         ["shelf:", "FW_PMC", "3.2.9"], ["shelf:", "PSU_5", "0x1", "/", "0x1"],
     ]
+    generic = model.Device(Host("generic", groups=["powershelf"]), lambda _: rf)
+    generic.odm = oem.for_device(generic)
+    assert inventory.collect(generic, None, None)[0].split() == ["generic:", "FW_PSU_6", "null"]
+
     del rf.data[supplies]
-    assert inventory._firmware(device)[0].split() == ["shelf:", "FW_PSU_6", "N/A"]
+    assert inventory.collect(device, None, None)[0].split() == ["shelf:", "FW_PSU_6", "N/A"]
+
+
+def test_delta_powershelf_uses_documented_read_only_inventory_fallback():
+    from nodetools_runtime.errors import CapUnsupported
+
+    manager = "/redfish/v1/Managers/PMC_0"
+    supplies = "/redfish/v1/Chassis/chassis/PowerSubsystem/PowerSupplies"
+    supply = supplies + "/1"
+    service = "/redfish/v1/UpdateService"
+    firmware = service + "/FirmwareInventory"
+    standard = firmware + "/FW_PMC_primary"
+    rf = FakeRedfish({
+        "/redfish/v1": {"UpdateService": {"@odata.id": service}},
+        service: {},
+        manager: {"Id": "PMC_0", "FirmwareVersion": "3.2.4"},
+        supplies: {"Members": [{"@odata.id": supply}]},
+        supply: {"Id": "1", "FirmwareVersion": "01050105"},
+    })
+    device = model.Device(Host("shelf", groups=["powershelf"]), lambda _: rf)
+    device.identity = {"manufacturer": "Delta Electronics"}
+    device.odm = oem.for_device(device)
+    assert inventory.collect(device, None, None) == [
+        "shelf: PMC_0  3.2.4",
+        "shelf: PSU_1  01050105",
+    ]
+    with pytest.raises(CapUnsupported, match="no verified"):
+        eventlog.collect(device, "clear", None)
+    assert not rf.posts
+
+    rf.data[service]["FirmwareInventory"] = {"@odata.id": firmware}
+    rf.data[firmware] = {"Members": [{"@odata.id": standard}]}
+    rf.data[standard] = {"Id": "FW_PMC_primary", "Version": "3.2.3"}
+    assert inventory.collect(device, None, None) == ["shelf: FW_PMC_primary  3.2.3"]
+
+
+@pytest.mark.parametrize("identity, vendor", [
+    ({"manufacturer": "Megmeet"}, "megmeet"),
+    ({"manufacturer": "Flex"}, "flex"),
+    ({"model": "NVD-P-0000ADT00"}, "flex"),
+])
+def test_powershelf_oem_recognition_uses_standard_adapter(identity, vendor):
+    from nodetools_runtime.oem.redfish import RedfishDiscovery
+
+    device = model.Device(Host("shelf", groups=["powershelf"]))
+    device.identity = identity
+    assert model.odm_for(device) == vendor
+    assert type(oem.for_device(device)) is RedfishDiscovery
 
 
 @pytest.mark.parametrize("pending_snc", ["Disabled", "Enabled", None])

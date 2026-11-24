@@ -8,6 +8,7 @@ from .config import ROLE_GROUPS
 # "nvidia" strings on a GB200 tray do not shadow an ODM reading.
 SIGNATURES = (
     ("dell", ("dell",)),
+    ("cisco", ("cisco", "ucs c880a m8", "ucsc-c880a-m8")),
     ("lenovo", ("lenovo",)),
     ("smc", ("supermicro", "super micro")),
     ("gigabyte", ("gigabyte", "giga-byte")),
@@ -16,6 +17,8 @@ SIGNATURES = (
     ("hpe", ("hewlett packard enterprise", "hpe")),
     ("liteon", ("lite-on", "liteon", "lite on")),
     ("delta", ("delta electronics", "delta")),
+    ("megmeet", ("megmeet", "mpsc6000-mcu")),
+    ("flex", ("flextronics", "flex power shelf", "flex powershelf", "nvd-p-0000adt00")),
     ("inventec", ("inventec",)),
     ("byd", ("byd",)),
     ("aivres", ("aivres",)),
@@ -106,9 +109,15 @@ _GENERATION = re.compile(r"\b(gb|b)[ _-]?(200|300)\b", re.I)
 
 
 _MODEL_GENERATIONS = {
+    ("cisco", "UCS C880A M8"): "b300",
+    ("cisco", "UCS C880A M8 RACK SERVER"): "b300",
+    ("cisco", "UCSC-C880A-M8"): "b300",
     ("lenovo", "HG635N_V2"): "gb300",
     ("kaytus", "KR9288-X3-A0-F0-01"): "b300",
     ("aivres", "KR9288-X3-A0-F0-01"): "b300",
+    ("aivres", "KRS8000"): "gb200",
+    ("aivres", "KRS8000V3"): "gb200",
+    ("aivres", "KRS8500V3"): "gb300",
     ("smc", "SYS-822GS-NB3RT"): "b300",
 }
 
@@ -129,6 +138,19 @@ def generation_for(device):
     return _MODEL_GENERATIONS.get((odm_for(device), product), "unknown")
 
 
+# Platform-only aliases for product names that omit the accelerator generation.
+_MODEL_PLATFORMS = {
+    ("hpe", "XD685"): "hgx",
+    ("hpe", "XD690"): "hgx",
+    ("hpe", "PROLIANT COMPUTE XD685"): "hgx",
+    ("hpe", "HPE PROLIANT COMPUTE XD685"): "hgx",
+    ("hpe", "COMPUTE XD690"): "hgx",
+    ("hpe", "HPE COMPUTE XD690"): "hgx",
+    ("dell", "XE9712"): "nvl",
+    ("dell", "POWEREDGE XE9712"): "nvl",
+}
+
+
 def platform_for(device):
     override = (getattr(device, "vars", {}) or {}).get("platform", "").strip().lower()
     if override:
@@ -141,7 +163,11 @@ def platform_for(device):
     generation = generation_for(device)
     if generation != "unknown":
         return "nvl" if generation.startswith("gb") else "hgx"
-    family = platform_family(hardware_identity(device), getattr(device, "name", ""))
+    identity = hardware_identity(device)
+    product = str(identity.get("model") or "").strip().upper()
+    family = _MODEL_PLATFORMS.get((odm_for(device), product)) or platform_family(
+        identity, getattr(device, "name", "")
+    )
     if family == "unknown" and getattr(device, "role", None) in ("nvswitch", "powershelf"):
         return "nvl"
     return family
@@ -155,6 +181,11 @@ def odm_for(device):
             raise ValueError("Unsupported inventory OEM: " + override)
         return override
     identity = hardware_identity(device)
+    if getattr(device, "role", None) == "powershelf" and any(
+        str(identity.get(field) or "").strip().casefold() == "flex"
+        for field in ("manufacturer", "vendor")
+    ):
+        return "flex"
     detected = classify(identity)
     if detected != "unknown":
         return detected

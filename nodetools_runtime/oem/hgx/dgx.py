@@ -1,7 +1,9 @@
 """NVIDIA DGX (HGX) system."""
 
+import json
+
 from ...subjects import common
-from ..base import FIRMWARE, Oem, _body_lines
+from ..base import FIRMWARE, Oem, _body_lines, _jq_r
 
 _BIOS = "/redfish/v1/Systems/DGX/LogServices/BIOS"
 _HGX = "/redfish/v1/Systems/HGX_Baseboard_0/LogServices/EventLog"
@@ -66,3 +68,14 @@ class Dgx(Oem):
             for item in ami.get("FirmwareInventory") or []
         ]
         return ["{}: {}".format(device.name, row) for row in rows]
+
+
+class DgxBlackwell(Dgx):
+    def _boot_order(self, device, quoted=False):
+        system = "/redfish/v1/Systems/DGX"
+        active = common.resource(device, system + "?$select=Boot/BootOrder")
+        order = (active.get("Boot") or {}).get("BootOrder")
+        if order is None:
+            settings = common.resource(device, system + "/SD", required=True)
+            order = (settings.get("Boot") or {}).get("BootOrder")
+        return [json.dumps(item) if quoted else _jq_r(item) for item in order or []]

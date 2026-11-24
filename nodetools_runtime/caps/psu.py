@@ -183,35 +183,6 @@ def _from_sensors(device):
     return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 
-def _from_delta_all_sensors(device):
-    rf = device.redfish
-
-    def scan(cid):
-        data = rf.get(
-            "/redfish/v1/Chassis/{}/Oem/deltaenergysystems/AllSensors".format(cid)
-        )
-        if not isinstance(data, dict):
-            return []
-        out = []
-        for sensor in data.get("Sensors", []) or []:
-            dtype = (sensor.get("ReadingType") or "").lower()
-            name = (sensor.get("DeviceName") or sensor.get("SensorName") or "").lower()
-            if "power" not in dtype and not any(h in name for h in _PSU_NAME_HINTS):
-                continue
-            out.append(
-                common.reading(
-                    sensor.get("SensorName") or sensor.get("DeviceName"),
-                    sensor.get("DeviceName"),
-                    common.num(sensor.get("Reading")),
-                    sensor.get("State") or "Unknown",
-                )
-            )
-        return out
-
-    chassis = common.chassis_list(device, DEFAULT_CHASSIS)
-    return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
-
-
 def _from_ipmi(device):
     if not device.ipmi:
         return []
@@ -224,7 +195,9 @@ def _from_ipmi(device):
 def collect(device):
     steps = [("power_supplies", lambda: _from_power_supplies(device))]
     if device.role == "powershelf":
-        steps.append(("delta_all_sensors", lambda: _from_delta_all_sensors(device)))
+        from ..oem import powershelf_psu_fallback
+
+        steps.append(("powershelf_oem", lambda: powershelf_psu_fallback(device)))
     steps += [
         ("sensors", lambda: _from_sensors(device)),
         ("ipmi", lambda: _from_ipmi(device)),

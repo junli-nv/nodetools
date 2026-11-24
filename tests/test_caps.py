@@ -1,3 +1,5 @@
+import pytest
+
 from nodetools_runtime import model
 from nodetools_runtime.caps import common, fan, inlet, psu, temp
 from nodetools_runtime.inventory import Host
@@ -131,6 +133,31 @@ def test_psu_delta_state():
     }
     readings = psu.collect(_device(data, role="powershelf", chassis=("PowerShelf_0",)))
     assert readings[0]["health"] == "On"
+
+
+@pytest.mark.parametrize("oem_name, expects_delta", [
+    ("delta", True), ("unknown", True), ("nvidia", True),
+    ("liteon", False), ("megmeet", False), ("flex", False),
+])
+def test_powershelf_psu_oem_fallback_is_scoped(oem_name, expects_delta):
+    chassis = "PowerShelf_0"
+    endpoint = "/redfish/v1/Chassis/" + chassis + "/Oem/deltaenergysystems/AllSensors"
+    device = _device({
+        endpoint: {"Sensors": [{"SensorName": "PSU 1", "Reading": 150}]},
+    }, role="powershelf", chassis=(chassis,))
+    device.vars["oem"] = oem_name
+    device.vars["chassis_id"] = chassis
+    get = device.redfish.get
+    requested = []
+
+    def record(path):
+        requested.append(path)
+        return get(path)
+
+    device.redfish.get = record
+    rows = psu.collect(device)
+    assert (endpoint in requested) is expects_delta
+    assert [row["value"] for row in rows] == ([150] if expects_delta else [])
 
 
 def test_enumerate_sensors_skips_when_not_expandable():

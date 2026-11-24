@@ -298,6 +298,26 @@ before the info-command check). `console.py` depends only on `transport` and
   operations) and SLURM-style **compact** (`compact`, the default `list`
   output), with `expand(compact(x)) == x`.
 
+### Shared framework and vendor adapters
+
+- **The shared layer defines the compatibility contract.** Command dispatch,
+  adapter base classes, shared transports, and data models form the framework.
+  The contract covers existing arguments and defaults, adapter inputs and return
+  values, output structure, error semantics, and fallback behavior. Follow these
+  interfaces and conventions when adding a vendor or model.
+- **Keep vendor-specific behavior in the adapter.** Use existing extension points
+  for vendor endpoints, field mapping, firmware differences, and capability checks.
+  Register adapters by platform, OEM, role, and generation, and follow the shared
+  contract. For example, Lenovo GB300 enriches `nodebootorder` with names and paths
+  from `BootOptions` in `oem/nvl/lenovo.py`, within that adapter's scope.
+- **Justify shared interface changes and verify compatibility.** Explain why the
+  existing extension points are insufficient. Identify affected callers, adapters,
+  and external behavior. Prefer backward-compatible extensions. For an unavoidable
+  breaking change, document the migration path. Test the target model, add or run
+  regression tests for affected existing implementations, and validate representative
+  hardware as described in section 7. Record cases where hardware is unavailable.
+  Results from one vendor apply to the models tested for that vendor.
+
 ### inventory syntax and precedence
 
 ```
@@ -402,6 +422,27 @@ Public BMC interface references
 - [HPE HGX B300 Redfish](https://support.hpe.com/hpesc/public/docDisplay?docId=sd00007670en_us&docLocale=en_US&page=GUID-2D1518D5-6372-401B-AE97-5F40677DFD0D.html)
 - [Supermicro Redfish API](https://www.supermicro.com/en/solutions/management-software/redfish)
 
+### Blackwell compute model coverage
+
+Cross-reference [HGX Certified Systems](https://docs.nvidia.com/certification-technology/certified-systems/nvidia-certified-systems/),
+[NVL Qualified Systems](https://marketplace.nvidia.com/en-us/enterprise/qualified-system-catalog/),
+and the [RMS compatibility list](https://docs.nvidia.com/rms/documentation/reference/hardware-compatibility-list/).
+
+| Model | Implementation |
+| --- | --- |
+| NVIDIA DGX B200/B300 | HGX routing. Use `Systems/DGX/SD` if active boot order is missing. |
+| HPE XD685 / XD690 HGX | Prefer iLO `Systems/1` on XD685. Discover OpenBMC resources on XD690. |
+| HPE GB200/GB300 NVL72 | Prefer `Systems/System_0`; honor inventory overrides. |
+| Cisco UCS C880A M8 HGX B300 | Prefer `Systems/DGX` for reads. |
+| Dell XE9712 NVL | Discover AMI and iDRAC resources. Use reported identity to resolve generation. |
+| Supermicro, Wiwynn, Aivres, KAYTUS NVL | OEM and generation registration points with standard read-only discovery. |
+| Wistron NVL | Existing Wistron adapter. |
+
+Aivres `KRS8000` / `KRS8000V3` are GB200 and `KRS8500V3` is GB300. Aivres and
+KAYTUS keep separate OEM identities. Use `platform=`, `oem=`, `generation=`,
+and `system_id=` where needed. Hardware validation is pending for the new
+paths. Verify writes separately per section 7.
+
 ### HGX B300 hardware interfaces
 
 Supermicro `SYS-822GS-NB3RT` (BMC `01.12.02.03`) uses `Chassis/1` for host PSUs.
@@ -430,6 +471,24 @@ each rack device's own OEM, model, and management interface. Adapt generations
 or models separately when their interfaces differ, including within one OEM.
 Reuse standard Redfish, IPMI, or NVOS paths where the interface matches.
 Follow section 7 for read-only hardware validation after implementation.
+
+### Adding a power-shelf PMC
+
+Use the identity reported by the PMC, or set `oem=liteon`, `oem=delta`,
+`oem=megmeet`, or `oem=flex` in inventory. Lite-On and Delta each have a
+dedicated adapter. Megmeet, Flex, and unidentified vendors use existing
+generic discovery, with fields and capabilities determined by the device
+response. Older shelves that report only NVIDIA/DGX or no known OEM retain
+the existing read-only Delta PSU sensor fallback.
+
+For a new PMC, verify standard Redfish resources first. Register a
+platform/generation or OEM/role adapter in `oem/__init__.py` when needed,
+and register specialized PSU readers in the OEM fallback table. Record the
+PMC model, firmware, and resources, and preserve the `ps*` command contract.
+Qualify writes separately. Delta's inventory fallback follows public
+documentation. Delta, Megmeet, and Flex are pending site hardware validation.
+
+[NVIDIA PowerShelf vendors and models](https://docs.nvidia.com/multi-node-nvlink-systems/nvfupd-guide/examples/powershelf.html)
 
 ### OEM capability checklist
 
@@ -651,8 +710,6 @@ Mark cases without hardware as pending real-hardware validation.
 
 - B200/B300 (BXX ordinary HGX machines) are **not done in this phase**; BXX only
   needs the `node*` prefix, so add its naming/source and matching ladders later.
-- The powershelf ODM is currently mostly `unknown` (Delta PSU); this only
-  affects control actions internally, not psu reading.
 - Non-`-gpu-nvl-` switches in the `Switch` group are classified as `switch` for
   now, with no matching capability (no `nvsw*` command hits them).
 - Control actions (`--action`) cover only the confirmed IPMI raw / Redfish PATCH
