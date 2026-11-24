@@ -405,6 +405,49 @@ def test_lenovo_nvl_bootorder_resolves_names_and_preserves_unknown_references():
 
 
 # -- macs ------------------------------------------------------------------
+def test_lenovo_nvl_macs_reports_vendor_model_and_link_from_linked_hardware():
+    from nodetools_runtime.oem.nvl.lenovo import LenovoNvl
+
+    system = "/redfish/v1/Systems/System_0"
+    links = system + "/EthernetInterfaces"
+    root = "/redfish/v1/Chassis/Chassis_0"
+    function = root + "/NetworkAdapters/nic/NetworkDeviceFunctions/0"
+    port = root + "/NetworkAdapters/nic/Ports/0"
+    card = root + "/PCIeDevices/1"
+    pci = card + "/PCIeFunctions/0"
+    address = "02:00:00:00:00:0A"
+    rf = FakeRedfish({
+        system: {"EthernetInterfaces": {"@odata.id": links}},
+        links: {"Members": [
+            {"Id": "EthernetInterface0", "MACAddress": address,
+             "LinkStatus": "LinkUp", "Links": {"NetworkDeviceFunction": {"@odata.id": function}}},
+            {"Id": "VirtualEthernetInterface3", "MACAddress": "02:00:00:00:00:03",
+             "LinkStatus": "LinkUp", "SpeedMbps": None},
+        ]},
+        function: {"Ethernet": {"PermanentMACAddress": address.lower()}, "Links": {
+            "PhysicalNetworkPortAssignment": {"@odata.id": port},
+            "PCIeFunction": {"@odata.id": pci},
+        }},
+        port: {"PhysicalPortNumber": 0, "LinkStatus": "LinkDown", "CurrentSpeedGbps": 100},
+        pci: {"VendorId": "0x15B3", "DeviceId": "0xA2DC", "Links": {"PCIeDevice": {"@odata.id": card}}},
+        card: {"PartNumber": "900-9D3B6-00CN-PA0  "},
+    })
+    device = _device(redfish=rf, odm=LenovoNvl())
+    rows = macs.collect(device, None, None)
+    assert rows == [
+        f"cp-01: EthernetInterface0,{address}  vendor=NVIDIA  model=NVIDIA BlueField-3  "
+        "link=LinkDown  speed=100 Gbps  port=0  part=900-9D3B6-00CN-PA0",
+        "cp-01: VirtualEthernetInterface3,02:00:00:00:00:03  vendor=N/A  "
+        "model=Virtual Ethernet  link=LinkUp  speed=N/A  port=N/A",
+    ]
+
+    rf.data[function]["Ethernet"]["PermanentMACAddress"] = "02:00:00:00:00:09"
+    assert macs.collect(device, None, None)[0] == (
+        f"cp-01: EthernetInterface0,{address}  vendor=N/A  model=N/A  "
+        "link=LinkUp  speed=N/A  port=N/A"
+    )
+
+
 def test_macs_base_os_and_bmc():
     expand = "/redfish/v1/Systems/system/BootOptions?$expand=."
     bmc = "/redfish/v1/Managers/BMC_0/EthernetInterfaces"

@@ -1,7 +1,9 @@
 """Lenovo HG635N_V2 Redfish adapter."""
 
+from functools import lru_cache
+
 from ...errors import CapUnsupported
-from ...subjects import boot_nics, netboot
+from ...subjects import boot_nics, common, netboot
 from ..redfish import ReadOnlyCompute
 
 
@@ -42,3 +44,72 @@ class LenovoNvl(ReadOnlyCompute):
 
         rows = ["  ".join([str(item), *options.get(netboot.reference(item), [])]) for item in order]
         return self._label_lines(device, rows)
+
+    def macs(self, device, action):
+        system = self._system(device)
+        interfaces = common.entries(device, self._link(system, "EthernetInterfaces"))
+
+        @lru_cache(maxsize=None)
+        def read(path):
+            return common.resource(device, path) if path else {}
+
+        rows = []
+        for iface in interfaces:
+            address = iface.get("MACAddress") or iface.get("PermanentMACAddress")
+            if not address:
+                continue
+            ident = iface.get("Id") or iface.get("Name") or "-"
+            function = read(boot_nics.linked(iface, "NetworkDeviceFunction"))
+            iface_macs = boot_nics.addresses(iface)
+            function_macs = boot_nics.addresses(function)
+            if iface_macs and function_macs and iface_macs.isdisjoint(function_macs):
+                function = {}
+
+            port = read(boot_nics.linked(function, "PhysicalNetworkPortAssignment")
+                        or boot_nics.linked(function, "PhysicalPortAssignment"))
+            link = port.get("LinkStatus") or iface.get("LinkStatus")
+            speed = _nic_speed(port, iface)
+            port_name = port.get("PhysicalPortNumber")
+            if port_name is None:
+                port_name = port.get("Id") or port.get("Name") or "N/A"
+
+            part = None
+            if str(ident).lower().startswith("virtual"):
+                vendor, model = "N/A", "Virtual Ethernet"
+            else:
+                pci = read(boot_nics.linked(function, "PCIeFunction"))
+                card = read(boot_nics.linked(pci, "PCIeDevice"))
+                vendor, model = _nic_identity(pci, card)
+                part = str(card.get("PartNumber") or "").strip()
+
+            row = (f"{ident},{address}  vendor={vendor}  model={model}  "
+                   f"link={link or 'N/A'}  speed={speed}  port={port_name}")
+            rows.append(row + (f"  part={part}" if part else ""))
+        return self._label_lines(device, rows)
+
+
+def _nic_identity(pci, card):
+    vendor_id = str(pci.get("VendorId") or "").strip().lower().removeprefix("0x")
+    device_id = str(pci.get("DeviceId") or "").strip().lower().removeprefix("0x")
+    manufacturer = str(card.get("Manufacturer") or "").strip()
+    vendor = {"15b3": "NVIDIA", "8086": "Intel"}.get(vendor_id) or manufacturer
+    model = str(card.get("Model") or "").strip()
+    if not model:
+        kind = boot_nics.product(pci=pci)
+        if kind:
+            family = {"bf": "BlueField-", "cx": "ConnectX-"}[kind[:2]]
+            model = "NVIDIA " + family + kind[2:]
+        elif (vendor_id, device_id) == ("8086", "1533"):
+            model = "Intel I210"
+    return vendor or "N/A", model or "N/A"
+
+
+def _nic_speed(port, iface):
+    for value, unit in (
+        (port.get("CurrentSpeedGbps"), "Gbps"),
+        (port.get("CurrentLinkSpeedMbps"), "Mbps"),
+        (iface.get("SpeedMbps"), "Mbps"),
+    ):
+        if isinstance(value, (int, float)) and value > 0:
+            return f"{value:g} {unit}"
+    return "N/A"
