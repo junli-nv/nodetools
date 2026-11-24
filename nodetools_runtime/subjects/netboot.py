@@ -1,6 +1,6 @@
 """Discover PXE ports and plan persistent per-port boot priorities."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import re
 import time
 
@@ -69,7 +69,10 @@ class Entry:
     fields: dict
 
     def matches(self, filters, family):
-        if family and self.family != family:
+        if family == "all":
+            if self.family not in ("ipv4", "ipv6"):
+                return False
+        elif family and self.family != family:
             return False
         for field, expected in filters.items():
             if field == "uefi_path":
@@ -116,15 +119,19 @@ def options_for(device, path, system, adapters, required):
     boot = system.get("Boot") or {}
     collection = nics.local_link(system.get("BootOptions") or boot.get("BootOptions")) or path + "/BootOptions"
     options = []
+    names = {}
     for _, item in nics.members(device, collection, required=required):
+        key = item.get("BootOptionReference") or item.get("Id")
+        name = str(item.get("DisplayName") or "")
+        if key and name:
+            names[reference(key)] = name
         if item.get("BootOptionEnabled") is False:
             continue
-        key = item.get("BootOptionReference") or item.get("Id")
-        row = entry(str(key or ""), str(item.get("DisplayName") or ""),
+        row = entry(str(key or ""), name,
                     str(item.get("UefiDevicePath") or ""), adapters)
         if key and row:
             options.append(row)
-    return options
+    return options, names
 
 
 def standard_order(device, system, target, path):
@@ -169,10 +176,13 @@ class Plan:
     system: str
     before: dict
     after: dict
-    lines: list
+    entries: dict
+    matched: set
+    names: dict = field(default_factory=dict)
+    notes: list = field(default_factory=list)
 
 
-def preferences(device, path, system, fixed, options, adapters, filters, family, action):
+def preferences(device, path, system, fixed, options, adapters, filters, family, action, names=None):
     if fixed and isinstance(fixed.get("UEFINetwork"), list):
         groups, order = fixed.get("FixedBootOrder"), fixed["UEFINetwork"]
         rows = list(smc_entries(order, options, adapters))
@@ -185,7 +195,7 @@ def preferences(device, path, system, fixed, options, adapters, filters, family,
         after = {"FixedBootOrder": network_before_disk(groups),
                  "UEFINetwork": stable_first(order, {int(row.key) - 1 for row in selected})}
         return Plan(path + SMC_ORDER, path, before, after,
-                    ["BBS preference: " + row.display() for row in selected])
+                    {row.label: row for row in rows}, {row.label for row in selected})
 
     settings = (system.get("@Redfish.Settings") or {}).get("SettingsObject")
     target = nics.local_link(settings) if settings else path
@@ -206,7 +216,7 @@ def preferences(device, path, system, fixed, options, adapters, filters, family,
     before = {"BootOrder": order}
     after = {"BootOrder": stable_first(order, {rank[key] for key in keys})}
     return Plan(target, path, before, after,
-                ["BootOrder preference: " + row.display() for row in selected])
+                {reference(row.key): row for row in options}, set(keys), names or {})
 
 
 def collect(device, action, options):
@@ -234,12 +244,12 @@ def collect(device, action, options):
             rows = [row.display() for row in entries if row and row.matches(filters, family)]
             return label(device, rows or ["No matching PXE entries"])
     have_bbs = isinstance(fixed.get("UEFINetwork"), list)
-    rows = options_for(device, path, system, adapters, required=not have_bbs)
-    result = preferences(device, path, system, fixed, rows, adapters, filters, family, action)
+    rows, names = options_for(device, path, system, adapters, required=not have_bbs)
+    result = preferences(device, path, system, fixed, rows, adapters, filters, family, action, names)
     if isinstance(result, Plan):
         state = system.get("Boot") or {}
         if state.get("BootSourceOverrideEnabled") in ("Once", "Continuous"):
-            result.lines.append("Existing boot override: {} {} (separate from persistent order)".format(
+            result.notes.append("Existing boot override: {} {} (separate from persistent order)".format(
                 state["BootSourceOverrideEnabled"], state.get("BootSourceOverrideTarget", "-")
             ))
         return result
@@ -272,13 +282,41 @@ def normalize_filters(values):
     return result
 
 
-def describe(device, plan):
-    lines = [*plan.lines, "Persistent target: " + plan.target]
-    for key, values in plan.after.items():
-        old = plan.before[key]
-        first = values[0] if values else "-"
-        lines.append("{} first: {} -> {}".format(key, old[0] if old else "-", first))
-    return label(device, lines)
+def short_entry(row):
+    product = row.fields.get("type") or row.fields.get("model") or row.fields.get("vendor")
+    if not product:
+        return row.label
+    product = product.upper() if row.fields.get("type") else product
+    port = " port " + row.fields["port"] if row.fields.get("port") else ""
+    mac = " " + ":".join(row.mac[i:i + 2] for i in range(0, 12, 2)) if row.mac else ""
+    family = {"ipv4": "IPv4", "ipv6": "IPv6"}.get(row.family, row.family)
+    return "{}{} PXE {}{}".format(product, port, family, mac)
+
+
+def describe(device, plan, order=None, message=None):
+    lines = [message] if message else ["Planned boot order"]
+    effective = plan.after if order is None else order
+    if "UEFINetwork" in effective:
+        lines.append("BIOS boot groups")
+        for number, group in enumerate(effective["FixedBootOrder"], 1):
+            if group.startswith("UEFI Network:"):
+                group = "UEFI Network"
+            lines.append("  {}. {}".format(number, group))
+        lines.append("Network boot order (* matched)")
+        values = effective["UEFINetwork"]
+    else:
+        lines.append("Boot order (* matched)")
+        values = effective["BootOrder"]
+
+    for number, value in enumerate(values, 1):
+        key = value if "UEFINetwork" in effective else reference(value)
+        row = plan.entries.get(key)
+        name = short_entry(row) if row else plan.names.get(key, value)
+        if "BootOrder" in effective and name != value:
+            name += " ({})".format(value)
+        mark = "*" if key in plan.matched else " "
+        lines.append("  {:>2}. {} {}".format(number, mark, name))
+    return label(device, lines + plan.notes)
 
 
 def read_plan_order(device, plan):
@@ -303,16 +341,19 @@ def confirmed(actual, expected):
 
 
 def apply(device, plan):
-    if read_plan_order(device, plan) != plan.before:
+    current = read_plan_order(device, plan)
+    if current != plan.before:
         raise TransportError("boot order changed after preflight; run the command again")
     if plan.before == plan.after:
-        return label(device, ["Persistent PXE preference is already set"])
+        return describe(device, plan, order=current, message="Persistent PXE preference is already set")
     payload = plan.after if plan.target.endswith(SMC_ORDER) else {"Boot": plan.after}
     response = common.patch(device, plan.target, payload, etag_source=plan.target)
     common.require_write_success(plan.target, response)
     for delay in (0, 1, 2) if response[0] == 202 else (0,):
         if delay:
             time.sleep(delay)
-        if confirmed(read_plan_order(device, plan), plan.after):
-            return label(device, ["Persistent PXE preference verified in BMC. Reboot separately to apply."])
+        current = read_plan_order(device, plan)
+        if confirmed(current, plan.after):
+            return describe(device, plan, order=current,
+                            message="Boot order verified in BMC. Reboot separately to apply.")
     raise TransportError("BMC accepted change but persistent boot order did not match on readback")

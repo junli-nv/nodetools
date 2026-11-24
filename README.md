@@ -302,7 +302,7 @@ Ansible 风格 INI，见 `inventory.example.ini`。每台主机用 `host=` 带 B
 
 `list` 显示 BMC 能确认的型号、槽位、端口、PCI 地址和 UEFI 路径。可组合
 `--type`、`--vendor`、`--slot`、`--port`、`--pci`、`--link`、`--mac` 和 `--uefi-path`。
-字段没有可靠来源时显示 `-`。`prefer` 默认 IPv4，可用 `--family ipv6` 指定 IPv6。
+字段没有可靠来源时显示 `-`。`prefer` 默认 IPv4，可用 `--family ipv6` 指定 IPv6，`--family all` 同时选择 IPv4 和 IPv6。
 匹配多项时，整体提前并保留相对顺序。
 
 Supermicro 的 `prefer` 调整 BIOS `UEFINetwork`，并在必要时把网络组移到硬盘前。

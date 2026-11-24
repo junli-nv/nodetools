@@ -87,7 +87,8 @@ _COMMAND_HELP = {
     "netboot": """Find PXE ports and set persistent network boot priority.
   list/status  List matching PXE ports (default, read-only).
   prefer       Move matching PXE entries ahead of other entries.
-               Defaults to IPv4. Use --dry-run to preview the batch.
+               Defaults to IPv4. Use --family all for both families.
+               Use --dry-run to see the complete proposed boot order.
   pxe          Legacy OEM action without a port selector.
 
 Examples
@@ -240,7 +241,7 @@ def _add_info_opts(parser, subject, role):
             ("uefi-path", "UEFI device path or component prefix"),
         ):
             parser.add_argument("--" + flag, help=help_text)
-        parser.add_argument("--family", choices=("ipv4", "ipv6"), help="PXE address family")
+        parser.add_argument("--family", choices=("ipv4", "ipv6", "all"), help="PXE address family")
         parser.add_argument("--dry-run", action="store_true", help="preview persistent changes")
     if subject == "vm":
         parser.add_argument(

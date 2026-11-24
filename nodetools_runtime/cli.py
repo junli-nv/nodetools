@@ -445,12 +445,14 @@ def _cmd_info(args):
     runner = InfoRunner(subject, options)
     plans = {}
     for result in runner.stream(hosts):
-        for line in render([result], summary=False, errors_only=args.errors_only):
-            print(line, flush=True)
+        plan = result.get("netboot_plan")
+        if plan is not None:
+            plans[result["name"]] = plan
+        if plan is None or args.dry_run:
+            for line in render([result], summary=False, errors_only=args.errors_only):
+                print(line, flush=True)
         if result.get("error"):
             exit_code = 1
-        if result.get("netboot_plan") is not None:
-            plans[result["name"]] = result["netboot_plan"]
     if subject == "netboot" and action == "prefer" and not args.dry_run:
         if exit_code or len(plans) != len(hosts):
             print("nodenetboot: preflight failed; batch was not changed", file=sys.stderr)

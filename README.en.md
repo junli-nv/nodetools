@@ -332,7 +332,7 @@ Check attribute names and types with `nodebios NODE`. Schedule the reboot separa
 `list` shows the available model, slot, port, PCI address, and UEFI path.
 Combine `--type`, `--vendor`, `--slot`, `--port`, `--pci`, `--link`, `--mac`, and
 `--uefi-path`. Unknown fields appear as `-`. `prefer` defaults to IPv4.
-Use `--family ipv6` for IPv6. Multiple matches move together in their current order.
+Use `--family ipv6` for IPv6 or `--family all` for both families. Multiple matches move together in their current order.
 
 On Supermicro, `prefer` reorders BIOS `UEFINetwork` and moves the network group
 ahead of disk if needed. On GBXX, it updates persistent `BootOrder` through the

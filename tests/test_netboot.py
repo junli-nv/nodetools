@@ -22,6 +22,15 @@ def test_smc_moves_only_selected_pxe_entries_and_verifies_both_orders(monkeypatc
         "UEFINetwork": [target, first, ipv6],
     }
     assert plan.target == path
+    preview = netboot.describe(device, plan)
+    assert "smc:   2. UEFI Network" in preview
+    assert "smc:    1. * CX7 PXE IPv4 02:00:00:00:00:02" in preview
+    assert "smc:    2.   intel PXE IPv4 02:00:00:00:00:01" in preview
+    both = netboot.preferences(device, system, {}, state, [], {}, {"type": "cx7"}, "all", "prefer")
+    assert both.after["UEFINetwork"] == [ipv6, target, first]
+    preview = netboot.describe(device, both)
+    assert "smc:    1. * CX7 PXE IPv6 02:00:00:00:00:02" in preview
+    assert "smc:    2. * CX7 PXE IPv4 02:00:00:00:00:02" in preview
     monkeypatch.setattr(netboot.common, "resource", lambda *args, **kwargs: state)
     patches = []
 
@@ -38,6 +47,18 @@ def test_smc_moves_only_selected_pxe_entries_and_verifies_both_orders(monkeypatc
     with pytest.raises(TransportError, match="changed after preflight"):
         netboot.apply(device, plan)
     assert len(patches) == 1
+
+    state.update(plan.before)
+
+    def accepted(device, request_path, payload, etag_source):
+        state.update(payload)
+        return 200, {}
+
+    monkeypatch.setattr(netboot.common, "patch", accepted)
+    result = netboot.apply(device, plan)
+    assert "Boot order verified in BMC" in result[0]
+    assert "smc:    1. * CX7 PXE IPv4 02:00:00:00:00:02" in result
+    assert "smc:    3.   CX7 PXE IPv6 02:00:00:00:00:02" in result
 
 
 def test_cli_aborts_batch_if_a_node_does_not_match(monkeypatch):
