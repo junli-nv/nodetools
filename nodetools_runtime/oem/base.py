@@ -13,8 +13,8 @@ import re
 import time
 
 from .. import fan_profiles
-from ..errors import CapUnsupported, TransportTimeout
-from ..subjects import common, eventlog, inventory, power, vm
+from ..errors import CapUnsupported, NodetoolsError, TransportError, TransportTimeout
+from ..subjects import boot, common, eventlog, inventory, power, vm
 
 # func.sh identifiers (GBXX / NVIDIA reference).
 SYSTEM_ID = "system"
@@ -320,17 +320,32 @@ class Oem:
     # -- boot device (nodeboot) -----------------------------------------
     def boot(self, device, action):
         action = (action or "pxe").strip().lower() or "pxe"
-        if not device.ipmi:
-            raise CapUnsupported("ipmitool unavailable for {}".format(device.name))
+        if action not in boot.TARGETS:
+            raise CapUnsupported("unsupported boot device {!r}".format(action))
+
+        explicit_system = device.vars.get("system_id")
+        if explicit_system:
+            target = boot.redfish_once(device, action, explicit_system)
+            return [self._label(device, "One-time boot target accepted via Redfish: " + target)]
+
+        if device.ipmi:
+            try:
+                out = device.ipmi.run("chassis", "bootdev", action)
+            except TransportError as exc:
+                ipmi_error = str(exc)
+            else:
+                lines = [self._label(device, line.rstrip("\r")) for line in out.splitlines() if line.strip()]
+                return lines or [self._label(device, "One-time boot target accepted via IPMI: " + action)]
+        else:
+            ipmi_error = "ipmitool unavailable"
+
         try:
-            out = device.ipmi.run("chassis", "bootdev", action)
-        except Exception:  # noqa: BLE001 - legacy nodeboot prints nothing on failure
-            return []
-        return [
-            "{}: {}".format(device.name, line.rstrip("\r"))
-            for line in out.splitlines()
-            if line.strip()
-        ]
+            target = boot.redfish_once(device, action, self.bootorder_system)
+        except NodetoolsError as exc:
+            raise TransportError("IPMI bootdev failed ({}); Redfish fallback failed ({})".format(
+                ipmi_error, exc
+            )) from exc
+        return [self._label(device, "One-time boot target accepted via Redfish fallback: " + target)]
 
     # -- boot order (nodebootorder) -------------------------------------
     def bootorder(self, device, action):
@@ -398,48 +413,9 @@ class Oem:
 
     # -- network boot override (nodenetboot) ----------------------------
     def netboot(self, device, action):
-        name = device.name
-        system = "/redfish/v1/Systems/{}".format(self._sys(self.bootorder_system))
-        lines = ["Enable continuous PXE boot override option"]
-        _, body = common.patch(
-            device,
-            system,
-            {
-                "Boot": {
-                    "BootSourceOverrideEnabled": "Continuous",
-                    "BootSourceOverrideMode": "UEFI",
-                    "BootSourceOverrideTarget": "Pxe",
-                }
-            },
-        )
-        lines.extend(_body_lines(body))
-        data = common.resource(device, system, required=True)
-        boot = data.get("Boot") or {}
-        lines.append(
-            "{},{},{}".format(
-                _jq_r(boot.get("BootSourceOverrideEnabled")),
-                _jq_r(boot.get("BootSourceOverrideMode")),
-                _jq_r(boot.get("BootSourceOverrideTarget")),
-            )
-        )
-        order = self._boot_order(device, quoted=True)
-        lines.append("OLD_BOOT_ORDER={}".format(",".join(order)))
-        targets = self._network_targets(device)
-        new = targets + [item for item in order if item not in targets]
-        common.patch(device, system, {"Boot": {"BootOrder": new}})
-        lines.append("New BootOrder:")
-        lines.append(",".join(self._boot_order(device)))
-        lines.append("INFO: reboot node to take effect")
-        return ["{}:{}".format(name, line) for line in lines]
-
-    def _network_targets(self, device):
-        targets = []
-        for member in self._boot_members(device, True):
-            if "PciRoot(0x16)" in (member.get("UefiDevicePath") or ""):
-                ident = member.get("Id")
-                if ident:
-                    targets.append(json.dumps(ident))
-        return targets
+        if action != "pxe":
+            raise CapUnsupported("unsupported legacy network boot action")
+        return self.boot(device, "pxe")
 
     # -- virtual media (nodevm) -----------------------------------------
     # GBXX/AMI reference: ``Managers/<id>/VirtualMedia/<CD*|USB*>`` with the

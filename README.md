@@ -113,7 +113,7 @@ psinventory  <noderange>
 # 启动（仅 compute）
 nodeboot      <noderange> [pxe|disk|bios|cdrom]
 nodebootorder <noderange>
-nodenetboot   <noderange> [status|mac|net]
+nodenetboot   <noderange> [list|status|prefer|pxe]
 nodemacs      <noderange>
 nodebios      <noderange> [status|base|pending]
 nodevm        <noderange> [status|enable|mount|umount|insert|eject|stop|media|lic] [image]
@@ -175,12 +175,10 @@ NVSwitch 的 `nvswfan`、`nvswpsu` 和 `nvswtemp` 通过 SSH 从 NVOS 读取。�
 这组只对 **compute tray** 有意义（`nvsw*`/`ps*` 无此对象）。默认 NVIDIA GBXX 实现
 与旧脚本逐字对齐，各 ODM 覆盖各自的端点（端点缺失时回退基类）：
 
-* **boot** — `nodeboot [pxe|disk|bios|cdrom]`：IPMI `chassis bootdev <action>`（默认
-  `pxe`）。无 ODM 变体。
+* **boot** — `nodeboot [pxe|disk|bios|cdrom]`：默认 `pxe`，先用 IPMI，失败或不可用时尝试 BMC 支持的 Redfish `Once`。库存 `system_id` 通过 Redfish 定位。KR9288 使用自身的 Redfish 路径。
 * **bootorder** — `nodebootorder`：读 `BootOptions` 与 `Systems/<id>` 的
   `Boot/BootOrder`，逐项打印 `Id`/`DisplayName`/`UefiDevicePath`。
-* **netboot** — `nodenetboot [status|mac|net]`：配置一次性/连续 PXE 启动覆盖
-  （GBXX 默认写 Continuous/UEFI/Pxe 并改 BootOrder）。Dell/Lenovo/SMC 各自实现。
+* **netboot** — `nodenetboot`：默认和 `status` 只读列出 PXE 项。`prefer` 按网卡特征设置持久优先级。
 * **macs** — `nodemacs`：打印 `OS <boot> <mac> <bus>` 与 BMC 网口 MAC。
 * **bios** — `nodebios [status|base|pending]`：`status` 读当前 BIOS 设置（过滤掉
   厂商噪声键）；`base`/`pending` 是 Lenovo/SMC 的写入路径。
@@ -295,9 +293,22 @@ Ansible 风格 INI，见 `inventory.example.ini`。每台主机用 `host=` 带 B
 提交待生效设置。KR9288 的嵌套设置使用 `组.属性=值`。先用 `nodebios NODE`
 确认属性名称和类型。提交后由操作者单独安排重启。
 
-Supermicro 的 `nodenetboot NODE` 查询当前顺序，`nodenetboot NODE pxe`
-把网络启动移到持久顺序前面并保留其他启动项。KR9288 的 `pxe` 是一次性启动覆盖。
-两者均需明确指定目标后才能提交。
+### 按网卡设置网络启动优先级
+
+```bash
+./nodenetboot 'HGX[600-602]' list --type cx7
+./nodenetboot 'HGX[600-602]' prefer --type cx7 --port 2 --dry-run
+```
+
+`list` 显示 BMC 能确认的型号、槽位、端口、PCI 地址和 UEFI 路径。可组合
+`--type`、`--vendor`、`--slot`、`--port`、`--pci`、`--link`、`--mac` 和 `--uefi-path`。
+字段没有可靠来源时显示 `-`。`prefer` 默认 IPv4，可用 `--family ipv6` 指定 IPv6。
+匹配多项时，整体提前并保留相对顺序。
+
+Supermicro 的 `prefer` 调整 BIOS `UEFINetwork`，并在必要时把网络组移到硬盘前。
+GBXX 使用持久 `BootOrder`，优先使用 BMC 公布的设置资源。整批预检通过后才提交，
+提交后回读；重启由操作者另行执行。已有一次性或持续覆盖会在预览中提示。
+旧 `pxe` 保留厂商动作，通用 IPMI 路径现在只设置一次性 PXE。
 
 ### BMC 任务、时钟和序列号
 

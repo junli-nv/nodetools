@@ -180,8 +180,7 @@ eventlog 的 BMC/HMC 带 `[BMC]`/`[HMC]` 前缀），`report.render` 检测到�
 `boot/bootorder/netboot/macs/bios/vm` 标为 `("compute",)`，因此只会生成 `node*` 前缀
 的命令，`nvsw*`/`ps*` 不生成。输出规则同信息对象（逐行、已带 `<node>: `）。
 
-- **boot** — `Oem.boot`：IPMI `chassis bootdev <action>`（默认 `pxe`），任何异常
-  都返回空行。无 ODM 变体。
+- **boot** — `Oem.boot`：IPMI `chassis bootdev` 失败或不可用时，按机型系统 ID 或唯一 Systems 成员定位，并验证 BMC 公布的目标后提交 Redfish `Once`。库存 `system_id` 直接走 Redfish。两条路径都失败会显示各自的错误。
 - **bootorder** — `Oem.bootorder`：`BootOptions?$expand` 取 `Id`/`DisplayName`/
   `UefiDevicePath`，再用 `Systems/<id>` 的 `Boot/BootOrder` 逐项匹配（先按去掉
   `Boot` 前缀的数字 `grep -w`，再退回整串）。基类字段带 JSON 引号（对应 `jq` 不加
@@ -193,9 +192,10 @@ eventlog 的 BMC/HMC 带 `[BMC]`/`[HMC]` 前缀），`report.render` 检测到�
   再补 `Managers/<bmc>/EthernetInterfaces` 的 BMC MAC。
 - **bios** — `Oem.bios`：`Systems/<id>/Bios` 的 `Attributes` 逐键 `key=value`，
   按厂商 grep 掉噪声键。`base`/`pending` 只在 Lenovo/SMC 有写入路径。
-- **netboot** — `Oem.netboot`：写一次性/连续 PXE 覆盖并改 BootOrder（**写操作**）。
-  Dell（racadm）/Lenovo（`Systems/1` + `BootOptions`）/SMC（`FixedBootOrder` + Reset）
-  各自实现。
+- **netboot** — `subjects.netboot` 只读列出 PXE 项，以有效 MAC 将启动项与
+  `boot_nics` 发现的网卡关联。`prefer` 在整批预检通过后更新持久顺序。Supermicro
+  使用 `FixedBootOrder` 和 `UEFINetwork`，NVL 使用 BMC 公布的 BootOrder 设置资源
+  或系统 `BootOrder`。提交前检查顺序是否变化，提交后回读。旧 `pxe` 走 OEM 动作。
 - **vm** — `Oem.vm(device, action, options)`：虚拟媒体（**写操作**）。基类对应
   NVIDIA/AMI：动态发现非 `HGX` 的 `BMC_ID` 与首个 `CD*`/`USB*` 接口，`enable` 走
   `AMIVirtualMedia.EnableRMedia`，`mount`/`eject` 走 `VirtualMedia.InsertMedia`/
@@ -206,15 +206,13 @@ eventlog 的 BMC/HMC 带 `[BMC]`/`[HMC]` 前缀），`report.render` 检测到�
 > 已知偏差（与旧脚本不完全逐字一致）：
 > - SMC `nodenetboot` 与 `nodebios base` 的旧脚本**没有** `<node>: ` 前缀，框架会给
 >   每行补前缀；
-> - `nodenetboot` 的旧脚本会把 PATCH 的**原始 curl body**（OpenBMC 大 JSON）打印出
->   来，这里对 `network_boot_gb200` 的 BootOrder 包裹逻辑做了简化近似；
 > - Lenovo `nodebios base` 的 pretty JSON 用 `json.dumps(indent=2)` 近似 `jq` 的格式；
 > - `nodevm` 的 AMI `EnableRMedia` 在旧脚本里带 `If-None-Match: not_match` 头，当前
 >   transport 不支持自定义头（见下）；Aivres `media`/`insert`/`eject` 的原始响应
 >   用紧凑 JSON 近似旧脚本直出的 curl body。
 
-> `nodebootorder`/`nodemacs`/`nodebios`/`nodevm status` 是只读；`nodenetboot` 与
-> `nodebios base`/`pending`、`nodevm` 的 `enable`/`mount`/`insert`/`eject`/`umount`/
+> `nodebootorder`/`nodemacs`/`nodebios`/`nodevm status` 是只读；`nodenetboot prefer`/`pxe` 与
+> `nodebios base`、`nodevm` 的 `enable`/`mount`/`insert`/`eject`/`umount`/
 > `stop` 会**修改** BMC/BIOS。
 
 ## 4d. 控制台（nodeconsole）
@@ -534,13 +532,12 @@ NVSwitch 和 Power Shelf 选至少一台代表设备，各跑一遍适用的只�
 
 | 对象 | 只读覆盖范围 |
 | --- | --- |
-| HGX / NVL 计算节点 | `nodeping`、`nodefan`、`nodepsu`、`nodetemp`、`nodeinlet`、`nodemon`、`nodepower status`、`nodeeventlog status`、`nodeinventory`、`nodebootorder`、`nodemacs`、`nodebios status` / `pending`、`nodevm status`、`nodefru`、`nodebmc` / `time`、`nodetask`、`nodefw show` / `status` |
+| HGX / NVL 计算节点 | `nodeping`、`nodefan`、`nodepsu`、`nodetemp`、`nodeinlet`、`nodemon`、`nodepower status`、`nodeeventlog status`、`nodeinventory`、`nodebootorder`、`nodenetboot list`、`nodemacs`、`nodebios status` / `pending`、`nodevm status`、`nodefru`、`nodebmc` / `time`、`nodetask`、`nodefw show` / `status` |
 | NVSwitch | `nvswfan`、`nvswpsu`、`nvswtemp`、`nvswpower status`、`nvsweventlog status`、`nvswinventory` |
 | Power Shelf | `psfan`、`pspsu`、`pstemp`、`pspower status`、`pseventlog status`、`psinventory` |
 
 同时验证改动涉及的其他只读入口。`nodetask` 先列任务，有记录时用 BMC 返回的真实 ID
-查详情。`nodenetboot` 只有在已确认该机型及动作只读时才纳入，启动顺序优先用
-`nodebootorder` 查询。只读验收不执行电源控制、清日志、改 BIOS 或启动项、
+查详情。用 `nodenetboot list` 查 PXE 项，用 `nodebootorder` 查完整启动顺序。只读验收不执行电源控制、清日志、改 BIOS 或启动项、
 变更虚拟介质、重启 BMC、改时钟或刷写固件。
 
 记录平台、OEM、实际型号、BMC 或 NVOS 版本、代表节点、命令和结果。核对关键字段与

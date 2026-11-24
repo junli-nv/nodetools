@@ -117,18 +117,20 @@ class Redfish:
                 self.timeout_reason = "Redfish GET timed out"
             return None, None
         self._debug("GET", path, "HTTP {}".format(resp.status_code))
-        etag = resp.headers.get("ETag") if resp.ok else None
-        if etag:
+        try:
+            body = resp.json()
+        except ValueError:
+            body = resp.text
+        etag = resp.headers.get("ETag")
+        if not etag and isinstance(body, dict) and isinstance(body.get("@odata.etag"), str):
+            etag = body["@odata.etag"]
+        if resp.ok and etag:
             self._etags[url] = etag
         else:
             self._etags.pop(url, None)
         if resp.status_code in (401, 403):
             return resp.status_code, None
-        text = resp.text
-        try:
-            return resp.status_code, resp.json()
-        except ValueError:
-            return resp.status_code, text
+        return resp.status_code, body
 
     def post(self, path, body, timeout=None):
         if self._expired():

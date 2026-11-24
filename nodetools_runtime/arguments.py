@@ -78,16 +78,28 @@ _COMMAND_HELP = {
 {bmc}{hmc}  clear    Erase the hardware event log entries, where supported.""",
     "inventory": "List installed firmware versions. Select --details for hardware identity or --tasks for Redfish task status.",
     "boot": """Set the next boot device. Reboot separately.
+  The generic path tries IPMI first, then Redfish Once when supported.
   pxe      Boot from the network (default if ACTION is omitted).
   disk     Boot from local storage.
   bios     Enter firmware setup.
   cdrom    Boot from an optical or virtual-media device, where supported.""",
     "bootorder": "Read the current boot device order.",
-    "netboot": """Inspect or configure network boot. Behavior depends on the OEM.
-  status/mac/net  Inspect boot state, MACs, or network boot entries on supported models.
-  pxe             Set network boot priority or an override. KAYTUS KR9288: one boot.
-                  Supermicro: persistent boot order. Some legacy OEMs write
-                  boot settings even without ACTION. For a read, use nodebootorder.""",
+    "netboot": """Find PXE ports and set persistent network boot priority.
+  list/status  List matching PXE ports (default, read-only).
+  prefer       Move matching PXE entries ahead of other entries.
+               Defaults to IPv4. Use --dry-run to preview the batch.
+  pxe          Legacy OEM action without a port selector.
+
+Examples
+  nodenetboot 'HGX[600-602]' list
+  nodenetboot 'HGX[600-602]' prefer --type cx7 --dry-run
+  nodenetboot 'HGX[600-602]' prefer --type bf3 --slot 3 --port 1 --dry-run
+  nodenetboot HGX601 prefer --uefi-path 'Acpi(0x168E09,0x133)/Pci(0x2,0x0)' --port 2 --dry-run
+
+Run list first to see available types and positions. An unknown value is shown
+as -. Use a UEFI path from the list when the slot or PCI address is unavailable.
+Prefer moves all matching entries ahead in their current order. Remove
+--dry-run to write the persistent priority, then reboot separately.""",
     "macs": "List Ethernet interface MAC addresses exposed by the BMC.",
     "bios": """Read or change BIOS settings.
   status   Read active settings (default).
@@ -216,6 +228,20 @@ def _add_info_opts(parser, subject, role):
         help="nodelist expression (defaults to every host of the role)",
     )
     parser.add_argument("action", nargs="?", metavar="ACTION")
+    if subject == "netboot":
+        for flag, help_text in (
+            ("type", "adapter family such as bf3, cx6, cx7, cx8"),
+            ("vendor", "adapter vendor"),
+            ("slot", "reported physical slot"),
+            ("port", "reported port number"),
+            ("pci", "reported PCI domain:bus:device.function"),
+            ("link", "reported link technology"),
+            ("mac", "adapter MAC address"),
+            ("uefi-path", "UEFI device path or component prefix"),
+        ):
+            parser.add_argument("--" + flag, help=help_text)
+        parser.add_argument("--family", choices=("ipv4", "ipv6"), help="PXE address family")
+        parser.add_argument("--dry-run", action="store_true", help="preview persistent changes")
     if subject == "vm":
         parser.add_argument(
             "image",

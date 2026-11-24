@@ -432,41 +432,55 @@ def test_bios_lenovo_base_patches_pending():
 
 
 # -- netboot ---------------------------------------------------------------
-def test_netboot_base_continuous_pxe():
+def test_netboot_generic_pxe_is_an_explicit_one_time_ipmi_action():
+    ipmi = FakeIpmi()
+    device = _device(ipmi=ipmi)
+    assert "One-time" in netboot.collect(device, "pxe", None)[0]
+    assert ipmi.calls == [("run", "chassis", "bootdev", "pxe")]
+    assert not device.redfish.patches
+
+
+def test_gbxx_prefer_uses_pending_order_without_setting_an_override():
+    from types import SimpleNamespace
+
     system = "/redfish/v1/Systems/system"
-    expand = system + "/BootOptions?$expand=."
+    pending = system + "/Settings"
+    collection = system + "/BootOptions"
+    original = ["Boot0003", "Boot0001", "Boot0004", "Boot0002"]
     data = {
         system: {
-            "Boot": {
-                "BootSourceOverrideEnabled": "Continuous",
-                "BootSourceOverrideMode": "UEFI",
-                "BootSourceOverrideTarget": "Pxe",
-            }
+            "Boot": {"BootOrder": original},
+            "@Redfish.Settings": {"SettingsObject": {"@odata.id": pending}},
         },
-        system + "?$select=Boot/BootOrder": {
-            "Boot": {"BootOrder": ["Boot0002", "Boot0001"]}
-        },
-        expand: {
-            "Members": [
-                {"Id": "Boot0001", "DisplayName": "PXE",
-                 "UefiDevicePath": "PciRoot(0x16)/NIC"},
-                {"Id": "Boot0002", "DisplayName": "Shell",
-                 "UefiDevicePath": "VenHw"},
-            ]
-        },
+        pending: {"Boot": {"BootOrder": original}},
+        collection + "?$expand=.": {"Members": [
+            {"@odata.id": collection + "/2", "Id": "2", "BootOptionReference": "Boot0002",
+             "DisplayName": "UEFI PXE IPv4 BlueField-3",
+             "UefiDevicePath": "PciRoot(0x16)/Pci(1,0)/MAC(020000000001,1)/IPv4(0.0.0.0)"},
+            {"@odata.id": collection + "/4", "Id": "4", "BootOptionReference": "Boot0004",
+             "DisplayName": "UEFI PXE IPv6 BlueField-3",
+             "UefiDevicePath": "PciRoot(0x16)/Pci(1,0)/MAC(020000000001,1)/IPv6(::)"},
+        ]},
     }
-    rf = FakeRedfish(data=data, patch={system: (200, {"Status": "ok"})})
-    lines = netboot.collect(_device(redfish=rf), None, None)
-    assert lines == [
-        "cp-01:Enable continuous PXE boot override option",
-        'cp-01:{"Status": "ok"}',
-        "cp-01:Continuous,UEFI,Pxe",
-        'cp-01:OLD_BOOT_ORDER="Boot0002","Boot0001"',
-        "cp-01:New BootOrder:",
-        "cp-01:Boot0002,Boot0001",
-        "cp-01:INFO: reboot node to take effect",
-    ]
-    assert rf.patches[system] == {"Boot": {"BootOrder": ['"Boot0001"', '"Boot0002"']}}
+    rf = FakeRedfish(data)
+    device = _device(redfish=rf, odm=oem.get("gb200"))
+    device.vars.update({"platform": "nvl"})
+    assert "rank=3" in netboot.collect(device, None, None)[0]
+    assert not rf.patches
+    options = SimpleNamespace(netboot_filters={"uefi_path": "PciRoot(0x16)/Pci(1,0)"})
+    plan = netboot.collect(device, "prefer", options)
+    assert plan.target == pending
+    assert plan.after["BootOrder"] == ["Boot0002", "Boot0003", "Boot0001", "Boot0004"]
+    assert not rf.patches
+
+    def update(path, body, etag_source=None):
+        assert path == etag_source == pending
+        assert body == {"Boot": plan.after}
+        data[path] = body
+        return 200, {}
+
+    rf.patch = update
+    assert "verified" in netboot.apply(device, plan)[0]
 
 
 # -- aivres ----------------------------------------------------------------
@@ -1014,9 +1028,11 @@ def test_smc_netboot_status_is_read_only_and_pxe_stages_without_reset():
     from nodetools_runtime.oem.hgx.smc import Smc
 
     path = "/redfish/v1/Systems/1/Oem/Supermicro/FixedBootOrder"
-    rf = FakeRedfish({path: {"FixedBootOrder": ["UEFI Hard Disk", "UEFI Network"]}})
+    rf = FakeRedfish({"/redfish/v1/Systems/1": {"Id": "1"},
+                      path: {"FixedBootOrder": ["UEFI Hard Disk", "UEFI Network"],
+                             "UEFINetwork": ["UEFI PXE IPv4 NIC"]}})
     device = _device(redfish=rf, odm=Smc())
-    assert netboot.collect(device, None, None) == ["cp-01: UEFI Hard Disk", "cp-01: UEFI Network"]
+    assert "UEFI PXE IPv4 NIC" in netboot.collect(device, None, None)[0]
     assert not rf.posts and not rf.patches
     assert "staged" in netboot.collect(device, "pxe", None)[0]
     assert rf.patches[path] == {"FixedBootOrder": ["UEFI Network", "UEFI Hard Disk"]}

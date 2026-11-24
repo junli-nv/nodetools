@@ -34,6 +34,7 @@ from .errors import NodetoolsError
 from .inventory import Inventory, generate_from_hostslist
 from .monitor_report import MonitorCSV
 from .report import format_inlet_temperature, render
+from .subjects import netboot
 from .subjects.vm import image_source
 from .runtime import InfoRunner, Runner, Scanner
 
@@ -417,8 +418,19 @@ def _cmd_info(args):
     explicit_targets = args.noderange or args.group or args.all
     if options.bios_updates and (action or not explicit_targets):
         raise NodetoolsError("nodebios --set requires explicit targets and cannot be combined with an action")
-    if subject == "netboot" and action == "pxe" and not explicit_targets:
-        raise NodetoolsError("nodenetboot pxe requires explicit targets")
+    if subject == "netboot":
+        options.netboot_filters = netboot.normalize_filters(
+            {key: getattr(args, key, None) for key in netboot.FILTERS}
+        )
+        options.netboot_family = args.family
+        if action in ("prefer", "pxe") and not explicit_targets:
+            raise NodetoolsError("nodenetboot {} requires explicit targets".format(action))
+        if action == "prefer" and not options.netboot_filters:
+            raise NodetoolsError("nodenetboot prefer requires a NIC selector")
+        if args.dry_run and action != "prefer":
+            raise NodetoolsError("--dry-run requires nodenetboot prefer")
+        if action == "pxe" and (options.netboot_filters or options.netboot_family):
+            raise NodetoolsError("use prefer to select specific PXE ports")
     if subject == "vm" and action in ("mount", "insert", "stop"):
         image_source(options)
     inv = Inventory.from_file(_inventory_path(args.inventory))
@@ -431,12 +443,26 @@ def _cmd_info(args):
 
     exit_code = 0
     runner = InfoRunner(subject, options)
+    plans = {}
     for result in runner.stream(hosts):
         for line in render([result], summary=False, errors_only=args.errors_only):
             print(line, flush=True)
         if result.get("error"):
             exit_code = 1
+        if result.get("netboot_plan") is not None:
+            plans[result["name"]] = result["netboot_plan"]
+    if subject == "netboot" and action == "prefer" and not args.dry_run:
+        if exit_code or len(plans) != len(hosts):
+            print("nodenetboot: preflight failed; batch was not changed", file=sys.stderr)
+            return 1
+        options.netboot_plans = plans
+        for result in runner.stream(hosts):
+            for line in render([result], summary=False, errors_only=args.errors_only):
+                print(line, flush=True)
+            if result.get("error"):
+                exit_code = 1
     return exit_code
+
 
 
 def _cmd_console(args):

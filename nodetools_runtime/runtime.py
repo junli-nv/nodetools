@@ -7,6 +7,7 @@ from functools import lru_cache
 from . import caps, fan_profiles, model, oem, scan, subjects
 from .caps import nvos
 from .diagnostics import debug
+from .subjects import netboot
 from .errors import CapUnsupported, NodetoolsError
 from .transport.ipmi import Ipmi
 from .transport.redfish import Redfish
@@ -214,16 +215,20 @@ class InfoRunner:
         device = None
         try:
             device = build_device(host, self.options)
-            # Every role dispatches to the ODM recorded by ``scan`` so vendor
-            # overrides (e.g. Compal NVSwitch power) apply; unscanned nodes and
-            # ODMs without an override fall back to the base handler.
             device.odm = oem.for_device(device)
             supported = getattr(device.odm, "info_subjects", None)
-            if supported is not None and self.subject not in supported:
+            network_discovery = self.subject == "netboot" and self.options.action != "pxe"
+            if supported is not None and self.subject not in supported and not network_discovery:
                 raise CapUnsupported("{} has no verified {} adapter".format(
                     device.name, self.subject
                 ))
-            lines = self.handler(device, self.options.action, self.options)
+            plans = getattr(self.options, "netboot_plans", None)
+            if self.subject == "netboot" and plans is not None:
+                lines = netboot.apply(device, plans[host.name])
+            else:
+                lines = self.handler(device, self.options.action, self.options)
+            if isinstance(lines, netboot.Plan):
+                return dict(self._result(host, lines=netboot.describe(device, lines)), netboot_plan=lines)
             if not lines and device.transport_errors:
                 return self._result(
                     host,

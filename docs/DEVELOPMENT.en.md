@@ -210,8 +210,7 @@ marks `boot/bootorder/netboot/macs/bios/vm` as `("compute",)`, so only `node*`
 commands are generated and `nvsw*`/`ps*` produce none. Output rules match the
 info subjects (line-oriented, already prefixed with `<node>: `).
 
-- **boot** — `Oem.boot`: IPMI `chassis bootdev <action>` (default `pxe`); any
-  exception yields empty lines. No ODM variant.
+- **boot** — `Oem.boot` falls back from IPMI `chassis bootdev` to Redfish `Once` if supported. The fallback uses a known OEM system or a sole Systems member. Inventory `system_id` selects Redfish directly. If both attempts fail, the report includes both causes.
 - **bootorder** — `Oem.bootorder`: `BootOptions?$expand` for `Id`/`DisplayName`/
   `UefiDevicePath`, then match each entry of `Systems/<id>`'s `Boot/BootOrder`
   (first `grep -w` on the number with the `Boot` prefix stripped, then on the
@@ -226,9 +225,12 @@ info subjects (line-oriented, already prefixed with `<node>: `).
 - **bios** — `Oem.bios`: `Systems/<id>/Bios` `Attributes` as `key=value` per
   key, grepping out vendor noise keys. `base`/`pending` are write paths only on
   Lenovo/SMC.
-- **netboot** — `Oem.netboot`: writes a one-shot/continuous PXE override and
-  rewrites BootOrder (**a write**). Dell (racadm) / Lenovo (`Systems/1` +
-  `BootOptions`) / SMC (`FixedBootOrder` + Reset) each implement their own.
+- **netboot** — `subjects.netboot` lists PXE entries and joins them to hardware
+  discovered by `boot_nics` using valid MACs. `prefer` updates persistent
+  priority after batch preflight. Supermicro uses `FixedBootOrder` and
+  `UEFINetwork`. NVL uses the advertised settings resource or system
+  `BootOrder`. Check for changed order before writing and verify it afterward.
+  Legacy `pxe` uses the OEM action.
 - **vm** — `Oem.vm(device, action, options)`: virtual media (**a write**). The
   base class is NVIDIA/AMI: it discovers the non-`HGX` `BMC_ID` and the first
   `CD*`/`USB*` interface, `enable` goes through `AMIVirtualMedia.EnableRMedia`,
@@ -241,9 +243,6 @@ info subjects (line-oriented, already prefixed with `<node>: `).
 > Known deviations from the legacy scripts:
 > - SMC `nodenetboot` and `nodebios base` had **no** `<node>: ` prefix; the
 >   framework prefixes every line;
-> - `nodenetboot`'s legacy script prints the **raw curl body** of the PATCH
->   (a large OpenBMC JSON blob); here the `network_boot_gb200` BootOrder-wrapping
->   logic is simplified/approximate;
 > - Lenovo `nodebios base` pretty-prints with `json.dumps(indent=2)`,
 >   approximating `jq`'s formatting;
 > - `nodevm`'s AMI `EnableRMedia` carries an `If-None-Match: not_match` header in
@@ -252,7 +251,7 @@ info subjects (line-oriented, already prefixed with `<node>: `).
 >   JSON instead of the legacy script's verbatim curl body.
 
 > `nodebootorder`/`nodemacs`/`nodebios`/`nodevm status` are read-only;
-> `nodenetboot`, `nodebios base`/`pending` and `nodevm`'s
+> `nodenetboot prefer`/`pxe`, `nodebios base` and `nodevm`'s
 > `enable`/`mount`/`insert`/`eject`/`umount`/`stop` **modify** the BMC/BIOS.
 
 ## 4d. Console (nodeconsole)
@@ -618,14 +617,13 @@ of each associated NVSwitch and power-shelf model.
 
 | Device | Read-only coverage |
 | --- | --- |
-| HGX / NVL compute | `nodeping`, `nodefan`, `nodepsu`, `nodetemp`, `nodeinlet`, `nodemon`, `nodepower status`, `nodeeventlog status`, `nodeinventory`, `nodebootorder`, `nodemacs`, `nodebios status` / `pending`, `nodevm status`, `nodefru`, `nodebmc` / `time`, `nodetask`, `nodefw show` / `status` |
+| HGX / NVL compute | `nodeping`, `nodefan`, `nodepsu`, `nodetemp`, `nodeinlet`, `nodemon`, `nodepower status`, `nodeeventlog status`, `nodeinventory`, `nodebootorder`, `nodenetboot list`, `nodemacs`, `nodebios status` / `pending`, `nodevm status`, `nodefru`, `nodebmc` / `time`, `nodetask`, `nodefw show` / `status` |
 | NVSwitch | `nvswfan`, `nvswpsu`, `nvswtemp`, `nvswpower status`, `nvsweventlog status`, `nvswinventory` |
 | Power shelf | `psfan`, `pspsu`, `pstemp`, `pspower status`, `pseventlog status`, `psinventory` |
 
 Include any other read-only entry points affected by the change. With `nodetask`,
 list tasks first and query details with an ID returned by the BMC when one is
-available. Include `nodenetboot` only when the selected action is known to be
-read-only on that model. Use `nodebootorder` to inspect the boot order.
+available. Use `nodenetboot list` for PXE entries and `nodebootorder` for the full order.
 Keep power control, log clearing, BIOS and boot changes, virtual media changes,
 BMC resets, clock writes, and firmware updates outside this read-only pass.
 

@@ -116,7 +116,7 @@ psinventory  <noderange>
 # boot (compute only)
 nodeboot      <noderange> [pxe|disk|bios|cdrom]
 nodebootorder <noderange>
-nodenetboot   <noderange> [status|mac|net]
+nodenetboot   <noderange> [list|status|prefer|pxe]
 nodemacs      <noderange>
 nodebios      <noderange> [status|base|pending]
 nodevm        <noderange> [status|enable|mount|umount|insert|eject|stop|media|lic] [image]
@@ -189,14 +189,11 @@ subject). The default NVIDIA GBXX implementation matches the legacy scripts
 verbatim and each ODM overrides its own endpoints (falling back to the base
 class when an endpoint is absent):
 
-* **boot** — `nodeboot [pxe|disk|bios|cdrom]`: IPMI `chassis bootdev <action>`
-  (default `pxe`). No ODM variant.
+* **boot** — `nodeboot [pxe|disk|bios|cdrom]` sets the next boot device (default `pxe`). The generic path tries IPMI and falls back to Redfish `Once` when supported. Inventory `system_id` uses Redfish directly. KR9288 uses its own Redfish path.
 * **bootorder** — `nodebootorder`: reads `BootOptions` and
   `Systems/<id>`'s `Boot/BootOrder`, printing `Id`/`DisplayName`/
   `UefiDevicePath` per entry.
-* **netboot** — `nodenetboot [status|mac|net]`: configure a one-shot or
-  continuous PXE boot override (GBXX default writes Continuous/UEFI/Pxe and
-  rewrites BootOrder). Dell/Lenovo/SMC have their own implementations.
+* **netboot** — `nodenetboot` lists PXE entries by default and with `status`. `prefer` sets persistent priority by adapter attributes.
 * **macs** — `nodemacs`: prints `OS <boot> <mac> <bus>` plus the BMC NIC MACs.
 * **bios** — `nodebios [status|base|pending]`: `status` reads current BIOS
   settings (vendor noise keys filtered out); `base`/`pending` are the
@@ -325,9 +322,24 @@ On Supermicro and Aivres/KAYTUS, `nodebios NODE --set KEY=VALUE` stages
 a pending BIOS setting. Use `Group.Attribute=value` for nested KR9288 settings.
 Check attribute names and types with `nodebios NODE`. Schedule the reboot separately.
 
-On Supermicro, `nodenetboot NODE` reads the current order and `nodenetboot NODE pxe`
-stages network first in the persistent order, retaining the other entries.
-On KR9288, `pxe` stages a one-time override. Specify the target explicitly for writes.
+### Network boot priority by adapter
+
+```bash
+./nodenetboot 'HGX[600-602]' list --type cx7
+./nodenetboot 'HGX[600-602]' prefer --type cx7 --port 2 --dry-run
+```
+
+`list` shows the available model, slot, port, PCI address, and UEFI path.
+Combine `--type`, `--vendor`, `--slot`, `--port`, `--pci`, `--link`, `--mac`, and
+`--uefi-path`. Unknown fields appear as `-`. `prefer` defaults to IPv4.
+Use `--family ipv6` for IPv6. Multiple matches move together in their current order.
+
+On Supermicro, `prefer` reorders BIOS `UEFINetwork` and moves the network group
+ahead of disk if needed. On GBXX, it updates persistent `BootOrder` through the
+advertised settings resource when available. The entire batch must pass
+preflight before submission. The tool reads the order back. Reboot separately.
+Preview shows any existing boot override. Legacy `pxe` keeps the OEM action,
+while the generic IPMI path now sets one-time PXE.
 
 ### BMC tasks, clock, and serial numbers
 
