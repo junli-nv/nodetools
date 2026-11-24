@@ -196,7 +196,7 @@ NVSwitch 的 `nvswfan`、`nvswpsu` 和 `nvswtemp` 通过 SSH 从 NVOS 读取。�
   Compal 正常弹出失败后可显式执行 `stop URL`，调用专用停止接口。Netweb 的
   `stop URL` 使用标准弹出接口，按 BMC 报告的完整 URL 匹配目标。
 
-> 注意：`nodenetboot` 与 `nodebios base/pending` 会**修改** BMC/BIOS，属于写操作；
+> 注意：`nodebios base` 写入 BIOS 预设。支持的机型至少关闭 SNC 和 CPU 虚拟化。标准 Redfish 路径要求能识别两项并读回待应用值，缺少明确字段时报错。Supermicro SYS-822GS-NB3RT 会读回待应用值，确认后请求 Redfish PowerCycle。待操作系统启动后检查实际 NUMA 拓扑。`pending` 只读取。部分机型的 `nodenetboot` 会**修改** BMC/BIOS；
 > `nodevm` 的 `enable`/`mount`/`insert`/`eject`/`umount`/`stop` 也是写操作。
 
 ### 控制台（nodeconsole）
@@ -298,6 +298,42 @@ Ansible 风格 INI，见 `inventory.example.ini`。每台主机用 `host=` 带 B
 Supermicro 的 `nodenetboot NODE` 查询当前顺序，`nodenetboot NODE pxe`
 把网络启动移到持久顺序前面并保留其他启动项。KR9288 的 `pxe` 是一次性启动覆盖。
 两者均需明确指定目标后才能提交。
+
+### BMC 任务、时钟和序列号
+
+```bash
+./nodetask HGX601
+./nodetask HGX601 1
+./nodebmc HGX601
+./nodebmc HGX601 time
+./nodebmc HGX601 time --set '2026-11-24T20:00:00+08:00'
+./nodebmc HGX601 reset
+./nodefru 'HGX[601-602]'
+```
+
+`nodetask` 查询 Redfish 任务状态和进度。`nodebmc` 默认查询 BMC 信息，`time` 查询时钟，`time --set` 在支持的 Redfish Manager 上写入时钟，`reset` 重启管理控制器。写入和重启每次仅接收一个节点。`nodefru` 只查询 System 序列号，必要时读取 IPMI 主 FRU 的产品序列号。
+
+`nodetask` 默认列出 BMC 当前保留的全部任务，包括成功、失败和运行中的任务。用 `nodetask NODE ID` 或 `--task ID` 查看该任务的起止时间和 BMC 消息。BMC 清理任务记录后，旧 ID 可能返回找不到。
+
+以上查询及 `nodefw` 的 `show`、`status`、`check` 支持节点范围。默认使用库存并行数，可用 `--jobs` 覆盖，节点完成后立即输出。
+
+### 固件查询和升级
+
+```bash
+./nodefw show HGX601
+./nodefw show 'HGX[600-602]'
+./nodefw status HGX601
+./nodefw check HGX601 bmc /path/to/official-bundle.zip
+```
+
+`show` 读取 Redfish 提供的 BIOS、BMC 及其他组件版本。`status` 查询 BMC 任务，
+可用 `--task ID` 查指定任务。查询适用于提供相应 Redfish 资源的厂商。
+
+`check` 核验目标、固件包和更新条件。首个升级适配器支持 Supermicro
+SYS-822GS-NB3RT 的官方 BMC `01.12.05.00` 和 BIOS `2.0` 配套 ZIP。
+要写入时将 `check` 换成 `update`。每次提交一个组件。批量提交使用 `update 'HGX[600-602]' bmc /path/to/official-bundle.zip --jobs 2`，`--jobs` 限制同时上传的节点数。
+BIOS 要求配套 BMC 已就绪且主机已关机。同版本重刷需要 `--reflash`。
+收到 `ACCEPTED` 后，用 `status` 确认任务完成，再用 `show` 回读版本。
 
 ## 输出
 

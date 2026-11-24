@@ -3,7 +3,8 @@
 import time
 
 from ...errors import CapUnsupported, TransportError
-from ...subjects import common, power, vm
+from ...model import hardware_identity
+from ...subjects import bios, common, power, vm
 from ..base import Oem, _body_lines, _jq_r
 
 _SYSTEM = "/redfish/v1/Systems/1"
@@ -35,6 +36,7 @@ _MAC_FIELDS = (
 class Smc(Oem):
     name = "smc"
     family = "hgx"
+    bios_base_preset = True
     fan_chassis = ("1",)
     psu_read_chassis = ("1",)
 
@@ -89,6 +91,9 @@ class Smc(Oem):
 
     def bios(self, device, action):
         if action == "base":
+            identity = hardware_identity(device)
+            if str(identity.get("model") or "").upper() == "SYS-822GS-NB3RT":
+                return self._apply_b300_base(device)
             resp = common.require_write_success(_BIOS_SD, common.patch(device, _BIOS_SD, _BIOS_BASE))
             lines = [
                 self._label(device, line) for line in _body_lines(resp, pretty=True)
@@ -109,6 +114,22 @@ class Smc(Oem):
             return [self._label(device, row) for row in rows]
         rows = self._bios_rows(device, ("BootOption",), sort=True)
         return [self._label(device, row) for row in rows]
+
+    def _apply_b300_base(self, device):
+        system = common.resource(device, _SYSTEM, required=True)
+        expected = _BIOS_BASE["Attributes"]
+        active = common.resource(device, _SYSTEM + "/Bios", required=True).get("Attributes") or {}
+        missing = [key for key in expected if key not in active]
+        if missing:
+            raise CapUnsupported("BMC did not report active BIOS fields: " + ", ".join(missing))
+        bios.stage_flat_base(device, _BIOS_SD, expected)
+        reset = common.reset_system(device, _SYSTEM, system, _RESET["cycle"])
+        return [
+            self._label(device, "Pending BIOS: " + ", ".join(
+                "{}={}".format(key, value) for key, value in expected.items()
+            )),
+            self._label(device, "Accepted {}. Verify active BIOS and NUMA topology after boot.".format(reset)),
+        ]
 
     def netboot(self, device, action):
         order_path = _SYSTEM + "/Oem/Supermicro/FixedBootOrder"

@@ -600,6 +600,33 @@ the per-node deadline (`subprocess` stubbed, no network). Cache tests override
 **Note**: `--action` (fan `auto/max`) really changes device
 state; test on a single, known-reversible machine first, never the whole batch.
 
+### Read-only hardware validation by model
+
+When adding or changing a device interface, track hardware validation by actual
+model. For HGX and NVL, select at least one representative of every available
+compute model and run each applicable read-only `node*` command. Test separate
+generations and models with different management interfaces even within one OEM.
+For each NVL model, also run the applicable read-only checks on a representative
+of each associated NVSwitch and power-shelf model.
+
+| Device | Read-only coverage |
+| --- | --- |
+| HGX / NVL compute | `nodeping`, `nodefan`, `nodepsu`, `nodetemp`, `nodeinlet`, `nodemon`, `nodepower status`, `nodeeventlog status`, `nodeinventory`, `nodebootorder`, `nodemacs`, `nodebios status` / `pending`, `nodevm status`, `nodefru`, `nodebmc` / `time`, `nodetask`, `nodefw show` / `status` |
+| NVSwitch | `nvswfan`, `nvswpsu`, `nvswtemp`, `nvswpower status`, `nvsweventlog status`, `nvswinventory` |
+| Power shelf | `psfan`, `pspsu`, `pstemp`, `pspower status`, `pseventlog status`, `psinventory` |
+
+Include any other read-only entry points affected by the change. With `nodetask`,
+list tasks first and query details with an ID returned by the BMC when one is
+available. Include `nodenetboot` only when the selected action is known to be
+read-only on that model. Use `nodebootorder` to inspect the boot order.
+Keep power control, log clearing, BIOS and boot changes, virtual media changes,
+BMC resets, clock writes, and firmware updates outside this read-only pass.
+
+Record the platform, OEM, actual model, BMC or NVOS version, representative
+node, commands, and results. Check key fields against the device interface.
+Distinguish passes, failures, unsupported operations, and unavailable hardware.
+Mark cases without hardware as pending real-hardware validation.
+
 ## 8. Code style and commit conventions
 
 - Standard library + `requests` only; no extra dependencies (keep
@@ -639,3 +666,12 @@ state; test on a single, known-reversible machine first, never the whole batch.
   tools (`onecli`, `racadm`) or return empty bodies in the legacy scripts, so
   their output details are not compared one by one; re-read the legacy script
   before changing them.
+
+## Adding a firmware update adapter
+
+`nodefw show` and `nodefw status` use the standard Redfish queries in
+`subjects/firmware.py`. For a new vendor, implement the adapter in the matching
+platform's OEM directory and register verified system models in
+`firmware_cli.ADAPTERS`. The adapter validates hardware, package, version,
+component, and power and task state, then reads the submission result.
+`check` and `update` share preflight validation. Only `update` writes.

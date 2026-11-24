@@ -520,6 +520,27 @@ python -m pytest -q
 **注意**：`--action`（fan `auto/max`）会真正改动设备状态，
 测试时先在单台、且确认可回退的机器上做，不要整批跑。
 
+### 按机型做只读实机验收
+
+新增或修改设备接口时，按实际设备型号维护验收记录。HGX 和 NVL 应分别对每个可用机型
+选至少一台代表设备，逐个运行该机型适用的 `node*` 只读命令。即使是同一 OEM，
+不同代际或使用不同管理接口的机型也分别验证。NVL 还要对该机型配套的每种
+NVSwitch 和 Power Shelf 选至少一台代表设备，各跑一遍适用的只读命令。
+
+| 对象 | 只读覆盖范围 |
+| --- | --- |
+| HGX / NVL 计算节点 | `nodeping`、`nodefan`、`nodepsu`、`nodetemp`、`nodeinlet`、`nodemon`、`nodepower status`、`nodeeventlog status`、`nodeinventory`、`nodebootorder`、`nodemacs`、`nodebios status` / `pending`、`nodevm status`、`nodefru`、`nodebmc` / `time`、`nodetask`、`nodefw show` / `status` |
+| NVSwitch | `nvswfan`、`nvswpsu`、`nvswtemp`、`nvswpower status`、`nvsweventlog status`、`nvswinventory` |
+| Power Shelf | `psfan`、`pspsu`、`pstemp`、`pspower status`、`pseventlog status`、`psinventory` |
+
+同时验证改动涉及的其他只读入口。`nodetask` 先列任务，有记录时用 BMC 返回的真实 ID
+查详情。`nodenetboot` 只有在已确认该机型及动作只读时才纳入，启动顺序优先用
+`nodebootorder` 查询。只读验收不执行电源控制、清日志、改 BIOS 或启动项、
+变更虚拟介质、重启 BMC、改时钟或刷写固件。
+
+记录平台、OEM、实际型号、BMC 或 NVOS 版本、代表节点、命令和结果。核对关键字段与
+设备接口返回一致，并区分通过、失败、不支持、无实机。没有实机的组合标为待实机验证。
+
 ## 8. 代码风格与提交约定
 
 - 只用标准库 + `requests`，不引入额外依赖（保持 `pip install .` 轻量）。
@@ -549,3 +570,10 @@ python -m pytest -q
   交换机能力、`nodealive`/`nodecable`/`nodeflapping`（SSH）、`nodemon.ipmi`。
 - 信息对象的 `clear`（清日志）与 `reseat` 等动作因旧脚本本身依赖外部工具
   （`onecli`、`racadm`）或返回体为空，输出细节未逐一比对；改动前回读旧脚本。
+
+## 接入固件升级适配器
+
+`nodefw show` 和 `nodefw status` 复用 `subjects/firmware.py` 的标准 Redfish 查询。
+新增厂商时，在对应平台的 OEM 目录实现适配器，在 `firmware_cli.ADAPTERS` 中登记
+验证过的系统型号。适配器负责匹配硬件与固件包、校验版本和组件、核对电源和任务状态，
+并返回实际提交结果。`check` 与 `update` 共用预检，只有 `update` 执行写入。

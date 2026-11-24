@@ -8,7 +8,7 @@ import time
 
 from ...diagnostics import debug_connection
 from ...errors import NodetoolsError, TransportError
-from ...subjects import common, vm
+from ...subjects import bios, common, vm
 from ..base import Oem, _body_lines, _jq_r, firmware_name_lines
 
 _SYSTEM = "/redfish/v1/Systems/Self"
@@ -42,6 +42,7 @@ _NVSW_RESET = {
 class Compal(Oem):
     name = "compal"
     family = "hgx"
+    bios_base_preset = True
     fan_chassis = ("Self", "1")
 
     bootorder_system = "Self"
@@ -83,7 +84,9 @@ class Compal(Oem):
     # -- BIOS settings (nodebios.cpl) -----------------------------------
     def bios(self, device, action):
         if action == "base":
-            _, body = common.patch(device, _BIOS_SD, _BIOS_BASE)
+            active = common.resource(device, _SYSTEM + "/Bios", required=True)
+            controls = bios.base_controls(active.get("Attributes") or {})
+            body = bios.stage_flat_base(device, _BIOS_SD, {**_BIOS_BASE["Attributes"], **controls})
             lines = [
                 self._label(device, line) for line in _body_lines(body, pretty=True)
             ]

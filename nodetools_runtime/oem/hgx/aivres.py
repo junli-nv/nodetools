@@ -46,6 +46,7 @@ def _bbs_number(row):
 class Aivres(Oem):
     name = "aivres"
     family = "hgx"
+    bios_base_preset = True
     monitor_sensor_collection = "/ThresholdSensors"
     fan_chassis = ("1", "Chassis_0")
     fan_read_chassis = ("1",)

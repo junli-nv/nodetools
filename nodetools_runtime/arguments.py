@@ -92,9 +92,9 @@ _COMMAND_HELP = {
     "bios": """Read or change BIOS settings.
   status   Read active settings (default).
   pending  Read staged settings, where supported.
-  base     Write the nodetools OEM preset. Supermicro disables SNC and Intel
-           virtualization. Aivres disables SNC and VMX and enables x2APIC,
-           VT-d and interrupt remapping. Both may restart the node immediately.
+  base     Write the nodetools OEM preset with SNC and CPU virtualization
+           disabled. Supermicro SYS-822GS-NB3RT verifies pending values
+           then power-cycles. Aivres may also restart immediately.
   bf3      Stage a BlueField-3 BIOS preset (EGM and PCIe option-ROM settings),
            where supported.""",
     "vm": """Inspect or control BMC virtual media.
@@ -272,7 +272,8 @@ def build_parser():
     parser = argparse.ArgumentParser(
         prog="nodetools",
         description="Inspect and manage HGX and NVL nodes over Redfish and IPMI.",
-        epilog="Run COMMAND --help for actions. Common inventory, authentication, and timeout options are in README.md.",
+        epilog=("Run COMMAND --help for actions. Also available: nodefw, nodetask, nodebmc, nodefru. "
+                "Common inventory, authentication, and timeout options are in README.md."),
     )
     _add_common_flags(parser)
     parser.add_argument("--version", action="store_true", help="print version")

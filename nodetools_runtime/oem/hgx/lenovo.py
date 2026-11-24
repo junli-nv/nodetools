@@ -3,7 +3,7 @@
 import json
 
 from ...errors import CapUnsupported
-from ...subjects import common, power
+from ...subjects import bios, common, power
 from ..base import FIRMWARE, Oem, _body_lines, _jq_r, _members_static
 
 _SYSTEM = "/redfish/v1/Systems/1"
@@ -23,6 +23,7 @@ _BIOS_EXCLUDES = ("BootOrder", "MACAddress", "NvidiaNetworkAdapter")
 class Lenovo(Oem):
     name = "lenovo"
     family = "hgx"
+    bios_base_preset = True
     fan_chassis = ("1",)
 
     bootorder_system = "1"
@@ -126,7 +127,7 @@ class Lenovo(Oem):
 
     def bios(self, device, action):
         if action == "base":
-            _, resp = common.patch(device, _SYSTEM + "/Bios/Pending", _BIOS_BASE)
+            resp = bios.stage_flat_base(device, _SYSTEM + "/Bios/Pending", _BIOS_BASE["Attributes"])
             return [self._label(device, line) for line in _body_lines(resp, pretty=True)]
         rows = self._bios_rows(device, _BIOS_EXCLUDES, sort=True)
         return [self._label(device, row) for row in rows]

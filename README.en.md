@@ -216,7 +216,7 @@ class when an endpoint is absent):
   normal eject fails. Netweb `stop URL` uses standard eject and matches the
   full mounted URL reported by the BMC.
 
-> Note: `nodenetboot` and `nodebios base/pending` **modify** the BMC/BIOS;
+> Note: `nodebios base` writes the BIOS preset. Supported models set both SNC and CPU virtualization to disabled. The standard Redfish path requires both controls and verifies pending readback. On Supermicro SYS-822GS-NB3RT it verifies the pending values before requesting a Redfish PowerCycle. Verify the NUMA topology after the OS boots. `pending` is read-only. On some models `nodenetboot` **modifies** the BMC/BIOS;
 > `nodevm`'s `enable`/`mount`/`insert`/`eject`/`umount`/`stop` are writes too.
 
 ### Console (nodeconsole)
@@ -328,6 +328,45 @@ Check attribute names and types with `nodebios NODE`. Schedule the reboot separa
 On Supermicro, `nodenetboot NODE` reads the current order and `nodenetboot NODE pxe`
 stages network first in the persistent order, retaining the other entries.
 On KR9288, `pxe` stages a one-time override. Specify the target explicitly for writes.
+
+### BMC tasks, clock, and serial numbers
+
+```bash
+./nodetask HGX601
+./nodetask HGX601 1
+./nodebmc HGX601
+./nodebmc HGX601 time
+./nodebmc HGX601 time --set '2026-11-24T20:00:00+08:00'
+./nodebmc HGX601 reset
+./nodefru 'HGX[601-602]'
+```
+
+`nodetask` reads Redfish task state and progress. `nodebmc` shows BMC information by default. `time` reads the clock and `time --set` writes it on supported Redfish Managers. `reset` restarts the management controller. Writes and resets require one node. `nodefru` reads the system serial, with the primary IPMI FRU product serial as fallback.
+
+`nodetask` lists every task currently retained by the BMC, including successful, failed, and running tasks. Use `nodetask NODE ID` or `--task ID` to read its timestamps and BMC messages. Old IDs may disappear when the BMC clears its records.
+
+These queries and `nodefw show`, `status`, and `check` accept node ranges. They use the inventory worker count by default. `--jobs` overrides it, and results print as each node finishes.
+
+### Firmware inventory and updates
+
+```bash
+./nodefw show HGX601
+./nodefw show 'HGX[600-602]'
+./nodefw status HGX601
+./nodefw check HGX601 bmc /path/to/official-bundle.zip
+```
+
+`show` reads BIOS, BMC, and component versions exposed by Redfish. `status` reads
+BMC tasks and accepts `--task ID`. Both work across vendors that expose the
+corresponding Redfish resources.
+
+`check` validates the target, package, and prerequisites. The first update
+adapter supports the official Supermicro SYS-822GS-NB3RT bundle with BMC
+`01.12.05.00` and BIOS `2.0`. Replace `check` with `update` to submit one component. For multiple nodes, use
+`update 'HGX[600-602]' bmc /path/to/official-bundle.zip --jobs 2`. The job count limits concurrent uploads. BIOS updates require the paired BMC version and a
+powered-off host. Use `--reflash` to write the installed version again.
+After `ACCEPTED`, confirm completion with `status` and read back the installed
+version with `show`.
 
 ## Output
 

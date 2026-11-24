@@ -404,10 +404,10 @@ def test_bios_base_filters_and_formats():
 
 
 def test_bios_lenovo_base_patches_pending():
-    from nodetools_runtime.oem.hgx.lenovo import Lenovo
+    from nodetools_runtime.oem.hgx.lenovo import Lenovo, _BIOS_BASE
 
     pending = "/redfish/v1/Systems/1/Bios/Pending"
-    rf = FakeRedfish(patch={pending: (200, {"ok": True})})
+    rf = FakeRedfish({pending: _BIOS_BASE}, patch={pending: (200, {"ok": True})})
     lines = bios.collect(_device(redfish=rf, odm=Lenovo()), "base", None)
     assert lines == ["cp-01: {", 'cp-01:   "ok": true', "cp-01: }"]
     attributes = rf.patches[pending]["Attributes"]
@@ -515,9 +515,14 @@ def test_aivres_eventlog_hmc_quoted_suggestion():
 
 # -- compal ----------------------------------------------------------------
 def test_compal_bios_base_patches_sd_and_info():
-    from nodetools_runtime.oem.hgx.compal import Compal
+    from nodetools_runtime.oem.hgx.compal import Compal, _BIOS_BASE
 
-    rf = FakeRedfish()
+    pending = "/redfish/v1/Systems/Self/Bios/SD"
+    controls = {"SNC": "Disabled", "IntelVirtualizationTechnology": "Disabled"}
+    rf = FakeRedfish({
+        pending: {"Attributes": {**_BIOS_BASE["Attributes"], **controls}},
+        pending.rsplit("/", 1)[0]: {"Attributes": dict.fromkeys(controls, "Enabled")},
+    })
     lines = bios.collect(_device(redfish=rf, odm=Compal()), "base", None)
     assert "/redfish/v1/Systems/Self/Bios/SD" in rf.patches
     assert rf.patches["/redfish/v1/Systems/Self/Bios/SD"]["Attributes"][
@@ -601,9 +606,14 @@ def test_netweb_eventlog_sensor_number():
 
 
 def test_netweb_bios_base_patches_system_0():
-    from nodetools_runtime.oem.hgx.netweb import Netweb
+    from nodetools_runtime.oem.hgx.netweb import Netweb, _BIOS_BASE
 
-    rf = FakeRedfish()
+    pending = "/redfish/v1/Systems/System_0/Bios/SD"
+    controls = {"SNC": "Disabled", "IntelVirtualizationTechnology": "Disabled"}
+    rf = FakeRedfish({
+        pending: {"Attributes": {**_BIOS_BASE["Attributes"], **controls}},
+        pending.rsplit("/", 1)[0]: {"Attributes": dict.fromkeys(controls, "Enabled")},
+    })
     bios.collect(_device(redfish=rf, odm=Netweb()), "base", None)
     assert "/redfish/v1/Systems/System_0/Bios/SD" in rf.patches
 
@@ -1174,3 +1184,70 @@ def test_liteon_psu_inventory_uses_hardware_ids_when_software_records_lack_versi
     ]
     del rf.data[supplies]
     assert inventory._firmware(device)[0].split() == ["shelf:", "FW_PSU_6", "N/A"]
+
+
+@pytest.mark.parametrize("pending_snc", ["Disabled", "Enabled", None])
+def test_smc_b300_bios_base_power_cycles_only_after_readback(pending_snc):
+    from nodetools_runtime.errors import CapUnsupported, TransportError
+
+    system = "/redfish/v1/Systems/1"
+    pending = system + "/Bios/SD"
+    target = system + "/Actions/ComputerSystem.Reset"
+    rf = FakeRedfish({
+        system: {"Actions": {"#ComputerSystem.Reset": {
+            "target": target, "ResetType@Redfish.AllowableValues": ["ForceRestart", "PowerCycle"],
+        }}},
+        system + "/Bios": {"Attributes": {
+            "SNC": "Enabled", "IntelVirtualizationTechnology": "Enabled",
+        } if pending_snc is not None else {}},
+        pending: {"Attributes": {
+            "SNC": pending_snc, "IntelVirtualizationTechnology": "Disabled",
+        }},
+    })
+    device = _device(redfish=rf)
+    device.identity = {"model": "SYS-822GS-NB3RT", "manufacturer": "Supermicro"}
+    device.odm = oem.for_device(device)
+    if pending_snc is None:
+        with pytest.raises(CapUnsupported, match="BMC did not report active BIOS fields"):
+            bios.collect(device, "base", None)
+        assert not rf.posts and not rf.patches
+        return
+    if pending_snc == "Disabled":
+        assert "Accepted PowerCycle" in bios.collect(device, "base", None)[-1]
+        assert rf.posts == {target: {"ResetType": "PowerCycle"}}
+    else:
+        with pytest.raises(TransportError, match="readback did not match: SNC"):
+            bios.collect(device, "base", None)
+        assert not rf.posts
+    assert rf.patches[pending]["Attributes"]["SNC"] == "Disabled"
+    assert not device.ipmi.calls
+
+
+@pytest.mark.parametrize("has_snc", [True, False])
+def test_standard_bios_base_requires_both_controls(has_snc):
+    from nodetools_runtime.errors import CapUnsupported
+
+    system = "/redfish/v1/Systems/1"
+    active = system + "/Bios"
+    pending = active + "/Settings"
+    current = {"VirtualizationTechnology": True}
+    if has_snc:
+        current["SubNumaCluster"] = "Enabled"
+    expected = {"VirtualizationTechnology": False, "SubNumaCluster": "Disabled"}
+    rf = FakeRedfish({
+        "/redfish/v1/Systems": {"Members": [{"@odata.id": system}]},
+        system: {"Bios": {"@odata.id": active}},
+        active: {"Attributes": current, "@Redfish.Settings": {
+            "SettingsObject": {"@odata.id": pending},
+        }},
+        pending: {"Attributes": expected},
+    })
+    device = _device(redfish=rf)
+    if has_snc:
+        assert "staged and verified" in bios.collect(device, "base", None)[0]
+        assert rf.patches == {pending: {"Attributes": expected}}
+    else:
+        with pytest.raises(CapUnsupported, match="cannot verify BIOS controls for SNC"):
+            bios.collect(device, "base", None)
+        assert not rf.patches
+    assert not rf.posts and not device.ipmi.calls

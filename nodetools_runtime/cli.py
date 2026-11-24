@@ -459,11 +459,20 @@ def _cmd_console(args):
 
 
 def main(argv=None):
+    management_commands = ("nodetask", "nodebmc", "nodefru")
     if argv is None:
         argv = sys.argv[1:]
         program = os.path.basename(sys.argv[0])
-        if program in NODE_PROGRAMS:
+        if program == "nodefw" or program in management_commands or program in NODE_PROGRAMS:
             argv = [program] + list(argv)
+    if argv and argv[0] == "nodefw":
+        from . import firmware_cli
+
+        return firmware_cli.main(argv[1:], "nodefw")
+    if argv and argv[0] in management_commands:
+        from . import management_cli
+
+        return management_cli.main(argv[1:], argv[0])
     args = parse_args(argv)
     if getattr(args, "version", False) and not args.command:
         print("nodetools {}".format(VERSION))

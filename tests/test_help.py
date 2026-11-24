@@ -13,7 +13,7 @@ def test_command_help_focuses_on_actions(capsys):
         for flag in ("--jobs", "--node-timeout", "--password", "--no-cache"):
             assert flag not in texts[command]
 
-    assert "may restart the node immediately" in texts["nodebios"]
+    assert "may also restart immediately" in texts["nodebios"]
     assert "Write the nodetools OEM preset" in texts["nodebios"]
     assert "fixed 50% PWM" in texts["nodefan"]
     assert "fixed 80% PWM" in texts["nodefan"]

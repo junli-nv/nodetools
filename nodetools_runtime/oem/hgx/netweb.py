@@ -7,7 +7,7 @@ Endpoints are pinned to ``Systems/System_0`` / ``Managers/BMC_0`` /
 import time
 
 from ...errors import NodetoolsError, TransportError
-from ...subjects import common, vm
+from ...subjects import bios, common, vm
 from ..base import Oem, _body_lines, _jq_r, firmware_name_lines
 
 _SYSTEM = "/redfish/v1/Systems/System_0"
@@ -35,6 +35,7 @@ def _duty(value):
 class Netweb(Oem):
     name = "netweb"
     family = "hgx"
+    bios_base_preset = True
     fan_chassis = ("BMC_0", "System_0")
 
     bootorder_system = "System_0"
@@ -65,7 +66,9 @@ class Netweb(Oem):
     # -- BIOS settings (nodebios.nw) ------------------------------------
     def bios(self, device, action):
         if action == "base":
-            _, body = common.patch(device, _BIOS_SD, _BIOS_BASE)
+            active = common.resource(device, _SYSTEM + "/Bios", required=True)
+            controls = bios.base_controls(active.get("Attributes") or {})
+            body = bios.stage_flat_base(device, _BIOS_SD, {**_BIOS_BASE["Attributes"], **controls})
             lines = [
                 self._label(device, line) for line in _body_lines(body, pretty=True)
             ]
