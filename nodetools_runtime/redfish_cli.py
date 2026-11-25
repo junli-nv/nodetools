@@ -33,6 +33,7 @@ def dump(args):
     if not math.isfinite(options.timeout) or options.timeout <= 0:
         raise NodetoolsError("timeout must be a finite positive number")
     _apply_redfish_defaults(options, inventory)
+    show_progress = options.debug or sys.stderr.isatty()
     options.debug = False
 
     def factory():
@@ -41,15 +42,26 @@ def dump(args):
     user, password = runtime._resolve_creds(host, options)
     metadata = {key: host.vars[key] for key in _METADATA if host.vars.get(key)}
     metadata["role"] = host.role
-    snapshot = redfish_snapshot.capture(
-        host.address, factory, metadata, (host.name, host.address, user, password),
-        workers=args.workers, seconds=args.seconds, limit=args.max_requests, extra_paths=args.path,
-    )
+    def progress(elapsed, completed, active, pending):
+        print(f"Redfish dump {host.name}: {elapsed:.0f}/{args.seconds:g}s, "
+              f"{completed}/{args.max_requests} completed, {active} active, {pending} queued",
+              file=sys.stderr, flush=True)
+
+    try:
+        snapshot = redfish_snapshot.capture(
+            host.address, factory, metadata, (host.name, host.address, user, password),
+            workers=args.workers, seconds=args.seconds, limit=args.max_requests, extra_paths=args.path,
+            progress=progress if show_progress else None,
+        )
+    except KeyboardInterrupt:
+        print("Redfish dump interrupted", file=sys.stderr)
+        return 130
     snapshot["identity"] = scan.read_identity(redfish_snapshot.Replay(snapshot), metadata)
     redfish_snapshot.save(args.output, snapshot)
     stats = snapshot["capture"]
     label = "Snapshot" if stats["complete"] else "Partial snapshot"
-    print(f"{label} saved to {args.output}: {len(snapshot['resources'])} requests in "
+    note = f" ({stats['stop_reason']})" if not stats["complete"] else ""
+    print(f"{label}{note} saved to {args.output}: {len(snapshot['resources'])} requests in "
           f"{stats['seconds']:g}s; {stats['pending']} pending, "
           f"{stats['transport_errors']} transport errors")
     return 0

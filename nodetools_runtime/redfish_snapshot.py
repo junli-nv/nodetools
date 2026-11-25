@@ -21,6 +21,7 @@ ROOTS = (
     "PowerEquipment", "Fabrics", "Oem",
 )
 SCHEMA = 1
+_PROGRESS_INTERVAL = 3
 _BLOCKED = {
     "accountservice", "sessionservice", "certificateservice", "keyservice",
     "externalaccountproviders", "accounts", "sessions", "certificates", "entries",
@@ -111,10 +112,12 @@ class Redactor:
         return _IP.sub("192.0.2.1", _MAC.sub(self._mac, value))
 
 
-def capture(address, factory, metadata, private_values, *, workers, seconds, limit, extra_paths=()):
+def capture(address, factory, metadata, private_values, *, workers, seconds, limit, extra_paths=(), progress=None):
     origin = ("https", address)
     redactor = Redactor(origin, private_values)
-    deadline = time.monotonic() + seconds
+    started = time.monotonic()
+    deadline = started + seconds
+    next_progress = started
     pending = deque()
     scheduled = set()
     records = {}
@@ -150,7 +153,12 @@ def capture(address, factory, metadata, private_values, *, workers, seconds, lim
                     active[pool.submit(fetch, path)] = path
                 if not active:
                     break
-                finished, _ = wait(active, return_when=FIRST_COMPLETED)
+                now = time.monotonic()
+                if progress is not None and now >= next_progress:
+                    progress(now - started, len(records), len(active), len(pending))
+                    next_progress = now + _PROGRESS_INTERVAL
+                wait_time = max(0, next_progress - time.monotonic()) if progress is not None else None
+                finished, _ = wait(active, timeout=wait_time, return_when=FIRST_COMPLETED)
                 for future in finished:
                     path = active.pop(future)
                     status, body = future.result()
@@ -181,11 +189,16 @@ def capture(address, factory, metadata, private_values, *, workers, seconds, lim
     if root.get("status") != 200 or not isinstance(root.get("body"), dict):
         raise NodetoolsError(f"Redfish root unavailable (HTTP {root.get('status')})")
     errors = sum(record["status"] is None for record in records.values())
+    elapsed = time.monotonic() - started
+    if pending:
+        stop_reason = "request limit" if len(records) >= limit else "time budget"
+    else:
+        stop_reason = "transport errors" if errors else "completed"
     return {
         "schema": SCHEMA, "device": metadata, "resources": records,
         "capture": {"complete": not pending and not errors,
                     "pending": len(pending), "transport_errors": errors,
-                    "seconds": round(seconds + time.monotonic() - deadline, 2)},
+                    "seconds": round(elapsed, 2), "stop_reason": stop_reason},
     }
 
 

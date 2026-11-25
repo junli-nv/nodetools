@@ -343,7 +343,11 @@ def build_parser():
 
     redfish = sub.add_parser("redfish", help="export and replay Redfish snapshots")
     redfish_sub = redfish.add_subparsers(dest="snapshot_command", required=True)
-    dump = redfish_sub.add_parser("dump", help="capture one BMC with parallel endpoint reads")
+    dump = redfish_sub.add_parser(
+        "dump", help="capture one BMC with parallel endpoint reads",
+        description="Capture a BMC snapshot. Progress is shown on interactive terminals. "
+                    "Use -x to show progress when redirecting output.",
+    )
     dump.add_argument("host", help="one host from inventory")
     dump.add_argument("-i", "--inventory", help="inventory file")
     dump.add_argument("-o", "--output", required=True, help="new snapshot file")

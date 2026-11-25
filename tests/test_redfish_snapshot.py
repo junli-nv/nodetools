@@ -97,3 +97,33 @@ def test_request_limit_records_pending_work():
     result = snapshots.capture("bmc.example", BMC, {}, (), workers=4, seconds=2, limit=1)
     assert list(result["resources"]) == [ROOT]
     assert result["capture"]["pending"] > 0
+
+
+def test_capture_reports_progress_while_request_is_in_flight(monkeypatch):
+    from threading import Event
+
+    release = Event()
+    updates = []
+
+    class BMC:
+        def set_deadline(self, deadline):
+            pass
+
+        def get_raw(self, path, *, follow_redirects):
+            release.wait(0.5)
+            return 200, {}
+
+        def close(self):
+            pass
+
+    def report(elapsed, completed, active, pending):
+        updates.append((completed, active, pending))
+        if len(updates) == 2:
+            release.set()
+
+    monkeypatch.setattr(snapshots, "_PROGRESS_INTERVAL", 0.01)
+    result = snapshots.capture("bmc.example", BMC, {}, (), workers=1, seconds=2,
+                               limit=1, progress=report)
+    assert len(updates) >= 2
+    assert updates[0][:2] == updates[1][:2] == (0, 1)
+    assert result["capture"]["stop_reason"] == "request limit"
