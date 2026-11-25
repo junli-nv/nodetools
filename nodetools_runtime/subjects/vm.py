@@ -7,6 +7,8 @@ back to the NVIDIA/AMI ``AMIVirtualMedia`` behaviour.
 
 from urllib.parse import urlsplit
 
+from requests.exceptions import ReadTimeout
+
 from ..diagnostics import debug_connection
 from ..errors import CapUnsupported, NodetoolsError, TransportError
 from . import common
@@ -38,7 +40,21 @@ def post(device, path, body):
         source = urlsplit(body["Image"])
         debug_connection(True, "media:" + device.name, source.scheme.upper(), source.netloc,
                          body.get("UserName"), body.get("Password"))
-    status, response = device.redfish.post(path, body)
+    try:
+        status, response = device.redfish.post(path, body)
+    except TransportError as exc:
+        if not isinstance(exc.__cause__, ReadTimeout) or not body.get("Image"):
+            raise
+        source = urlsplit(body["Image"])
+        if source.scheme not in ("smb", "cifs"):
+            raise
+        port = source.port or 445
+        raise TransportError(
+            f"Timed out waiting for the BMC to respond to the CIFS mount request. "
+            f"Run 'nodevm {device.name} status' to check whether the image mounted before retrying. "
+            f"Check whether the BMC can reach the SMB server {source.hostname} on TCP {port}. "
+            f"Redfish error: {exc}"
+        ) from exc
     if not 200 <= status < 300 or (isinstance(response, dict) and "error" in response):
         raise TransportError("virtual media action {} failed (HTTP {})".format(path, status))
     return status, response

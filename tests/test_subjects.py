@@ -1552,6 +1552,36 @@ def test_wistron_uses_host_system_for_netboot_and_virtual_media():
     assert netboot.system_path(device) == systems + "/selected"
 
 
+@pytest.mark.parametrize("kind, mount_hint", [("ReadTimeout", True), ("ConnectTimeout", False)])
+def test_cifs_mount_only_suggests_smb_check_on_response_timeout(kind, mount_hint):
+    from types import SimpleNamespace
+
+    import requests
+
+    from nodetools_runtime.errors import TransportError
+
+    def post(path, body):
+        try:
+            raise getattr(requests.exceptions, kind)("request timed out")
+        except requests.exceptions.RequestException as exc:
+            raise TransportError(str(exc)) from exc
+
+    device = SimpleNamespace(name="cp-01", redfish=SimpleNamespace(post=post))
+    body = {"Image": "smb://images.example.test/share/test.iso", "Password": "example-secret"}
+    with pytest.raises(TransportError) as error:
+        vm.post(device, "/Actions/VirtualMedia.InsertMedia", body)
+
+    message = str(error.value)
+    assert "request timed out" in message
+    assert "example-secret" not in message
+    if mount_hint:
+        assert "waiting for the BMC to respond to the CIFS mount request" in message
+        assert "nodevm cp-01 status" in message
+        assert "images.example.test on TCP 445" in message
+    else:
+        assert message == "request timed out"
+
+
 def test_wistron_mount_and_eject_discovered_cifs_slot(monkeypatch):
     from nodetools_runtime.errors import CapUnsupported
 

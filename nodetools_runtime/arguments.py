@@ -114,6 +114,8 @@ Prefer moves all matching entries ahead in their current order. Remove
     "vm": """Inspect or control BMC virtual media.
   status            Show the selected or mounted image (default).
   mount/insert URL  Attach an ISO. Supported URL schemes depend on the OEM.
+                    Use an NFS or Samba server IP or hostname reachable from
+                    the BMC. The BMC connects to the server to read the ISO.
   eject/umount      Detach the image.
   stop URL          OEM-specific stop. On Lenovo GB300, eject first, then
                     use stop to disable Remote Media.
@@ -128,9 +130,9 @@ Lenovo GB300 CIFS example
   ./nodevm "$node" stop "$image"
   ./nodevm "$node" status
 
-Set SMB_USER and SMB_PASSWORD to the share credentials first. The share
-must be reachable from the BMC. Run lsblk -o NAME,TYPE,LABEL,MODEL on
-the compute host before ejecting. See --help-full for timeout options.""",
+Set SMB_USER and SMB_PASSWORD to the share credentials first. Run
+lsblk -o NAME,TYPE,LABEL,MODEL on the compute host before ejecting.
+See --help-full for timeout options.""",
 }
 
 
