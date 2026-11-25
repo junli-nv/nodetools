@@ -548,6 +548,38 @@ by count > 0, `Thermal`/`Power` by existence. Measured on compute nodes: `fan`
 0.9 s vs 11 s live, `psu` 8 s vs 22 s, `temp` 7 s vs 17 s. Re-scan any one node of
 a type to refresh its template; `scan --clear` deletes it.
 
+### Endpoint selection for all management commands
+
+Apply this rule to every command that talks to a device, including status
+queries and control actions. It covers compute trays, NVSwitch trays, and
+power shelves through Redfish, IPMI, or OS interfaces.
+
+1. **Use the configured endpoint directly.** Select an adapter from the
+   vendor, platform, generation, and role in inventory. Keep fixed interfaces
+   in the adapter for the model and validated firmware. Inventory may specify
+   the resource instance with `system_id`, `manager_id`, or `chassis_id`.
+   Once the target is known, read or act directly through the known interface
+   and skip identity or collection probes unrelated to the operation.
+2. **Reuse templates for variable layouts.** Use `scan` to discover and save
+   machine-type templates. Discover only the resources needed when neither
+   inventory nor a valid template identifies the target. Use the capability's
+   fallback or rediscover when a fixed endpoint is no longer valid. Refresh
+   with `scan`, or verify live using `--no-cache` where supported.
+3. **Validate writes.** Reuse known paths and perform the target, resource,
+   parameter, and task or state checks required by the action. Stop if the
+   target cannot be confirmed. If the write outcome is uncertain, read the
+   task or state before deciding whether to retry.
+4. **Verify each command.** Preserve the command interface and output format.
+   Test request counts with complete configuration, fallback when configuration
+   or endpoints are missing, and readback after writes. Handle endpoint
+   differences in the vendor adapter.
+
+Lenovo GB300 `nodefan` is an implemented read-only example. With `platform=nvl`,
+`oem=lenovo`, and `generation=gb300` in inventory, the adapter uses
+`inventory_fixed_caps` to skip startup discovery for `fan` and sends one GET
+to `/redfish/v1/Chassis/<chassis_id>/Thermal`. The default is `Chassis_0`.
+One response supplies all eight PWM and sixteen RPM readings.
+
 ### IPMI password modes
 
 - Default: `-U user -P pass` (matching the legacy scripts).
@@ -628,6 +660,8 @@ effect automatically.
    targeted step in the `caps/*.py` ladder (the Wistron-specific
    `Sensors/Chassis_0_FAN_*` is hit via `_from_sensors`) rather than rewriting
    the whole collection in the ODM module.
+5. For reads and writes, follow
+   [Endpoint selection for all management commands](#endpoint-selection-for-all-management-commands).
 
 ### Add a transport
 

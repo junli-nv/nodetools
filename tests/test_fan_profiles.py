@@ -113,3 +113,29 @@ def test_local_ipmi_settings_inherit_and_override(tmp_path):
     path.write_text(profile + "ipmi_timeout=0\n", encoding="utf-8")
     with pytest.raises(NodetoolsError, match="must be positive integers"):
         fan_profiles.load(path, local=True)
+
+
+@pytest.mark.parametrize("fail_duty", (False, True))
+def test_lenovo_gb300_fan_control(fail_duty):
+    from nodetools_runtime.oem.nvl.lenovo import LenovoNvl
+
+    auto = (0x3A, 0x05, 0)
+    manual = (0x3A, 0x05, 1)
+    max_duty = (0x3A, 0x03, 0xFF, 100)
+    sent = []
+
+    def raw(*row):
+        sent.append(row)
+        if row == max_duty and fail_duty:
+            raise TransportError("controller rejected duty")
+
+    adapter = LenovoNvl()
+    device = SimpleNamespace(ipmi=SimpleNamespace(raw=raw))
+    assert adapter.fan_control(device, "auto") == "ok"
+    if fail_duty:
+        with pytest.raises(TransportError, match="step 2/2 failed.*restore command accepted"):
+            adapter.fan_control(device, "max")
+        assert sent == [auto, manual, max_duty, auto]
+    else:
+        assert adapter.fan_control(device, "max") == "ok"
+        assert sent == [auto, manual, max_duty]

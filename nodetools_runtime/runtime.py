@@ -109,11 +109,16 @@ class Runner:
     def _device(self, host):
         if self.device_factory is not None:
             return self.device_factory(host)
-        return build_device(
-            host,
-            self.options,
-            load_profile=self.capability not in _PROFILELESS_CAPS,
-        )
+        return build_device(host, self.options, load_profile=self._needs_profile(host))
+
+    def _needs_profile(self, host):
+        if self.capability in _PROFILELESS_CAPS:
+            return False
+        if (self.options.action or getattr(self.options, "no_cache", False)
+                or not all(host.vars.get(field) for field in ("platform", "oem", "generation"))):
+            return True
+        adapter = oem.for_device(model.Device(host), self.capability)
+        return self.capability not in getattr(adapter, "inventory_fixed_caps", ())
 
     def _result(self, host, readings=None, error=None, device=None):
         result = {

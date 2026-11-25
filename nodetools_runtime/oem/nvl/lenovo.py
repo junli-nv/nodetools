@@ -9,7 +9,11 @@ from ..redfish import ReadOnlyCompute
 
 
 class LenovoNvl(ReadOnlyCompute):
+    fan_profile = "lenovo-gb300-nvl"
     monitor_chassis = "Chassis_0"
+    fan_read_chassis = (monitor_chassis,)
+    inventory_fixed_caps = ("fan",)
+    fan_thermal_sensor_numbers = True
     monitor_power_control = "Chassis Power Control"
     monitor_hsc_sensors = {"79": ("79_0", "HSC0_Power"), "84": ("84_0", "HSC1_Power")}
 
@@ -20,6 +24,19 @@ class LenovoNvl(ReadOnlyCompute):
 
     def __init__(self):
         super().__init__(name="lenovo", system_id="System_0")
+
+    def fan_control(self, device, action):
+        if action != "max":
+            return super().fan_control(device, action)
+
+        try:
+            return super().fan_control(device, action)
+        except TransportError as exc:
+            try:
+                super().fan_control(device, "auto")
+            except TransportError as restore_error:
+                raise TransportError(f"{exc}; restoring automatic fan control failed: {restore_error}") from exc
+            raise TransportError(f"{exc}; automatic fan control restore command accepted") from exc
 
     def _host_manager(self, device):
         paths = management.managed_by(self._system(device))

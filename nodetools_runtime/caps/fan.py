@@ -47,16 +47,24 @@ def _from_thermal_subsystem(device):
     return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 
-def _from_thermal(device, chassis=None):
+def _from_thermal(device, chassis=None, sensor_numbers=False):
     rf = device.redfish
 
     def scan(cid):
         out = []
         thermal = rf.get("/redfish/v1/Chassis/{}/Thermal".format(cid))
-        for fan in (thermal or {}).get("Fans", []) or []:
+        fans = (thermal or {}).get("Fans") or []
+        if sensor_numbers:
+            ids = [fan.get("SensorNumber") for fan in fans]
+            if not all(isinstance(rid, int) for rid in ids) or len(set(ids)) != len(ids):
+                return []
+            fans = sorted(fans, key=lambda fan: str(fan["SensorNumber"]))
+        for fan in fans:
+            ident = (str(fan["SensorNumber"]) if sensor_numbers
+                     else fan.get("MemberId") or fan.get("FanName") or fan.get("Id"))
             out.append(
                 common.reading(
-                    fan.get("MemberId") or fan.get("FanName") or fan.get("Id"),
+                    ident,
                     fan.get("Name") or fan.get("FanName"),
                     common.fan_speed(fan),
                     common.health_of(fan.get("Status")),
@@ -116,9 +124,14 @@ def _from_ipmi(device):
 
 def collect(device):
     steps = []
-    preferred = getattr(getattr(device, "odm", None), "fan_read_chassis", ())
+    odm = getattr(device, "odm", None)
+    preferred = getattr(odm, "fan_read_chassis", ())
     if preferred:
-        steps.append(("oem_thermal", lambda: _from_thermal(device, preferred)))
+        selected = device.vars.get("chassis_id")
+        if selected and "fan" in getattr(odm, "inventory_fixed_caps", ()):
+            preferred = (selected,)
+        sensor_numbers = getattr(odm, "fan_thermal_sensor_numbers", False)
+        steps.append(("oem_thermal", lambda: _from_thermal(device, preferred, sensor_numbers)))
     steps += [
         ("thermal_subsystem", lambda: _from_thermal_subsystem(device)),
         ("thermal", lambda: _from_thermal(device)),

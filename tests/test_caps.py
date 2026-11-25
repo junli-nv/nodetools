@@ -453,3 +453,62 @@ def test_delta_speed_rpm_field_keeps_zero_and_reports_rpm():
     data = {"SpeedPercent": {"SpeedRpm": 0.0}}
     assert common.fan_speed(data) == 0.0
     assert fan._fan_unit(data) == "RPM"
+
+
+def test_lenovo_gb300_reads_thermal_with_existing_sensor_ids(monkeypatch):
+    from nodetools_runtime.oem.nvl.lenovo import LenovoNvl
+
+    base = "/redfish/v1/Chassis/Chassis_0"
+    thermal = [
+        {"MemberId": "0", "SensorNumber": 33, "Name": "FAN0_PWM", "Reading": 36},
+        {"MemberId": "1", "SensorNumber": 148, "Name": "FAN6_F_Speed", "Reading": 11700},
+    ]
+    data = {
+        base + "/Thermal": {"Fans": thermal},
+        base + "/ThermalSubsystem/Fans?$expand=.": {"Members": [
+            {"Id": "33", "Name": "FAN0_PWM", "SpeedPercent": {"SpeedRPM": 36}},
+        ]},
+    }
+    device = _device(data)
+    device.odm = LenovoNvl()
+    requests = []
+
+    def get(path, timeout=None):
+        requests.append(path)
+        return data.get(path)
+
+    monkeypatch.setattr(device.redfish, "get", get)
+    readings = fan.collect(device)
+    assert [(row["id"], row["value"]) for row in readings] == [("148", 11700), ("33", 36)]
+    assert requests == [base + "/Thermal"]
+
+    del thermal[0]["SensorNumber"]
+    assert fan.collect(device)[0]["id"] == "33"
+    assert requests[1] == base + "/Thermal"
+    assert base + "/ThermalSubsystem/Fans?$expand=." in requests[2:]
+
+
+def test_fixed_fan_endpoint_skips_profile_for_pinned_read_only_nodes():
+    from types import SimpleNamespace
+
+    from nodetools_runtime import runtime
+
+    host = Host("cp-01", "10.0.0.1", {
+        "platform": "nvl", "oem": "lenovo", "generation": "gb300", "chassis_id": "Chassis_0",
+    }, ["compute"])
+    options = SimpleNamespace(action=None, no_cache=False)
+    runner = runtime.Runner("fan", options)
+    assert not runner._needs_profile(host)
+
+    options.no_cache = True
+    assert runner._needs_profile(host)
+    options.no_cache = False
+    options.action = "max"
+    assert runner._needs_profile(host)
+
+    options.action = None
+    assert runtime.Runner("psu", options)._needs_profile(host)
+    host.vars["generation"] = "gb200"
+    assert runner._needs_profile(host)
+    del host.vars["generation"]
+    assert runner._needs_profile(host)

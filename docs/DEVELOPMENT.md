@@ -464,6 +464,29 @@ chassis（无缓存则回退到实时发现，行为不变）：`Fans`/`PowerSup
 `fan` 0.9s vs 实时 11s、`psu` 8s vs 22s、`temp` 7s vs 17s。同机型重扫任意一台即刷新，
 `scan --clear` 删除该机型的模版。
 
+### 所有管理命令的端点选择
+
+这条规则适用于所有访问设备的命令，包括读取状态和执行控制动作。compute tray、
+NVSwitch、power shelf 的 Redfish、IPMI 和 OS 接口按同一原则选路。
+
+1. **配置明确时直达。** 用 inventory 中的厂商、平台、代际和角色选适配器。
+   由适配器定义该机型和已验证固件的固定接口，inventory 可用 `system_id`、
+   `manager_id`、`chassis_id` 指定资源实例。目标明确后，直接读取或操作已知接口，
+   省掉与本次操作无关的身份和集合探测。
+2. **布局可变时复用模板。** `scan` 发现并保存机型模板。配置或有效模板无法确定
+   目标时，执行范围明确的发现。直读端点不再有效时，走该能力的回退或重新发现。
+   可用 `scan` 主动刷新模板，支持 `--no-cache` 的命令可用它做实时核对。
+3. **写操作保留校验。** 复用已知路径，同时保留动作所需的目标身份、资源和参数
+   校验，以及任务或状态回读。目标无法确认时停止写入。提交结果不明确时，先查
+   任务或状态，再决定是否重试。
+4. **按命令验收。** 保持现有命令接口和输出格式。测试配置齐全时的请求数、
+   配置缺失或端点失效时的回退，以及写后的状态验证。端点差异由厂商适配器处理。
+
+Lenovo GB300 的 `nodefan` 是已落地的只读示例。inventory 指定 `platform=nvl`、
+`oem=lenovo`、`generation=gb300` 时，适配器通过 `inventory_fixed_caps` 声明
+`fan` 可以跳过启动探测，一次 GET 读取 `/redfish/v1/Chassis/<chassis_id>/Thermal`。
+默认机箱为 `Chassis_0`，同一次响应提供 8 路 PWM 和 16 路 RPM。
+
 ### IPMI 密码双模式
 
 - 默认：`-U user -P pass`（与旧脚本一致）。
@@ -534,6 +557,16 @@ BMC 的 `ThermalMetrics` 单次响应就慢（并发轰同一 BMC 还会成倍�
 4. 如果它的**读数据**也和通用路径不同，优先在 `caps/*.py` 的阶梯里加一个
    针对性的步骤（参考 Wistron 专用 `Sensors/Chassis_0_FAN_*` 就是走
    `_from_sensors` 命中的），而不是在 ODM 模块里重写整条收集逻辑。
+5. 读取和写入都按[所有管理命令的端点选择](#所有管理命令的端点选择)接入。
+
+### Lenovo GB300 compute tray 风扇控制
+
+- `nodefan NODE auto` 用 `ipmitool raw 0x3a 0x05 0x00` 将风扇控制交回 BMC。
+- `nodefan NODE max` 先用 `ipmitool raw 0x3a 0x05 0x01` 切换到手动，再用
+  `ipmitool raw 0x3a 0x03 0xff 0x64` 设置 100% PWM。写入失败时尝试恢复自动控制。
+- `--dry-run` 显示命令顺序。用 `nodefan NODE check` 回读各路 PWM 和 RPM。
+
+`nodefan` 的路径选择见[所有管理命令的端点选择](#所有管理命令的端点选择)。
 
 ### 新增一个传输
 
