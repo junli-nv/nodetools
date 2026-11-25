@@ -1620,3 +1620,73 @@ def test_wistron_gpu_uses_uuid_when_firmware_repeats_module_serial():
     assert inventory._gpu_serials(device) == [
         "cp-01: GPU_0 serial=- uuid=gpu0-uuid", "cp-01: GPU_1 serial=- uuid=gpu1-uuid",
     ]
+
+
+def test_lenovo_host_bmc_and_virtual_media_readback(monkeypatch):
+    from types import SimpleNamespace
+
+    from nodetools_runtime.errors import CapUnsupported, TransportError
+    from nodetools_runtime.oem.nvl.lenovo import LenovoNvl
+    from nodetools_runtime.subjects import management
+
+    managers = "/redfish/v1/Managers"
+    bmc, hmc = managers + "/BMC_0", managers + "/HGX_BMC_0"
+    system = "/redfish/v1/Systems/System_0"
+    media = bmc + "/VirtualMedia"
+    cd = media + "/CD1"
+    toggle = bmc + "/Actions/Oem/AMIVirtualMedia.EnableRMedia"
+    insert = cd + "/Actions/VirtualMedia.InsertMedia"
+    eject = cd + "/Actions/VirtualMedia.EjectMedia"
+    task = "/redfish/v1/TaskService/Tasks/7"
+    image = "nfs://images.example.test/iso/probe.iso"
+    location = "//images.example.test/iso/probe.iso"
+    state = {"RMediaStatus": "Disabled"}
+    slot = {"Inserted": False, "Actions": {
+        "#VirtualMedia.InsertMedia": {"target": insert},
+        "#VirtualMedia.EjectMedia": {"target": eject},
+    }}
+    collection = {"Members": []}
+    rf = FakeRedfish({
+        managers: {"Members": [{"@odata.id": bmc}, {"@odata.id": hmc}]},
+        bmc: {"ManagerType": "BMC", "FirmwareVersion": "3.04.0",
+              "VirtualMedia": {"@odata.id": media}, "Oem": {"Ami": {"VirtualMedia": state}},
+              "Actions": {"Oem": {"#AMIVirtualMedia.EnableRMedia": {"target": toggle}}}},
+        hmc: {"ManagerType": "BMC", "FirmwareVersion": "HMC"},
+        system: {"Links": {"ManagedBy": [{"@odata.id": bmc}]}},
+        media: collection, cd: slot,
+        task: {"TaskState": "Exception", "Messages": [{"MessageId": "Test.InsertMediaError"}]},
+    })
+    post = rf.post
+
+    def transition(path, payload, timeout=None):
+        post(path, payload, timeout)
+        if path == toggle:
+            enabling = payload["RMediaState"] == "Enable"
+            state["RMediaStatus"] = "Enabled" if enabling else "Disabled"
+            collection["Members"] = [{"@odata.id": cd}] if enabling else []
+            return 200, {"error": {"code": "Ami.1.0.DelayInActionCompletion"}}
+        if path == insert:
+            assert payload == {"Image": location, "TransferProtocolType": "NFS"}
+            if rf.data[task]["TaskState"] == "Completed":
+                slot.update(Inserted=True, Image=location)
+            return 202, {"@odata.id": task}
+        assert path == eject
+        slot.update(Inserted=False, Image=None)
+        return 204, None
+
+    monkeypatch.setattr(rf, "post", transition)
+    device = _device(redfish=rf, odm=LenovoNvl())
+    monkeypatch.setattr(oem, "for_device", lambda _device: device.odm)
+    assert management.bmc(device, "info") == ["FirmwareVersion 3.04.0"]
+
+    options = SimpleNamespace(image=image)
+    with pytest.raises(TransportError, match="Test.InsertMediaError"):
+        vm.collect(device, "mount", options)
+    assert not slot["Inserted"]
+    rf.data[task]["TaskState"] = "Completed"
+    assert "Mounted in VirtualMedia slot CD1" in vm.collect(device, "mount", options)[-1]
+    with pytest.raises(CapUnsupported, match="eject inserted media"):
+        vm.collect(device, "stop", options)
+    assert "Ejected VirtualMedia slot CD1" in vm.collect(device, "eject", options)[0]
+    assert "Remote Media disabled" in vm.collect(device, "stop", options)[0]
+    assert state["RMediaStatus"] == "Disabled" and not collection["Members"]

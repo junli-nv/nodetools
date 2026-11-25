@@ -1,7 +1,14 @@
 """BMC controls and serial number queries."""
 
 from ..errors import CapUnsupported
-from . import common, firmware
+from . import boot_nics, common, firmware
+
+
+def managed_by(system):
+    links = common.member_ids({"Members": (system.get("Links") or {}).get("ManagedBy")})
+    prefix = "/redfish/v1/Managers/"
+    return {path for value in links if (path := boot_nics.local_link(value))
+            and path.startswith(prefix) and "/" not in path[len(prefix):]}
 
 
 def manager(device):
@@ -22,6 +29,16 @@ def manager(device):
             return linked[0]
         if len(linked) > 1:
             break
+    if controllers and (selected or getattr(device, "role", None) == "compute"):
+        from .. import oem
+
+        ident = selected or getattr(oem.for_device(device), "read_system_id", None)
+        if ident:
+            system = firmware.link("/redfish/v1/Systems/" + ident)
+            paths = managed_by(common.resource(device, system))
+            linked = [(path, data) for path, data in controllers if path in paths]
+            if len(linked) == 1:
+                return linked[0]
     if managers:
         raise CapUnsupported("could not identify a unique host BMC")
     return None, {}
