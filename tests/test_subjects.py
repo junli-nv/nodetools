@@ -556,6 +556,40 @@ def test_gbxx_prefer_uses_pending_order_without_setting_an_override():
     assert "verified" in netboot.apply(device, plan)[0]
 
 
+
+def test_aivres_netboot_stages_network_bbs_and_reads_it_back():
+    from types import SimpleNamespace
+    from nodetools_runtime.oem.hgx.kaytus import KaytusKr9288
+
+    sys = "/redfish/v1/Systems/1"
+    bios_path = sys + "/Bios"
+    settings = bios_path + "/Settings"
+    key = "NetworkBbsPriority"
+    original = [
+        {"BootOptionNumber": 2, "DescriptionName": "UEFI PXE IPv4 02:00:00:00:00:01"},
+        {"BootOptionNumber": 6, "DescriptionName": "UEFI PXE IPv4 02:00:00:00:00:02"},
+    ]
+    data = {sys: {}, bios_path: {"Attributes": {key: original}}, settings: {"Attributes": {}}}
+    rf = FakeRedfish(data)
+    device = _device(redfish=rf, odm=KaytusKr9288())
+    opts = SimpleNamespace(netboot_filters={"mac": "020000000002"})
+    plan = netboot.collect(device, "prefer", opts)
+    assert plan.after == {key: list(reversed(original))}
+    assert "02:00:00:00:00:02" in netboot.describe(device, plan)[2]
+
+    def stage(path, body, etag_source=None):
+        assert path == settings and etag_source == bios_path
+        assert body == {"Attributes": plan.after}
+        data[path] = body
+        return 200, {}
+
+    rf.patch = stage
+    assert "verified" in netboot.apply(device, plan)[0]
+    assert any("Pending PXE order" in line for line in netboot.collect(device, "status", None))
+    assert data[bios_path]["Attributes"][key] == original
+    assert not rf.posts
+
+
 # -- aivres ----------------------------------------------------------------
 def test_aivres_power_status_is_normalized():
     from nodetools_runtime.oem.hgx.aivres import Aivres

@@ -474,7 +474,7 @@ Supermicro writes to `Bios/SD`. The KR9288 requires the parent `Bios` ETag
 when writing `Bios/Settings`. Supermicro `stop URL` detaches the slot matching
 the exact URL. Firmware may retain the configured URL after detaching.
 Mount waits for the Redfish task and checks `Inserted`. On hardware, KR9288 mounted and ejected an NFS ISO and restored its original mount. Supermicro inserted and ejected an ISO served by Apache on standard HTTP.
-Persistent boot ordering and AUX reseat on the KR9288 remain unverified.
+On the KR9288, `nodenetboot prefer` stages `NetworkBbsPriority` in `Bios/Settings` using the parent `Bios` ETag. `status` reads back the pending order. This changes the order within the network group and preserves the relative order of the disk and network groups.
 
 ### Command implementation by model and role
 
@@ -809,6 +809,34 @@ node, commands, and results. Check key fields against the device interface.
 Distinguish passes, failures, unsupported operations, and unavailable hardware.
 Mark cases without hardware as pending real-hardware validation.
 
+#### HGX direct-read coverage
+
+The two verified B300 models were checked with automatic discovery and with
+explicit inventory settings (`platform=hgx`, `generation=b300`, and
+`oem=smc` or `oem=aivres`). Sensor IDs, names, and fields matched.
+After confirming chassis coverage, set `temp_chassis_id=1` to read
+`Chassis/1/Thermal`. The temperature collector falls back to discovery
+when that endpoint returns no readings.
+
+| Model or adapter | Adapter-defined direct reads | Hardware fan | Hardware PSU | Hardware temperature |
+| --- | --- | --- | --- | --- |
+| Supermicro SYS-822GS-NB3RT | fan, PSU | 6 (6 → 1) | 6 (13 → 8) | 35 (91 ‡ → 1) |
+| Aivres/KAYTUS KR9288-X3-A0-F0-01 | fan, PSU | 40 (6 → 1) | 8 (6 → 1) | 71 (12 → 1) |
+| AMI HGX | fan, PSU | Pending | Pending | Pending |
+| BYD HGX | fan | Pending | Pending | Pending |
+| Compal HGX | fan, PSU | Pending | Pending | Pending |
+| Dell HGX | fan, PSU, temp | Pending | Pending | Pending |
+| Gigabyte HGX | fan, PSU | Pending | Pending | Pending |
+| Lenovo HGX | fan, PSU | Pending | Pending | Pending |
+| Netweb HGX | fan, PSU | Pending | Pending | Pending |
+| NVIDIA DGX B200/B300 | fan, PSU | Pending | Pending | Pending |
+
+Cells show sensor counts and Redfish calls from discovery → direct read.
+‡ On Supermicro's discovery path, 33 of the 91 calls returned HTTP responses
+within the node deadline. One of its 35 temperature sensors lacked a numeric
+reading in both modes. The remaining models and command families require
+model-specific hardware validation.
+
 ## 8. Code style and commit conventions
 
 - Standard library + `requests` only; no extra dependencies (keep
@@ -826,8 +854,12 @@ Mark cases without hardware as pending real-hardware validation.
 
 ## 9. Known limitations and TODO
 
-- B200/B300 (BXX ordinary HGX machines) are **not done in this phase**; BXX only
-  needs the `node*` prefix, so add its naming/source and matching ladders later.
+- HGX B200/B300 use `node*` commands. Complete read-only validation by OEM and
+  actual model. See the table above for Supermicro and Aivres sensor results.
+- Persistent PXE order was verified on the KR9288 with BMC 2.03.ef. Two network
+  BBS entries were exchanged and checked in both the pending settings and the
+  active BIOS after power-on. Boot group priorities were preserved.
+  The KR9288 adapter rejects AUX reseat pending a confirmed model-specific interface.
 - Non-`-gpu-nvl-` switches in the `Switch` group are classified as `switch` for
   now, with no matching capability (no `nvsw*` command hits them).
 - Control actions (`--action`) cover only the confirmed IPMI raw / Redfish PATCH

@@ -54,6 +54,29 @@ def test_temp_from_thermal():
     assert readings[0]["value"] == 24
 
 
+@pytest.mark.parametrize("fixed_available", [True, False])
+def test_temp_fixed_chassis_or_discovery(fixed_available):
+    fixed = "/redfish/v1/Chassis/1/Thermal"
+    discovered = "/redfish/v1/Chassis/Chassis_0/Thermal"
+    reading = {"Temperatures": [{"Name": "Inlet", "ReadingCelsius": 24}]}
+    device = _device({fixed: reading} if fixed_available else {discovered: reading})
+    device.vars["temp_chassis_id"] = "1"
+    get = device.redfish.get
+    requests = []
+
+    def track(path, timeout=None):
+        requests.append(path)
+        return get(path, timeout=timeout)
+
+    device.redfish.get = track
+    assert temp.collect(device)[0]["value"] == 24
+    assert requests[0] == fixed
+    if fixed_available:
+        assert requests == [fixed]
+    else:
+        assert discovered in requests
+
+
 def test_psu_from_power_supplies():
     data = {
         "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies": {

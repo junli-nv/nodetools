@@ -33,12 +33,12 @@ def _from_thermal(device, chassis=None):
 
     if chassis is None:
         chassis = common.rung_chassis(device, "Thermal", DEFAULT_CHASSIS)
-    if not chassis:
-        return []
-    if common.profile(device) is None and common.absent(
-        device, "/redfish/v1/Chassis/{}/Thermal".format(chassis[0])
-    ):
-        return []
+        if not chassis:
+            return []
+        if common.profile(device) is None and common.absent(
+            device, "/redfish/v1/Chassis/{}/Thermal".format(chassis[0])
+        ):
+            return []
     return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 
@@ -136,6 +136,9 @@ def _from_ipmi(device):
 
 def collect(device):
     steps = []
+    fixed_chassis = device.vars.get("temp_chassis_id")
+    if fixed_chassis:
+        steps.append(("fixed_thermal", lambda: _from_thermal(device, (fixed_chassis,))))
     ipmi_first = getattr(getattr(device, "odm", None), "temp_read_ipmi", False)
     if ipmi_first:
         steps.append(("oem_ipmi", lambda: _from_ipmi(device)))

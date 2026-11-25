@@ -33,7 +33,7 @@ _INFO_READ_ACTIONS = {
     "eventlog": (None, "bmc", "hmc"),
     "inventory": (None,),
     "macs": (None,),
-    "netboot": (None, "list", "mac", "net"),
+    "netboot": (None, "list", "status", "mac", "net"),
     "power": (None,),
     "vm": (None,),
 }
@@ -128,6 +128,8 @@ class Runner:
         if (self.options.action or getattr(self.options, "no_cache", False)
                 or not all(host.vars.get(field) for field in ("platform", "oem", "generation"))):
             return True
+        if self.capability == "temp" and host.get("temp_chassis_id"):
+            return False
         adapter = oem.for_device(model.Device(host), self.capability)
         return self.capability not in getattr(adapter, "inventory_fixed_caps", ())
 

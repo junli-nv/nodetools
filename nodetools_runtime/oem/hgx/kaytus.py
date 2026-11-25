@@ -6,6 +6,8 @@ from .aivres import Aivres, _IDL, _SEL, _SYSTEM
 
 
 class KaytusKr9288(Aivres):
+    network_bbs_write = True
+
     system_id = "1"
     bmc_id = "1"
     psu_read_chassis = ("1",)

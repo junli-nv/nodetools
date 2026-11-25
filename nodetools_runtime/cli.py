@@ -430,6 +430,8 @@ def _cmd_info(args):
     if options.bios_updates and (action or not explicit_targets):
         raise NodetoolsError("nodebios --set requires explicit targets and cannot be combined with an action")
     if subject == "netboot":
+        if action == "status":
+            options.action = action
         options.netboot_filters = netboot.normalize_filters(
             {key: getattr(args, key, None) for key in netboot.FILTERS}
         )

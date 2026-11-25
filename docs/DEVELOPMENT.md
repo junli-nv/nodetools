@@ -400,7 +400,7 @@ Aivres/KAYTUS `KR9288-X3-A0-F0-01`（BMC `2.03.ef`）使用 `Systems/1`
 和 `Managers/1/VMMService`；`Systems/NV` 提供 GPU 序列号。
 两款机器已实测 BIOS 暂存、PXE 设置和风扇切换。Supermicro 写入 `Bios/SD`，
 KR9288 写入 `Bios/Settings` 时需要父 `Bios` 的 ETag。Supermicro 的介质
-`stop URL` 按精确 URL 分离指定槽，固件可能保留 URL 配置。挂载需等待 Redfish 任务成功并核对 `Inserted`。实机上，KR9288 完成了 NFS 挂载、推出和原挂载恢复，Supermicro 通过 Apache 标准 HTTP 端口完成了 ISO 插入和推出。KR9288 的持久启动顺序写入和 AUX reseat 待验证。
+`stop URL` 按精确 URL 分离指定槽，固件可能保留 URL 配置。挂载需等待 Redfish 任务成功并核对 `Inserted`。实机上，KR9288 完成了 NFS 挂载、推出和原挂载恢复，Supermicro 通过 Apache 标准 HTTP 端口完成了 ISO 插入和推出。KR9288 的 `nodenetboot prefer` 把 `NetworkBbsPriority` 写入 `Bios/Settings`，使用父 `Bios` 的 ETag；`status` 可以读回待生效顺序。此操作调整网络启动组内的顺序，硬盘与网络启动组的相对位置保持原样。
 
 ### 按机型和角色实现命令
 
@@ -691,6 +691,31 @@ NVSwitch 和 Power Shelf 选至少一台代表设备，各跑一遍适用的只�
 记录平台、OEM、实际型号、BMC 或 NVOS 版本、代表节点、命令和结果。核对关键字段与
 设备接口返回一致，并区分通过、失败、不支持、无实机。没有实机的组合标为待实机验证。
 
+#### HGX 直读覆盖表
+
+两款 B300 实机分别用自动发现和显式 inventory 配置验收
+（`platform=hgx`、`generation=b300`、`oem=smc` 或 `oem=aivres`）。
+传感器 ID、名称和输出字段一致。确认机箱覆盖后，可设 `temp_chassis_id=1`
+读取 `Chassis/1/Thermal`。固定端点无读数时，温度采集会回退到发现路径。
+
+| 机型或适配器 | 适配器内置直读 | 实机风扇 | 实机 PSU | 实机温度 |
+| --- | --- | --- | --- | --- |
+| Supermicro SYS-822GS-NB3RT | fan, PSU | 6 (6 → 1) | 6 (13 → 8) | 35 (91 ‡ → 1) |
+| Aivres/KAYTUS KR9288-X3-A0-F0-01 | fan, PSU | 40 (6 → 1) | 8 (6 → 1) | 71 (12 → 1) |
+| AMI HGX | fan, PSU | 待验收 | 待验收 | 待验收 |
+| BYD HGX | fan | 待验收 | 待验收 | 待验收 |
+| Compal HGX | fan, PSU | 待验收 | 待验收 | 待验收 |
+| Dell HGX | fan, PSU, temp | 待验收 | 待验收 | 待验收 |
+| Gigabyte HGX | fan, PSU | 待验收 | 待验收 | 待验收 |
+| Lenovo HGX | fan, PSU | 待验收 | 待验收 | 待验收 |
+| Netweb HGX | fan, PSU | 待验收 | 待验收 | 待验收 |
+| NVIDIA DGX B200/B300 | fan, PSU | 待验收 | 待验收 | 待验收 |
+
+单元格为传感器数及自动发现 → 直读的 Redfish 调用数。
+‡ Supermicro 自动发现的 91 次调用中，节点时限内收到 33 次 HTTP 响应。
+它的 35 个温度传感器中有 1 个在两种路径下都无数值。
+其他机型和命令仍需逐项实机验收。
+
 ## 8. 代码风格与提交约定
 
 - 只用标准库 + `requests`，不引入额外依赖（保持 `pip install .` 轻量）。
@@ -703,8 +728,11 @@ NVSwitch 和 Power Shelf 选至少一台代表设备，各跑一遍适用的只�
 
 ## 9. 已知限制与后续 TODO
 
-- B200/B300（BXX 普通 HGX 机型）**本期未做**；BXX 只需 `node*` 前缀，后续加 BXX 的
-  命名/来源与对应阶梯即可。
+- HGX B200/B300 使用 `node*` 命令，按 OEM 和实际机型补齐只读验收。
+  Supermicro 和 Aivres 的传感器实测见上表。
+- KR9288（BMC 2.03.ef）已验证持久 PXE 顺序。交换两个网络 BBS 项后，
+  待生效设置和上电后的当前 BIOS 顺序均匹配，启动组优先级未变。
+  KR9288 适配器仍拒绝 AUX reseat，等待厂商确认该机型的 AUX 接口。
 - `Switch` 组里非 `-gpu-nvl-` 的交换机暂归 `switch` 组，尚无对应能力（无 `nvsw*`
   命令命中）。
 - 控制动作（`--action`）只覆盖已确证的几条 IPMI raw / Redfish PATCH / racadm；

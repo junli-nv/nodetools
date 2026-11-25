@@ -10,6 +10,7 @@ from . import boot_nics as nics, common
 
 SYSTEMS = "/redfish/v1/Systems"
 SMC_ORDER = "/Oem/Supermicro/FixedBootOrder"
+AIVRES_BBS = "NetworkBbsPriority"
 FILTERS = ("type", "vendor", "slot", "port", "pci", "link", "mac", "uefi_path")
 MAC_IN_ENTRY = re.compile(r"MAC\s*[:(]\s*([0-9a-f:-]{12,17})", re.I)
 MAC_IN_NAME = re.compile(r"(?<![0-9a-f])(?:[0-9a-f]{2}:){5}[0-9a-f]{2}(?![0-9a-f])", re.I)
@@ -219,6 +220,54 @@ def preferences(device, path, system, fixed, options, adapters, filters, family,
                 {reference(row.key): row for row in options}, set(keys), names or {})
 
 
+def aivres_preferences(device, system, adapters, filters, family, action):
+    bios = system + "/Bios"
+    active = (common.resource(device, bios).get("Attributes") or {}).get(AIVRES_BBS)
+    if not isinstance(active, list):
+        return None
+    if action == "prefer" and not getattr(device.odm, "network_bbs_write", False):
+        raise CapUnsupported("persistent KAYTUS network boot order is unavailable for this model")
+
+    def entries(order):
+        return [entry(str(item.get("BootOptionNumber", "-")), item.get("DescriptionName") or "",
+                      item.get("DevicePath") or "", adapters) if isinstance(item, dict) else None
+                for item in order]
+
+    if action in ("prefer", "status"):
+        pending = common.resource(device, bios + "/Settings", required=action == "prefer").get("Attributes") or {}
+    else:
+        pending = {}
+    if action != "prefer":
+        rows = [row.display() for row in entries(active) if row and row.matches(filters, family)]
+        if isinstance(pending.get(AIVRES_BBS), list) and pending[AIVRES_BBS] != active:
+            staged = [row.display() for row in entries(pending[AIVRES_BBS])
+                      if row and row.matches(filters, family)]
+            if staged:
+                rows += ["Pending PXE order (applies after reboot)", *staged]
+        return label(device, rows or ["No matching PXE entries"])
+
+    if set(pending) - {AIVRES_BBS}:
+        raise CapUnsupported("unrelated BIOS settings are pending")
+    order = pending.get(AIVRES_BBS, active)
+    if not isinstance(order, list) or not all(isinstance(item, dict) and
+                                              isinstance(item.get("BootOptionNumber"), int)
+                                              for item in order):
+        raise CapUnsupported("invalid KAYTUS network boot order")
+    ids = [str(item["BootOptionNumber"]) for item in order]
+    if len(set(ids)) != len(ids):
+        raise CapUnsupported("duplicate KAYTUS boot option numbers")
+    rows = entries(order)
+    selected = {i for i, row in enumerate(rows) if row and row.matches(filters, family)}
+    if not selected:
+        raise CapUnsupported("no matching PXE entry")
+    names = {key: item.get("DescriptionName") or key for key, item in zip(ids, order)}
+    return Plan(bios + "/Settings", system, {AIVRES_BBS: order},
+                {AIVRES_BBS: stable_first(order, selected)},
+                {row.key: row for row in rows if row}, {ids[i] for i in selected},
+                names)
+
+
+
 def collect(device, action, options):
     action = action or "list"
     if action == "pxe":
@@ -232,17 +281,10 @@ def collect(device, action, options):
     fixed = common.resource(device, path + SMC_ORDER) if device.odm.name == "smc" else {}
     chassis = "/redfish/v1/Chassis/" + ("Chassis_0" if model.platform_for(device) == "nvl" else "1")
     adapters = nics.inventory(device, system, chassis)
-    if device.odm.name == "aivres" and action != "prefer":
-        bios = common.resource(device, path + "/Bios")
-        bbs = (bios.get("Attributes") or {}).get("NetworkBbsPriority")
-        if isinstance(bbs, list):
-            entries = (
-                entry(str(item.get("BootOptionNumber") or "-"), item.get("DescriptionName") or "",
-                      item.get("DevicePath") or "", adapters)
-                for item in bbs if isinstance(item, dict)
-            )
-            rows = [row.display() for row in entries if row and row.matches(filters, family)]
-            return label(device, rows or ["No matching PXE entries"])
+    if device.odm.name == "aivres":
+        result = aivres_preferences(device, path, adapters, filters, family, action)
+        if result is not None:
+            return result
     have_bbs = isinstance(fixed.get("UEFINetwork"), list)
     rows, names = options_for(device, path, system, adapters, required=not have_bbs)
     result = preferences(device, path, system, fixed, rows, adapters, filters, family, action, names)
@@ -304,6 +346,9 @@ def describe(device, plan, order=None, message=None):
             lines.append("  {}. {}".format(number, group))
         lines.append("Network boot order (* matched)")
         values = effective["UEFINetwork"]
+    elif AIVRES_BBS in effective:
+        lines.append("Network boot order (* matched)")
+        values = [str(item["BootOptionNumber"]) for item in effective[AIVRES_BBS]]
     else:
         lines.append("Boot order (* matched)")
         values = effective["BootOrder"]
@@ -323,6 +368,14 @@ def read_plan_order(device, plan):
     if plan.target.endswith(SMC_ORDER):
         data = common.resource(device, plan.target, required=True)
         return {key: data.get(key) for key in plan.before}
+    if AIVRES_BBS in plan.before:
+        pending = common.resource(device, plan.target, required=True).get("Attributes") or {}
+        if set(pending) - {AIVRES_BBS}:
+            raise TransportError("unrelated BIOS settings are pending")
+        if AIVRES_BBS in pending:
+            return {AIVRES_BBS: pending[AIVRES_BBS]}
+        active = common.resource(device, plan.system + "/Bios", required=True).get("Attributes") or {}
+        return {AIVRES_BBS: active.get(AIVRES_BBS)}
     system = common.resource(device, plan.system, required=True)
     return {"BootOrder": standard_order(device, system, plan.target, plan.system)}
 
@@ -346,8 +399,15 @@ def apply(device, plan):
         raise TransportError("boot order changed after preflight; run the command again")
     if plan.before == plan.after:
         return describe(device, plan, order=current, message="Persistent PXE preference is already set")
-    payload = plan.after if plan.target.endswith(SMC_ORDER) else {"Boot": plan.after}
-    response = common.patch(device, plan.target, payload, etag_source=plan.target)
+    etag_source = plan.target
+    if AIVRES_BBS in plan.after:
+        payload = {"Attributes": plan.after}
+        etag_source = plan.system + "/Bios"
+    elif plan.target.endswith(SMC_ORDER):
+        payload = plan.after
+    else:
+        payload = {"Boot": plan.after}
+    response = common.patch(device, plan.target, payload, etag_source=etag_source)
     common.require_write_success(plan.target, response)
     for delay in (0, 1, 2) if response[0] == 202 else (0,):
         if delay:

@@ -25,7 +25,7 @@ from .config import (
 )
 from .errors import InventoryError
 
-RESOURCE_ID_KEYS = ("system_id", "manager_id", "chassis_id")
+RESOURCE_ID_KEYS = ("system_id", "manager_id", "chassis_id", "temp_chassis_id")
 _ADDRESS_KEYS = ("host", "bmc_ip", "ansible_host", "ip", "address")
 
 
