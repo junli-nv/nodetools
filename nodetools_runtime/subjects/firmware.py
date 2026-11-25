@@ -20,7 +20,7 @@ def link(value):
     raise CapUnsupported("expected a local Redfish resource link")
 
 
-def collection(device, path, required=False):
+def collection(device, path, required=False, expand=False):
     path = link(path)
     page = path
     seen = set()
@@ -28,7 +28,12 @@ def collection(device, path, required=False):
         if page in seen:
             raise TransportError("Redfish collection repeats a page")
         seen.add(page)
-        data = common.resource(device, page, required=required)
+        data = None
+        if expand:
+            separator = "&" if "?" in page else "?"
+            data = common.resource(device, page + separator + "$expand=.")
+        if not data or not isinstance(data.get("Members"), list):
+            data = common.resource(device, page, required=required)
         if not data:
             return
         members = data.get("Members")
@@ -38,7 +43,8 @@ def collection(device, path, required=False):
             member_path = link(member)
             if not member_path.startswith(path + "/"):
                 raise TransportError("unexpected member outside {}".format(path))
-            yield member_path, common.resource(device, member_path, required=True)
+            item = member if expand and isinstance(member, dict) and "Version" in member else None
+            yield member_path, item if item is not None else common.resource(device, member_path, required=True)
         page = data.get("Members@odata.nextLink")
         if page and (not isinstance(page, str) or not page.startswith(path + "?")):
             raise TransportError("unexpected Redfish collection page")
@@ -65,9 +71,11 @@ def inventory(device):
         return
     service = common.resource(device, link(root["UpdateService"]), required=True)
     if service.get("FirmwareInventory"):
-        for path, item in collection(device, link(service["FirmwareInventory"]), required=True):
-            yield "{}  {}".format(item.get("Name") or item.get("Id") or path.rsplit("/", 1)[-1],
-                                  item.get("Version") or "NA")
+        for path, item in collection(device, link(service["FirmwareInventory"]), required=True, expand=True):
+            label = item.get("Name")
+            if not label or label == "Software Inventory":
+                label = item.get("Id") or path.rsplit("/", 1)[-1]
+            yield "{}  {}".format(label, item.get("Version") or "NA")
 
 
 def tasks(device, task_id=None):

@@ -71,7 +71,7 @@ def num(value):
 def fan_speed(data):
     speed = data.get("SpeedPercent")
     if isinstance(speed, dict):
-        for key in ("SpeedRPM", "Reading"):
+        for key in ("SpeedRPM", "SpeedRpm", "Reading"):
             if speed.get(key) is not None:
                 return num(speed[key])
     for key in ("Reading", "SpeedRPM", "ReadingRPM"):

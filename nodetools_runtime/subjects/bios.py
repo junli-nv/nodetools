@@ -16,7 +16,7 @@ def collect(device, action, options):
     mode = getattr(device.odm, "bios_write_target", None)
     if mode is None:
         raise CapUnsupported("BIOS attribute staging is unavailable for this OEM")
-    path = "/redfish/v1/Systems/{}/Bios".format(device.odm.bios_system)
+    path = device.odm.bios_path(device)
     data = common.resource(device, path, required=True)
     current = data.get("Attributes") or {}
     changes = {}

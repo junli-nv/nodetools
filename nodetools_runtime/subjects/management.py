@@ -11,12 +11,17 @@ def manager(device):
     controllers = [(path, data) for path, data in managers if data.get("ManagerType") == "BMC"]
     if len(controllers) == 1:
         return controllers[0]
-    linked = [
-        (path, data) for path, data in controllers
-        if {"@odata.id": "/redfish/v1/Systems/1"} in (data.get("Links") or {}).get("ManagerForServers", [])
-    ]
-    if len(linked) == 1:
-        return linked[0]
+    selected = getattr(device, "vars", {}).get("system_id")
+    for system_id in (selected,) if selected else ("1", "system"):
+        system = firmware.link("/redfish/v1/Systems/" + system_id)
+        linked = [
+            (path, data) for path, data in controllers
+            if system in common.member_ids({"Members": (data.get("Links") or {}).get("ManagerForServers")})
+        ]
+        if len(linked) == 1:
+            return linked[0]
+        if len(linked) > 1:
+            break
     if managers:
         raise CapUnsupported("could not identify a unique host BMC")
     return None, {}

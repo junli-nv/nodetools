@@ -19,7 +19,10 @@ Variable precedence: ``[all:vars]`` < group ``:vars`` < per-host inline.
 
 import os
 
-from .config import DEFAULTS_SECTION, NAME_ROLE_PATTERNS, ROLE_GROUPS
+from .config import (
+    DEFAULT_REDFISH_CONNECT_TIMEOUT, DEFAULT_REDFISH_TIMEOUT, DEFAULTS_SECTION,
+    NAME_ROLE_PATTERNS, ROLE_GROUPS,
+)
 from .errors import InventoryError
 
 RESOURCE_ID_KEYS = ("system_id", "manager_id", "chassis_id")
@@ -251,6 +254,8 @@ def generate_from_hostslist(path):
         "jobs=18",
         "timeout=10",
         "node_timeout=30",
+        f"redfish_timeout={DEFAULT_REDFISH_TIMEOUT}",
+        f"redfish_connect_timeout={DEFAULT_REDFISH_CONNECT_TIMEOUT:g}",
         "summary=false",
         "",
     ]

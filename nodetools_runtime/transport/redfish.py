@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 
 import urllib3
 
+from ..config import DEFAULT_REDFISH_CONNECT_TIMEOUT, DEFAULT_REDFISH_TIMEOUT
 from ..diagnostics import debug_connection
 from ..errors import AuthError, TransportError
 
@@ -20,12 +21,14 @@ except ImportError as exc:  # pragma: no cover - environment guard
 class Redfish:
     """A basic, cookieless Redfish session for a single BMC."""
 
-    def __init__(self, address, user, password, timeout=10, verify=False):
+    def __init__(self, address, user, password, timeout=DEFAULT_REDFISH_TIMEOUT,
+                 verify=False, connect_timeout=DEFAULT_REDFISH_CONNECT_TIMEOUT):
         self.address = address
         self.debug_label = None
         self._debug_endpoints = set()
         self.user = user
         self.timeout = timeout
+        self.connect_timeout = connect_timeout
         self.verify = verify
         self._deadline = None
         self._etags = {}
@@ -77,9 +80,10 @@ class Redfish:
     def _timeout(self, timeout=None):
         read = timeout or self.timeout
         remaining = self._remaining()
+        connect = min(self.connect_timeout, read)
         if remaining is None:
-            return (min(3.0, read), read)
-        return urllib3.util.Timeout(total=max(1e-6, remaining), connect=min(3.0, read), read=read)
+            return (connect, read)
+        return urllib3.util.Timeout(total=max(1e-6, remaining), connect=connect, read=read)
 
     def url(self, path):
         if path.startswith("http://") or path.startswith("https://"):
@@ -97,7 +101,7 @@ class Redfish:
             return body
         return None
 
-    def get_raw(self, path, timeout=None):
+    def get_raw(self, path, timeout=None, *, follow_redirects=True):
         """Return (status, parsed-or-text). status is None on transport error."""
         self.timeout_reason = None
         if self._expired():
@@ -107,7 +111,8 @@ class Redfish:
         url = self.url(path)
         self._debug_connection(url)
         try:
-            resp = self._session.get(url, timeout=self._timeout(timeout))
+            flags = {} if follow_redirects else {"allow_redirects": False}
+            resp = self._session.get(url, timeout=self._timeout(timeout), **flags)
         except requests.RequestException as exc:
             self.transport_errors += 1
             self._debug("GET", path, type(exc).__name__)

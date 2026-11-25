@@ -22,6 +22,7 @@ from .config import (
     DEFAULT_INVENTORY,
     DEFAULT_JOBS,
     DEFAULT_NODE_TIMEOUT,
+    DEFAULT_REDFISH_TIMEOUT,
     DEFAULT_SUMMARY,
     DEFAULT_TIMEOUT,
     ROLE_LABELS,
@@ -56,6 +57,7 @@ class Options:
     def __init__(self, args):
         self.jobs = getattr(args, "jobs", None)
         self.timeout = getattr(args, "timeout", None)
+        self.timeout_explicit = self.timeout is not None
         self.node_timeout = None
         self.summary = False
         self.action = None
@@ -84,7 +86,15 @@ class Options:
         self.no_log = getattr(args, "no_log", False)
 
 
+def _apply_redfish_defaults(options, inv):
+    options.redfish_timeout = inv.default(
+        "redfish_timeout", inv.default("timeout", DEFAULT_REDFISH_TIMEOUT)
+    )
+    options.redfish_connect_timeout = inv.default("redfish_connect_timeout", None)
+
+
 def _apply_defaults(options, inv, args):
+    _apply_redfish_defaults(options, inv)
     options.jobs = args.jobs if args.jobs is not None else int(
         inv.default("jobs", DEFAULT_JOBS)
     )
@@ -256,6 +266,7 @@ def _cmd_scan(args):
         return 2
     inv = Inventory.from_file(_inventory_path(args.inventory))
     options = Options(args)
+    _apply_redfish_defaults(options, inv)
     options.jobs = (
         args.jobs if args.jobs is not None else int(inv.default("jobs", DEFAULT_JOBS))
     )
@@ -526,7 +537,7 @@ def main(argv=None):
         return 0
     if getattr(args, "debug", False):
         debug(True, "nodetools", "command={}".format(command))
-        if command != "bak" and (command != "inventory" or args.inventory_command == "show"):
+        if command not in ("bak", "redfish") and (command != "inventory" or args.inventory_command == "show"):
             debug(True, "inventory", "load {!r}".format(_inventory_path(getattr(args, "inventory", None))))
     try:
         if command == "inventory":
@@ -537,6 +548,12 @@ def main(argv=None):
             return _cmd_ping(args)
         if command == "bak":
             return _cmd_bak(args)
+        if command == "redfish":
+            from . import redfish_cli
+
+            if args.snapshot_command == "dump":
+                return redfish_cli.dump(args)
+            return redfish_cli.replay(args)
         if command == "scan":
             return _cmd_scan(args)
         if command == "nodeconsole":

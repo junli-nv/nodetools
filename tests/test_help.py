@@ -3,6 +3,13 @@ import pytest
 from nodetools_runtime.arguments import NODE_PROGRAMS, parse_args
 
 
+def test_nvswitch_fan_command_is_not_registered():
+    assert "nvswfan" not in NODE_PROGRAMS
+    with pytest.raises(SystemExit) as exc:
+        parse_args(["nvswfan"])
+    assert exc.value.code == 2
+
+
 def test_command_help_focuses_on_actions(capsys):
     texts = {}
     for command in (*NODE_PROGRAMS, "scan", "inventory"):
@@ -17,7 +24,7 @@ def test_command_help_focuses_on_actions(capsys):
     assert "Write the nodetools OEM preset" in texts["nodebios"]
     assert "fixed 50% PWM" in texts["nodefan"]
     assert "fixed 80% PWM" in texts["nodefan"]
-    assert "Netweb" not in texts["nvswfan"]
+    assert "Netweb" not in texts["psfan"]
     assert "Power the tray off and back on" in texts["nvswpower"]
     assert "  reset " not in texts["nvswpower"]
     assert "  reseat " not in texts["nvswpower"]

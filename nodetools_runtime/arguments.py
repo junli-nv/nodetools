@@ -2,10 +2,10 @@
 
 The command surface mirrors the legacy ``node*`` scripts: the **prefix** names
 the node role and the **suffix** names the subject, e.g. ``nodepsu``,
-``nodelist``, ``nvswfan``, ``pspsu``::
+``nodelist``, ``nvswtemp``, ``pspsu``::
 
     node  -> compute tray     fan / psu / temp
-    nvsw  -> NVSwitch         fan / psu / temp
+    nvsw  -> NVSwitch         psu / temp
     ps    -> power shelf      fan / psu / temp
 
 GBXX needs all three prefixes; BXX only ``node*``.  ``nodelist``/``nodeping``
@@ -31,6 +31,7 @@ SENSOR_COMMANDS = {
     "{}{}".format(prefix, subject): (role, subject)
     for prefix, role in ROLE_PREFIXES.items()
     for subject in SUBJECTS
+    if (role, subject) != ("nvswitch", "fan")
 }
 
 # ``nodeinlet`` checks the compute-tray air intake only: NVSwitch trays and power
@@ -306,6 +307,23 @@ def build_parser():
     parser.add_argument("--version", action="store_true", help="print version")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND", parser_class=_CommandParser)
 
+    redfish = sub.add_parser("redfish", help="export and replay Redfish snapshots")
+    redfish_sub = redfish.add_subparsers(dest="snapshot_command", required=True)
+    dump = redfish_sub.add_parser("dump", help="capture one BMC with parallel endpoint reads")
+    dump.add_argument("host", help="one host from inventory")
+    dump.add_argument("-i", "--inventory", help="inventory file")
+    dump.add_argument("-o", "--output", required=True, help="new snapshot file")
+    dump.add_argument("--workers", type=int, default=4, help="concurrent requests to this BMC (default 4)")
+    dump.add_argument("--seconds", type=float, default=60, help="capture budget in seconds (default 60)")
+    dump.add_argument("--max-requests", type=int, default=600, help="request limit (default 600)")
+    dump.add_argument("--timeout", type=float, help="override the Redfish response timeout")
+    dump.add_argument("--path", action="append", default=[], help="prioritize an additional Redfish resource")
+    replay = redfish_sub.add_parser("replay", help="run a read-only command from a snapshot")
+    replay.add_argument("file", help="snapshot JSON file")
+    replay.add_argument("snapshot_tool", metavar="COMMAND", help="a Redfish read command such as nodefan")
+    replay.add_argument("action", nargs="?", choices=("status", "check", "pending"))
+    replay.add_argument("--details", action="store_true", help="show detailed PSU fields")
+
     inv = sub.add_parser("inventory", help="inventory management")
     inv_sub = inv.add_subparsers(dest="inventory_command")
     init = inv_sub.add_parser("init", help="generate inventory from hosts.list")
@@ -334,7 +352,6 @@ def build_parser():
         description = _COMMAND_HELP[subject]
         if role == "nvswitch":
             description = {
-                "fan": "Read fan speeds and health over NVOS SSH, where exposed by the tray.",
                 "psu": "Read NVOS PSU telemetry, or DC input power from the tray HSC.",
                 "temp": "Read NVOS platform temperatures in Celsius over SSH.",
             }[subject]
@@ -345,7 +362,7 @@ def build_parser():
   auto/max Request automatic or maximum speed, where supported."""
         sensor = sub.add_parser(name, help="{} {}".format(role, subject), description=description)
         _add_sensor_opts(sensor)
-        if subject == "fan" and role != "nvswitch":
+        if subject == "fan":
             sensor.add_argument("--fan-profiles", metavar="FILE", help="use exact-model IPMI fan profiles from an INI file")
             sensor.add_argument("--dry-run", action="store_true", help="show the fan control plan without writing")
         if subject == "psu":

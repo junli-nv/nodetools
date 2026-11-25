@@ -92,7 +92,6 @@ nodepsu  <noderange> [status|check]
 nodetemp <noderange>
 nodemon  <noderange> [--count N] [--interval SEC] [--format csv|json]
 nodeinlet <noderange> [check] [--target C] [--tolerance D]
-nvswfan  <noderange> [status|check]
 nvswpsu  <noderange> [status|check]
 nvswtemp <noderange>
 psfan    <noderange> [status|check|auto|max]
@@ -129,7 +128,7 @@ nodetools inventory init [--from hosts.list] [-o inventory.ini]
 nodetools inventory show [-i inventory.ini]
 ```
 
-NVSwitch 的 `nvswfan`、`nvswpsu` 和 `nvswtemp` 通过 SSH 从 NVOS 读取。在 inventory 配置 `nvswitch_os_user`，可用 `nvswitch_os_host` 覆盖主机名。密码登录优先读取 `nvswitch_os_password`，未设置时读取旧字段 `nvswitch_os_pass`，并需要 `sshpass`。如果交换机托盘只提供 HSC DC 输入，`nvswpsu --details` 输出 `HSC-DC-IN,电压(V),电流(A),功率(W)`。机柜电源架的 PSU 用 `pspsu` 查询。 `-x` 显示 NVOS 的 SSH 主机名、连接 IP、用户名、明文密码及其配置来源。
+NVSwitch 的 `nvswpsu` 和 `nvswtemp` 通过 SSH 从 NVOS 读取。在 inventory 配置 `nvswitch_os_user`，可用 `nvswitch_os_host` 覆盖主机名。密码登录优先读取 `nvswitch_os_password`，未设置时读取旧字段 `nvswitch_os_pass`，并需要 `sshpass`。如果交换机托盘只提供 HSC DC 输入，`nvswpsu --details` 输出 `HSC-DC-IN,电压(V),电流(A),功率(W)`。机柜电源架的 PSU 用 `pspsu` 查询。 `-x` 显示 NVOS 的 SSH 主机名、连接 IP、用户名、明文密码及其配置来源。
 
 任何命令也可写成 `nodetools <command> ...`；旧短名 `list`/`ping` 是
 `nodelist`/`nodeping` 的别名。
@@ -181,7 +180,7 @@ NVSwitch 的 `nvswfan`、`nvswpsu` 和 `nvswtemp` 通过 SSH 从 NVOS 读取。�
 * **netboot** — `nodenetboot`：默认和 `status` 只读列出 PXE 项。`prefer` 按网卡特征设置持久优先级。
 * **macs** — `nodemacs`：打印 `OS <boot> <mac> <bus>` 与 BMC 网口 MAC。
 * **bios** — `nodebios [status|base|pending]`：`status` 读当前 BIOS 设置（过滤掉
-  厂商噪声键）；`base`/`pending` 是 Lenovo/SMC 的写入路径。
+  厂商噪声键）；`pending` 读待应用设置，`base` 写入受支持的 BIOS 预设。
 * **vm** — `nodevm [status|enable|mount|umount|insert|eject|stop|media|lic] [image]`：
   虚拟媒体（挂载/弹出 ISO）。默认 NVIDIA/AMI（动态发现 `BMC_ID`/VMI，走
   `AMIVirtualMedia.EnableRMedia` + `VirtualMedia.InsertMedia`）；Compal/Netweb/
@@ -193,6 +192,8 @@ NVSwitch 的 `nvswfan`、`nvswpsu` 和 `nvswtemp` 通过 SSH 从 NVOS 读取。�
   `eject` 也须指定该 URL。SMC 直接插入。`status` 查询当前状态。
   Compal 正常弹出失败后可显式执行 `stop URL`，调用专用停止接口。Netweb 的
   `stop URL` 使用标准弹出接口，按 BMC 报告的完整 URL 匹配目标。
+
+Wistron GB300 的 `nodebios pending` 读取 BIOS 公布的 `SettingsObject`。`nodenetboot status` 默认查询主系统 `system`，可用库存 `system_id` 覆盖。`nodevm status` 从主系统查询虚拟介质槽位，已实机验证 CIFS 挂载和弹出。用 `nodevm HOST mount smb://SMB_HOST/share/probe.iso` 挂载，用 `nodevm HOST eject URL` 按完整 CIFS URL 弹出。
 
 > 注意：`nodebios base` 写入 BIOS 预设。支持的机型至少关闭 SNC 和 CPU 虚拟化。标准 Redfish 路径要求能识别两项并读回待应用值，缺少明确字段时报错。Supermicro SYS-822GS-NB3RT 会读回待应用值，确认后请求 Redfish PowerCycle。待操作系统启动后检查实际 NUMA 拓扑。`pending` 只读取。部分机型的 `nodenetboot` 会**修改** BMC/BIOS；
 > `nodevm` 的 `enable`/`mount`/`insert`/`eject`/`umount`/`stop` 也是写操作。
@@ -272,6 +273,11 @@ Ansible 风格 INI，见 `inventory.example.ini`。每台主机用 `host=` 带 B
 `[nodehealth:defaults]` 设置运行默认值：`jobs`、`timeout`（单请求）、
 `node_timeout`（含身份识别的整节点请求预算，默认 30 秒）。可用 `--node-timeout S` 覆盖 `node_timeout`；用完后
 慢 BMC 会被放弃，而不是拖住整批。`scan` 不使用它（本身就是长任务）。
+
+Redfish 读响应设 `redfish_timeout`（秒），建连设 `redfish_connect_timeout`（秒）。
+可以在 `[nodehealth:defaults]` 设置全局值，在 `[组名:vars]` 或某台主机行上覆盖。
+读响应默认 8 秒，旧 inventory 的通用 `timeout` 仍可作为回退。建连默认 3 秒，且不超过
+读响应超时。显式 `--timeout` 优先于 `redfish_timeout`，整节点预算仍由 `node_timeout` 控制。
 
 从 `DeviceType Hostname BMC_IP` 的 hosts.list 生成初始文件：
 
@@ -360,6 +366,11 @@ BIOS 要求配套 BMC 已就绪且主机已关机。同版本重刷需要 `--ref
 动作如 `auto` 或 `max`，每行写一条由空格分隔的十六进制或十进制 IPMI raw 序列。
 显式选择本地文件时，目标须匹配其中的配置和动作。预览通过后，去掉 `--dry-run` 即可执行。
 
+风扇 INI 的 `[DEFAULT]` 中，`ipmi_timeout = 8` 是每次 IPMI raw 等待回执的秒数
+（`ipmitool -N`），`ipmi_retries` 对应 `-R`。单个 `[profile:名称]` 可以覆盖这两个值。
+本地文件也可设置自己的 `[DEFAULT]`。`--timeout` 和 `--node-timeout` 仍分别限制
+一次调用和整台节点的时间。
+
 ## 输出
 
 传感器行是 `<node>: <field>,<field>,...`，与旧脚本一致，`grep -v ,OK` 仍可用：
@@ -400,6 +411,25 @@ vdc1-pro2-t10-gpu-cp-01: PSU_1,OK,1318.8
 vs 实时 11s，`psu` 8s vs 22s，`temp` 7s vs 17s）。没有映射时回退到实时发现，所以
 事先什么都不做也能用。机器变动后重跑 `scan` 刷新（同机型扫任意一台即可），
 `scan --clear` 删除该机型的模版。
+
+## Redfish 快照与离线回放
+
+在能访问 BMC 的机器上，选一台库存里的代表设备导出。每次命令只接收一个主机名，
+默认最多同时发 4 个 GET 请求到这台 BMC。默认采集预算是 60 秒、最多 600 个请求。
+
+```bash
+./nodetools redfish dump cp01 --workers 4 --seconds 30 -o cp-snapshot.json
+./nodetools redfish replay cp-snapshot.json nodebios
+./nodetools redfish replay cp-snapshot.json nodefan check
+```
+
+快照记录资源路径、HTTP 状态和 JSON。到时间或请求上限时保留已采结果，并报告
+未采路径数和传输错误数。可重复传入 `--path /redfish/v1/Systems/system/Bios`，
+让待补采的路径优先进入队列。离线回放不读取现场 inventory，也不连接 BMC；
+它会区分实采的 HTTP 404、采集失败和未采路径。IPMI、NVOS 和写操作仍需实机验证。
+
+导出会遮盖常见凭据字段、序列号和地址，保留适配所需的资源 ID 和 OEM 结构。
+分享文件前请检查厂商自定义字段和资源 ID 是否含现场信息。
 
 ## 采集原理
 

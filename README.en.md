@@ -95,7 +95,6 @@ nodepsu  <noderange> [status|check]
 nodetemp <noderange>
 nodemon  <noderange> [--count N] [--interval SEC] [--format csv|json]
 nodeinlet <noderange> [check] [--target C] [--tolerance D]
-nvswfan  <noderange> [status|check]
 nvswpsu  <noderange> [status|check]
 nvswtemp <noderange>
 psfan    <noderange> [status|check|auto|max]
@@ -132,7 +131,7 @@ nodetools inventory init [--from hosts.list] [-o inventory.ini]
 nodetools inventory show [-i inventory.ini]
 ```
 
-`nvswfan`, `nvswpsu`, and `nvswtemp` use SSH to read NVOS telemetry. Set `nvswitch_os_user` in inventory and optionally override the hostname with `nvswitch_os_host`. Password login requires `sshpass` and uses `nvswitch_os_password` when set, falling back to the legacy `nvswitch_os_pass` field. For trays with HSC DC input, `nvswpsu --details` reports `HSC-DC-IN,volts,amps,watts`. Use `pspsu` for rack power-shelf PSU modules. `-x` shows the NVOS SSH hostname, connection IP, username, plaintext password, and password source.
+`nvswpsu` and `nvswtemp` use SSH to read NVOS telemetry. Set `nvswitch_os_user` in inventory and optionally override the hostname with `nvswitch_os_host`. Password login requires `sshpass` and uses `nvswitch_os_password` when set, falling back to the legacy `nvswitch_os_pass` field. For trays with HSC DC input, `nvswpsu --details` reports `HSC-DC-IN,volts,amps,watts`. Use `pspsu` for rack power-shelf PSU modules. `-x` shows the NVOS SSH hostname, connection IP, username, plaintext password, and password source.
 
 Any command also works as `nodetools <command> ...`, and the legacy short
 names `list`/`ping` are aliases for `nodelist`/`nodeping`.
@@ -196,8 +195,8 @@ class when an endpoint is absent):
 * **netboot** — `nodenetboot` lists PXE entries by default and with `status`. `prefer` sets persistent priority by adapter attributes.
 * **macs** — `nodemacs`: prints `OS <boot> <mac> <bus>` plus the BMC NIC MACs.
 * **bios** — `nodebios [status|base|pending]`: `status` reads current BIOS
-  settings (vendor noise keys filtered out); `base`/`pending` are the
-  Lenovo/SMC write paths.
+  settings (vendor noise keys filtered out). `pending` reads staged settings.
+  `base` writes the BIOS preset on supported models.
 * **vm** — `nodevm [status|enable|mount|umount|insert|eject|stop|media|lic]
   [image]`: virtual media (mount/eject an ISO). NVIDIA/AMI default (discovers
   `BMC_ID`/VMI dynamically, uses `AMIVirtualMedia.EnableRMedia` +
@@ -212,6 +211,13 @@ class when an endpoint is absent):
   Compal supports an explicit `stop URL` through its stop-media endpoint if
   normal eject fails. Netweb `stop URL` uses standard eject and matches the
   full mounted URL reported by the BMC.
+
+On Wistron GB300, `nodebios pending` follows the BIOS `SettingsObject`.
+`nodenetboot status` defaults to the host system `system`, with an inventory
+`system_id` override. `nodevm status` lists slots on that host system.
+CIFS mount and eject were validated on hardware. Use `nodevm HOST mount
+smb://SMB_HOST/share/probe.iso` to mount and `nodevm HOST eject URL` to eject
+by the full CIFS URL.
 
 > Note: `nodebios base` writes the BIOS preset. Supported models set both SNC and CPU virtualization to disabled. The standard Redfish path requires both controls and verifies pending readback. On Supermicro SYS-822GS-NB3RT it verifies the pending values before requesting a Redfish PowerCycle. Verify the NUMA topology after the OS boots. `pending` is read-only. On some models `nodenetboot` **modifies** the BMC/BIOS;
 > `nodevm`'s `enable`/`mount`/`insert`/`eject`/`umount`/`stop` are writes too.
@@ -301,6 +307,13 @@ The `[nodehealth:defaults]` section sets run defaults: `jobs`, `timeout`
 (per request) and `node_timeout` (whole-node request budget including identification, default 30 seconds).
 Use `--node-timeout S` to override `node_timeout`; once it is spent a slow BMC is abandoned
 instead of hanging the run. `scan` ignores it (it is a long task by design).
+
+Use `redfish_timeout` for response reads and `redfish_connect_timeout` for
+connection establishment, both in seconds. Set global values in
+`[nodehealth:defaults]`, then override them in `[group:vars]` or on a host line.
+The read default is 8 seconds, with an existing inventory `timeout` as a fallback.
+Connection setup defaults to 3 seconds and is capped by the read timeout.
+An explicit `--timeout` overrides `redfish_timeout`. `node_timeout` still limits the whole node.
 
 Generate a starter file from a `DeviceType Hostname BMC_IP` hosts.list:
 
@@ -396,6 +409,11 @@ space-separated raw sequence per line. Hexadecimal and decimal bytes are
 accepted. With a local file, each target must match a profile with the requested
 action. Remove `--dry-run` to execute the sequence after reviewing the plan.
 
+In the fan INI, `[DEFAULT]` sets `ipmi_timeout = 8` seconds to wait for an
+IPMI raw response (`ipmitool -N`). `ipmi_retries` sets `-R`. A `[profile:name]`
+can override either value, and a local file can supply its own `[DEFAULT]`.
+`--timeout` and `--node-timeout` still bound a single invocation and the whole node.
+
 ## Output
 
 Sensor lines are `<node>: <field>,<field>,...`, matching the legacy scripts so
@@ -440,6 +458,29 @@ legacy `Thermal`/`Power` objects exist. Cache keys include vendor, manufacturer,
 7 s vs 17 s). Without a map they fall back to live discovery, so nothing is
 required up front. Re-scan any one node of a type to refresh it after a change,
 or `scan --clear` to drop that type's template.
+
+## Redfish snapshots and offline replay
+
+On a host that can reach the BMC, select one representative device from
+inventory. Each invocation accepts one host and uses four concurrent GETs
+to that BMC by default. The default budget is 60 seconds and 600 requests.
+
+```bash
+./nodetools redfish dump cp01 --workers 4 --seconds 30 -o cp-snapshot.json
+./nodetools redfish replay cp-snapshot.json nodebios
+./nodetools redfish replay cp-snapshot.json nodefan check
+```
+
+The snapshot records resource paths, HTTP statuses, and JSON. When it reaches
+a budget, it saves the captured data and reports pending resources and
+transport errors. Repeat `--path /redfish/v1/Systems/system/Bios` to prioritize
+additional resources. Offline replay uses the snapshot alone and distinguishes
+observed HTTP 404s, transport failures, and uncaptured paths. IPMI, NVOS,
+and write operations still require hardware validation.
+
+Capture masks common credential fields, serial numbers, and addresses while
+preserving resource IDs and OEM structure. Review vendor-specific fields and
+resource IDs for site information before sharing a snapshot.
 
 ## How collection works
 

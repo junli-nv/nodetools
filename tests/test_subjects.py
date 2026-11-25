@@ -1219,6 +1219,29 @@ def test_hgx_b300_bios_settings_are_staged(maker, product, attr, current, change
     assert not rf.posts and not device.ipmi.calls
 
 
+def test_wistron_bios_set_uses_selected_system_settings_without_reset():
+    from types import SimpleNamespace
+
+    path = "/redfish/v1/Systems/selected/Bios"
+    settings = path + "/Settings"
+    rf = FakeRedfish({
+        path: {
+            "Attributes": {"PXE_Boot_Wait_Time": 0},
+            "@Redfish.Settings": {"SettingsObject": {"@odata.id": settings}},
+        },
+        settings: {"Attributes": {"PXE_Boot_Wait_Time": 1}},
+    })
+    device = _device(redfish=rf, odm=oem.get("wistron"))
+    device.vars["system_id"] = "selected"
+
+    options = SimpleNamespace(bios_updates=["PXE_Boot_Wait_Time=1"])
+    assert "staged" in bios.collect(device, None, options)[0]
+    assert rf.patches == {settings: {"Attributes": {"PXE_Boot_Wait_Time": 1}}}
+    assert bios.collect(device, "status", None) == ["cp-01:PXE_Boot_Wait_Time=0"]
+    assert bios.collect(device, "pending", None) == ["cp-01:PXE_Boot_Wait_Time=1"]
+    assert not rf.posts and not device.ipmi.calls
+
+
 def test_smc_psu_scopes_to_primary_chassis_and_merges_same_serial():
     from nodetools_runtime.caps import psu
     from nodetools_runtime.oem.hgx.smc import Smc
@@ -1478,3 +1501,122 @@ def test_standard_bios_base_requires_both_controls(has_snc):
             bios.collect(device, "base", None)
         assert not rf.patches
     assert not rf.posts and not device.ipmi.calls
+
+
+def test_wistron_pending_uses_settings_object():
+    active = "/redfish/v1/Systems/system/Bios"
+    pending = active + "/Settings"
+    rf = FakeRedfish({
+        active: {
+            "Attributes": {"Language": "English"},
+            "@Redfish.Settings": {"SettingsObject": {"@odata.id": pending}},
+        },
+        pending: {"Attributes": {"Language": "French"}},
+    })
+    device = _device(redfish=rf, odm=oem.get("wistron"))
+    assert bios.collect(device, "status", None) == ["cp-01:Language=English"]
+    assert bios.collect(device, "pending", None) == ["cp-01:Language=French"]
+    assert not rf.posts and not rf.patches
+
+
+def test_wistron_uses_host_system_for_netboot_and_virtual_media():
+    from nodetools_runtime.errors import CapUnsupported
+
+    systems = "/redfish/v1/Systems"
+    system = systems + "/system"
+    media = system + "/VirtualMedia"
+    rf = FakeRedfish({
+        systems: {"Members": [{"@odata.id": systems + "/HGX_Baseboard_0"}, {"@odata.id": system}]},
+        system: {
+            "Boot": {"BootOrder": ["Boot0001"]},
+            "VirtualMedia": {"@odata.id": media},
+        },
+        system + "/BootOptions?$expand=.": {
+            "Members": [{
+                "@odata.id": system + "/BootOptions/Boot0001",
+                "BootOptionReference": "Boot0001",
+                "DisplayName": "UEFI PXE IPv4",
+            }],
+        },
+        media: {"Members": [{"@odata.id": media + "/CD1"}]},
+        media + "/CD1": {"Id": "CD1", "Inserted": False},
+    })
+    device = _device(redfish=rf, odm=oem.get("wistron"))
+    assert netboot.system_path(device) == system
+    assert any("PXE IPv4" in line for line in netboot.collect(device, "status", None))
+    assert vm.collect(device, "status", None) == ["cp-01: CD1\tinserted=False\timage=-"]
+    with pytest.raises(CapUnsupported, match="unsupported"):
+        vm.collect(device, "enable", None)
+    assert not rf.posts and not rf.patches
+    device.vars["system_id"] = "selected"
+    assert netboot.system_path(device) == systems + "/selected"
+
+
+def test_wistron_mount_and_eject_discovered_cifs_slot(monkeypatch):
+    from nodetools_runtime.errors import CapUnsupported
+
+    system = "/redfish/v1/Systems/system"
+    media = system + "/VirtualMedia"
+    busy, free = media + "/0", media + "/1"
+    image = "smb://images.example.test/isos/probe.iso"
+    insert = free + "/Actions/VirtualMedia.InsertMedia"
+    eject = free + "/Actions/VirtualMedia.EjectMedia"
+    state = {
+        "Inserted": False,
+        "Actions": {
+            "#VirtualMedia.InsertMedia": {"target": insert},
+            "#VirtualMedia.EjectMedia": {"target": eject},
+        },
+    }
+    rf = FakeRedfish({
+        system: {"VirtualMedia": {"@odata.id": media}},
+        media: {"Members": [{"@odata.id": busy}, {"@odata.id": free}]},
+        busy: {"Inserted": True, "Image": "smb://images.example.test/isos/other.iso"},
+        free: state,
+    })
+    post = rf.post
+
+    def post_and_update(path, payload, timeout=None):
+        result = post(path, payload, timeout)
+        if path == insert:
+            state.update(Inserted=True, Image=image.removeprefix("smb://"))
+        elif path == eject:
+            state.update(Inserted=False, Image=None)
+        return result
+
+    monkeypatch.setattr(rf, "post", post_and_update)
+    device = _device(redfish=rf, odm=oem.get("wistron"))
+    opts = Opts(image=image, vm_user="example-user", vm_password="example-password")
+    assert vm.collect(device, "mount", opts) == ["cp-01: Mounted in VirtualMedia slot 1"]
+    assert rf.posts[insert] == {
+        "Image": image, "TransferProtocolType": "CIFS",
+        "UserName": "example-user", "Password": "example-password",
+    }
+    with pytest.raises(CapUnsupported, match="expected one inserted"):
+        vm.collect(device, "eject", Opts())
+    assert vm.collect(device, "eject", opts) == ["cp-01: Ejected VirtualMedia slot 1"]
+    assert rf.posts[eject] == {}
+    assert rf.data[busy]["Inserted"] is True
+
+
+def test_wistron_gpu_uses_uuid_when_firmware_repeats_module_serial():
+    from nodetools_runtime.subjects import inventory
+
+    root = "/redfish/v1/Systems"
+    system = root + "/HGX_Baseboard_0"
+    processors = system + "/Processors"
+    rf = FakeRedfish({
+        root: {"Members": [{"@odata.id": system}]},
+        system: {"SerialNumber": "module"},
+        processors + "?$expand=.": {"Members": [
+            {"@odata.id": processors + "/GPU_0", "Id": "GPU_0", "SerialNumber": "module",
+             "Links": {"PCIeDevice": {"@odata.id": "/redfish/v1/Chassis/GPU_0/PCIeDevices/0"}}},
+            {"@odata.id": processors + "/GPU_1", "Id": "GPU_1", "SerialNumber": "module",
+             "UUID": "gpu1-uuid"},
+        ]},
+        "/redfish/v1/Chassis/GPU_0/PCIeDevices/0": {"UUID": "gpu0-uuid"},
+    })
+    device = _device(redfish=rf, odm=oem.get("wistron"))
+    assert inventory._gpu_serials(device) == [
+        "cp-01: GPU_0 serial=- uuid=gpu0-uuid", "cp-01: GPU_1 serial=- uuid=gpu1-uuid",
+    ]

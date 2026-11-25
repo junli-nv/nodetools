@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 
 from ..diagnostics import debug_connection
 from ..errors import CapUnsupported, NodetoolsError, TransportError
+from . import common
 
 
 def image_source(options, *schemes):
@@ -68,3 +69,37 @@ def collect(device, action, options):
     for step in steps:
         lines.extend(odm.vm(device, step, options))
     return lines
+
+
+def status_lines(device, parent_paths):
+    """Read VirtualMedia slots from manager or system resources that advertise them."""
+    media_paths = set()
+    lines = []
+    empty_collections = {}
+    for parent_path in parent_paths:
+        parent = common.resource(device, parent_path)
+        media = parent.get("VirtualMedia")
+        if not isinstance(media, dict) or not media.get("@odata.id"):
+            continue
+        media_path = media["@odata.id"]
+        members = common.resource(device, media_path, required=True)
+        if (members.get("Members") == [] and not members.get("Members@odata.count")
+                and not members.get("Members@odata.nextLink")):
+            ami = (parent.get("Oem") or {}).get("Ami") or {}
+            state = (ami.get("VirtualMedia") or {}).get("RMediaStatus")
+            detail = "VirtualMedia collection is empty"
+            if isinstance(state, str) and state:
+                detail += " (RMediaStatus={})".format(state)
+            empty_collections[media_path] = detail
+        for path in common.member_ids(members):
+            if path in media_paths:
+                continue
+            media_paths.add(path)
+            data = common.resource(device, path, required=True)
+            lines.append("{}\tinserted={}\timage={}".format(
+                data.get("Id") or path, data.get("Inserted", "unknown"),
+                data.get("ImageName") or data.get("Image") or "-",
+            ))
+    if not lines and not empty_collections:
+        raise CapUnsupported("BMC did not return a usable VirtualMedia collection")
+    return lines or list(empty_collections.values())

@@ -32,6 +32,25 @@ def test_bundled_sequences_match_existing_adapter_actions(adapter, expected):
         assert sent == rows
 
 
+@pytest.mark.parametrize("adapter, network", [("wistron", ("8", "3")), ("gb200", ("8", "1"))])
+def test_fan_control_uses_oem_ipmi_retry_settings(monkeypatch, adapter, network):
+    from nodetools_runtime.transport.ipmi import Ipmi
+
+    sent = []
+
+    def run(argv, **kwargs):
+        sent.append(argv)
+        return SimpleNamespace(returncode=0, stdout="")
+
+    monkeypatch.setattr("nodetools_runtime.transport.ipmi.subprocess.run", run)
+    device = SimpleNamespace(ipmi=Ipmi("bmc.example.test", None, None, tool="ipmitool"))
+    runner = runtime.Runner("fan", SimpleNamespace(action="max"))
+    runner._control(device, oem.get(adapter))
+
+    assert len(sent) == 2
+    assert all((argv[argv.index("-N") + 1], argv[argv.index("-R") + 1]) == network for argv in sent)
+
+
 def test_local_exact_model_preview(monkeypatch, tmp_path):
     path = tmp_path / "fan-profiles.ini"
     path.write_text(
@@ -74,3 +93,23 @@ def test_failed_step_stops_the_sequence():
     with pytest.raises(TransportError, match=r"step 2/4 failed \(1 steps completed\)"):
         oem.get("compal").fan_control(device, "max")
     assert len(sent) == 2
+
+
+def test_local_ipmi_settings_inherit_and_override(tmp_path):
+    path = tmp_path / "fan-profiles.ini"
+    profile = (
+        "[profile:lab]\nplatform=nvl\noem=wistron\nrole=compute\n"
+        "model=Sample\nmax=0x3c 0x73 0x01\n"
+    )
+    path.write_text(profile, encoding="utf-8")
+    inherited = fan_profiles.load(path, local=True)["lab"]
+    assert (inherited.ipmi_timeout, inherited.ipmi_retries) == (8, 1)
+
+    path.write_text("[DEFAULT]\nipmi_timeout=5\nipmi_retries=2\n" + profile + "ipmi_timeout=7\n",
+                    encoding="utf-8")
+    override = fan_profiles.load(path, local=True)["lab"]
+    assert (override.ipmi_timeout, override.ipmi_retries) == (7, 2)
+
+    path.write_text(profile + "ipmi_timeout=0\n", encoding="utf-8")
+    with pytest.raises(NodetoolsError, match="must be positive integers"):
+        fan_profiles.load(path, local=True)

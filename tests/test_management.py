@@ -90,3 +90,27 @@ def test_parallel_queries_print_fast_node_first(monkeypatch, capsys):
     args = SimpleNamespace(inventory=None, nodes="slow,fast", jobs=2)
     assert firmware_cli.run_selected(args, "nodefru", query, single=False) == 0
     assert capsys.readouterr().out.splitlines() == ["fast: result", "slow: result"]
+
+
+def test_bmc_selects_manager_linked_to_system_on_wistron():
+    device, _ = make_device()
+    primary = device.redfish.get(MANAGER)
+    primary["Links"]["ManagerForServers"][0]["@odata.id"] = "/redfish/v1/Systems/system"
+    device.redfish.get("/redfish/v1/Managers/Tray")["Links"] = {
+        "ManagerForServers": [{"@odata.id": "/redfish/v1/Systems/HGX_Baseboard_0"}],
+    }
+    assert management.bmc(device, "info") == ["Model primary", "FirmwareVersion 1.0"]
+
+
+def test_firmware_collection_uses_expanded_items_and_fetches_missing_details():
+    from nodetools_runtime.subjects import firmware
+
+    path = "/redfish/v1/UpdateService/FirmwareInventory"
+    inline = {"@odata.id": path + "/CX8_0", "Version": "1"}
+    resources = {
+        path + "?$expand=.": {"Members": [inline, {"@odata.id": path + "/CX8_1"}]},
+        path + "/CX8_1": {"Version": "2"},
+    }
+    device = SimpleNamespace(redfish=SimpleNamespace(get=resources.__getitem__))
+    result = list(firmware.collection(device, path, required=True, expand=True))
+    assert result == [(path + "/CX8_0", inline), (path + "/CX8_1", {"Version": "2"})]

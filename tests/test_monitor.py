@@ -126,3 +126,17 @@ def test_lenovo_gb300_monitor_reads_chassis_power_and_hsc_sensors():
     assert [(row["id"], row["value"]) for row in monitor._supplies(device)] == [
         ("79", 686.4), ("84", None),
     ]
+
+
+def test_wistron_monitor_uses_direct_power_sensor_and_pdb_hsc():
+    power = "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_TotalHSC_Power_0"
+    hsc = "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_0_Pwr_0"
+    data = {
+        power: {"Id": "Chassis_0_TotalHSC_Power_0", "ReadingType": "Power", "Reading": 1600},
+        hsc: {"Name": "PDB 0 HSC 0 Pwr 0", "ReadingType": "Power", "Reading": 810},
+    }
+    device = SimpleNamespace(redfish=SimpleNamespace(get=data.get), vars={}, odm=oem.get("wistron"))
+    assert [(row["value"], row["source"]) for row in monitor._power(device)] == [(1600, power)]
+    assert [(row["id"], row["value"]) for row in monitor._supplies(device)] == [
+        ("0", 810), ("1", None),
+    ]

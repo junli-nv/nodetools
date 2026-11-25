@@ -598,9 +598,11 @@ class Oem:
         )
         return [self._label(device, line) for line in lines]
 
+    def bios_path(self, device):
+        return "/redfish/v1/Systems/{}/Bios".format(self._sys(self.bios_system))
+
     def _bios_rows(self, device, excludes=(), sort=False):
-        path = "/redfish/v1/Systems/{}/Bios".format(self._sys(self.bios_system))
-        return self._bios_rows_at(device, path, excludes=excludes, sort=sort)
+        return self._bios_rows_at(device, self.bios_path(device), excludes=excludes, sort=sort)
 
     def _bios_rows_at(self, device, path, excludes=(), sort=False):
         data = common.resource(device, path, required=True)

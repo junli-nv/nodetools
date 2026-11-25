@@ -1,11 +1,13 @@
 """Parallel execution engine: build devices, collect or control."""
 
 import concurrent.futures
+import math
 import time
 from functools import lru_cache
 
 from . import caps, fan_profiles, model, oem, scan, subjects
 from .caps import nvos
+from .config import DEFAULT_REDFISH_CONNECT_TIMEOUT
 from .diagnostics import debug
 from .subjects import netboot
 from .errors import CapUnsupported, NodetoolsError
@@ -38,6 +40,19 @@ def _resolve_creds(host, options):
     return user, password
 
 
+def _redfish_setting(host, options, field, fallback):
+    value = host.vars.get(field, getattr(options, field, None))
+    if value is None:
+        return fallback
+    try:
+        seconds = float(value)
+        if not math.isfinite(seconds) or seconds <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        raise NodetoolsError(f"{field} for {host.name} must be a finite positive number") from None
+    return seconds
+
+
 def build_device(host, options, apply_deadline=True, load_profile=True):
     """Construct a Device for a host and attach its cached scan map (if any).
 
@@ -48,7 +63,13 @@ def build_device(host, options, apply_deadline=True, load_profile=True):
     ``load_profile=False`` skips the lookup (used by ``scan`` itself).
     """
     user, password = _resolve_creds(host, options)
-    redfish = Redfish(host.address, user, password, timeout=options.timeout)
+    read_timeout = options.timeout
+    if not getattr(options, "timeout_explicit", False):
+        read_timeout = _redfish_setting(host, options, "redfish_timeout", read_timeout)
+    connect_timeout = _redfish_setting(
+        host, options, "redfish_connect_timeout", DEFAULT_REDFISH_CONNECT_TIMEOUT
+    )
+    redfish = Redfish(host.address, user, password, timeout=read_timeout, connect_timeout=connect_timeout)
     if getattr(options, "debug", False):
         redfish.debug_label = host.name
     ipmi = Ipmi(
@@ -80,11 +101,14 @@ def build_device(host, options, apply_deadline=True, load_profile=True):
 
 
 class Runner:
-    def __init__(self, capability, options):
+    def __init__(self, capability, options, device_factory=None):
+        self.device_factory = device_factory
         self.capability = capability
         self.options = options
 
     def _device(self, host):
+        if self.device_factory is not None:
+            return self.device_factory(host)
         return build_device(
             host,
             self.options,
@@ -133,14 +157,11 @@ class Runner:
     def _one(self, host):
         device = None
         try:
-            if host.role == "nvswitch" and self.capability in ("fan", "psu", "temp"):
+            if host.role == "nvswitch" and self.capability in ("psu", "temp"):
                 if self.options.action:
                     raise CapUnsupported("NVOS sensor queries are read-only")
                 readings = nvos.collect(host, self.capability, self.options)
-                result = self._result(host, readings=readings)
-                if not readings and self.capability == "fan":
-                    result["notice"] = "N/A (NVOS exposes no fan sensors)"
-                return result
+                return self._result(host, readings=readings)
             if not host.address:
                 return self._result(host, error="no BMC address (missing from inventory)")
             device = self._device(host)
@@ -194,7 +215,8 @@ class Runner:
 class InfoRunner:
     """Run an info subject (power/eventlog/inventory) and return verbatim lines."""
 
-    def __init__(self, subject, options):
+    def __init__(self, subject, options, device_factory=None):
+        self.device_factory = device_factory
         self.subject = subject
         self.options = options
         self.handler = subjects.handler_for(subject)
@@ -214,7 +236,8 @@ class InfoRunner:
             return self._result(host, error="no BMC address (missing from inventory)")
         device = None
         try:
-            device = build_device(host, self.options)
+            device = (self.device_factory(host) if self.device_factory is not None
+                      else build_device(host, self.options))
             device.odm = oem.for_device(device)
             supported = getattr(device.odm, "info_subjects", None)
             network_discovery = self.subject == "netboot" and self.options.action != "pxe"

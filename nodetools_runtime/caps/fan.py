@@ -17,7 +17,7 @@ def _speed_unit(data):
 def _fan_unit(detail):
     speed = detail.get("SpeedPercent")
     if isinstance(speed, dict):
-        if speed.get("SpeedRPM") is not None:
+        if speed.get("SpeedRPM") is not None or speed.get("SpeedRpm") is not None:
             return "RPM"
         if speed.get("Reading") is not None:
             return "%"

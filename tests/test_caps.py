@@ -427,7 +427,6 @@ def test_nvswitch_sensors_use_nvos_without_a_bmc_address(monkeypatch):
     replies = {
         "nv show platform environment temperature -o json": (0, '{"ASIC1":{"current":"50.00","state":"ok"}}', ""),
         "nv show platform environment psu -o json": (2, "", "'psu' is not one of ['temperature']"),
-        "nv show platform environment fan -o json": (2, "", "'fan' is not one of ['temperature']"),
         nvos._HSC: (0, "49932\n3873\n191651969\n0\n0\n0\n0\n0\n0\n0\n", ""),
     }
 
@@ -443,9 +442,14 @@ def test_nvswitch_sensors_use_nvos_without_a_bmc_address(monkeypatch):
     assert (reading["id"], reading["input_volts"], reading["input_amps"], reading["input_watts"]) == (
         "HSC-DC-IN", 49.932, 3.873, 191.65,
     )
-    fan = runtime.Runner("fan", options)._one(host)
     assert reading["health"] == "OK"
-    assert fan["error"] is None
-    assert fan["notice"] == "N/A (NVOS exposes no fan sensors)"
-    replies["nv show platform environment fan -o json"] = (255, "", "Permission denied")
-    assert "SSH exit 255" in runtime.Runner("fan", options)._one(host)["error"]
+    replies["nv show platform environment temperature -o json"] = (255, "", "Permission denied")
+    assert "SSH exit 255" in runtime.Runner("temp", options)._one(host)["error"]
+
+
+def test_delta_speed_rpm_field_keeps_zero_and_reports_rpm():
+    from nodetools_runtime.caps import common, fan
+
+    data = {"SpeedPercent": {"SpeedRpm": 0.0}}
+    assert common.fan_speed(data) == 0.0
+    assert fan._fan_unit(data) == "RPM"

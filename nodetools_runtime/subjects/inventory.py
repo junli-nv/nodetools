@@ -1,7 +1,9 @@
 """Firmware inventory dispatched by device role and OEM."""
 
+from collections import Counter
+
 from ..errors import CapUnsupported
-from . import common
+from . import boot_nics, common
 
 FIRMWARE = "/redfish/v1/UpdateService/FirmwareInventory"
 
@@ -68,23 +70,37 @@ def _format_firmware(device, rows):
 
 def _gpu_serials(device):
     base = "/redfish/v1/Systems"
-    ident = device.vars.get("system_id")
+    module_serials = getattr(device.odm, "gpu_reports_module_serials", False)
+    ident = None if module_serials else device.vars.get("system_id")
     paths = [base + "/" + ident] if ident else common.member_ids(
         common.resource(device, base, required=True)
     )
-    rows = []
+    records = []
     for path in paths:
         system = common.resource(device, path, required=bool(ident))
-        link = system.get("Processors") or {}
-        collection = link.get("@odata.id") or path.rstrip("/") + "/Processors"
-        if not common.resource(device, collection):
-            continue
-        for gpu in common.entries(device, collection):
+        collection = boot_nics.local_link(system.get("Processors")) or path.rstrip("/") + "/Processors"
+        for _, gpu in boot_nics.members(device, collection):
             gpu_id = gpu.get("Id") or ""
             if (gpu.get("ProcessorType") or "").lower() == "gpu" or gpu_id.upper().startswith("GPU"):
-                rows.append("{}: {} serial={}".format(device.name, gpu_id, gpu.get("SerialNumber") or "-"))
-    if not rows:
+                records.append((gpu_id, gpu, system.get("SerialNumber")))
+    if not records:
         raise CapUnsupported("Redfish did not advertise any GPU processors")
+
+    serial_counts = Counter(str(gpu.get("SerialNumber") or "") for _, gpu, _ in records)
+    rows = []
+    for gpu_id, gpu, system_serial in records:
+        serial = gpu.get("SerialNumber") or "-"
+        detail = ""
+        if module_serials:
+            if serial == system_serial or serial_counts[str(serial)] > 1:
+                serial = "-"
+            uuid = gpu.get("UUID")
+            if not uuid:
+                pcie = boot_nics.local_link((gpu.get("Links") or {}).get("PCIeDevice"))
+                if pcie:
+                    uuid = common.resource(device, pcie).get("UUID")
+            detail = " uuid={}".format(uuid or "-")
+        rows.append("{}: {} serial={}{}".format(device.name, gpu_id, serial, detail))
     return rows
 
 

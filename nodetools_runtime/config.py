@@ -45,6 +45,8 @@ INFO_READ_WORDS = ("", "status", "check", "read")
 
 DEFAULT_JOBS = 18
 DEFAULT_TIMEOUT = 10
+DEFAULT_REDFISH_TIMEOUT = 8
+DEFAULT_REDFISH_CONNECT_TIMEOUT = 3.0
 DEFAULT_SUMMARY = False
 # Whole-node wall-clock budget for a capability run: once it is spent, the
 # transport stops issuing new requests instead of hanging on a slow BMC.

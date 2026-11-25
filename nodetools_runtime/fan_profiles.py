@@ -11,6 +11,7 @@ from .errors import CapUnsupported, NodetoolsError, TransportError
 
 ACTIONS = ("auto", "max", "low", "opt")
 MATCH = ("platform", "oem", "role", "model")
+IPMI_OPTIONS = ("ipmi_timeout", "ipmi_retries")
 BUILTIN = Path(__file__).with_name("fan-profiles.ini")
 BYTE = re.compile(r"(?:0[xX][0-9a-fA-F]{1,2}|[0-9]{1,3})")
 
@@ -20,6 +21,8 @@ class Profile:
     name: str
     match: tuple
     actions: dict
+    ipmi_timeout: int
+    ipmi_retries: int
 
     def sequence(self, action):
         if action not in self.actions:
@@ -27,16 +30,24 @@ class Profile:
         return self.actions[action]
 
 
-def load(path, local=False):
+def _read_ini(path):
     parser = ConfigParser(interpolation=None, inline_comment_prefixes=("#", ";"))
     try:
         with Path(path).open(encoding="utf-8") as stream:
             parser.read_file(stream)
     except (Error, OSError, UnicodeError) as exc:
         raise NodetoolsError("cannot load fan profiles {}: {}".format(path, exc)) from exc
-    if parser.defaults() or not parser.sections():
-        raise NodetoolsError("{} requires profile sections and no DEFAULT values".format(path))
+    unknown = parser.defaults().keys() - set(IPMI_OPTIONS)
+    if unknown:
+        raise NodetoolsError("{} [DEFAULT]: unknown keys {}".format(path, ", ".join(sorted(unknown))))
+    return parser
 
+
+def load(path, local=False):
+    parser = _read_ini(path)
+    if not parser.sections():
+        raise NodetoolsError("{} requires profile sections".format(path))
+    inherited = _read_ini(BUILTIN).defaults() if local else {}
     profiles = {}
     seen = set()
     for section in parser.sections():
@@ -50,9 +61,18 @@ def load(path, local=False):
                       or bindings[2] not in ("compute", "powershelf")):
             raise NodetoolsError("{} [{}]: invalid or duplicate model match".format(path, section))
         seen.add(bindings)
+        try:
+            ipmi_timeout = int(values.get("ipmi_timeout", inherited.get("ipmi_timeout", 8)))
+            ipmi_retries = int(values.get("ipmi_retries", inherited.get("ipmi_retries", 1)))
+            if ipmi_timeout < 1 or ipmi_retries < 1:
+                raise ValueError
+        except ValueError:
+            raise NodetoolsError(
+                "{} [{}]: ipmi_timeout and ipmi_retries must be positive integers".format(path, section)
+            ) from None
         actions = {}
         for key, value in values.items():
-            if local and key in MATCH:
+            if key in IPMI_OPTIONS or (local and key in MATCH):
                 continue
             if key not in ACTIONS:
                 raise NodetoolsError("{} [{}]: unknown key {}".format(path, section, key))
@@ -72,7 +92,7 @@ def load(path, local=False):
             actions[key] = tuple(rows)
         if not actions:
             raise NodetoolsError("{} [{}]: no actions".format(path, section))
-        profiles[name] = Profile(name, bindings, actions)
+        profiles[name] = Profile(name, bindings, actions, ipmi_timeout, ipmi_retries)
     return profiles
 
 
@@ -89,12 +109,15 @@ def for_model(device, profiles):
 
 
 def execute(device, profile, action):
-    if not device.ipmi:
+    ipmi = device.ipmi
+    if not ipmi:
         raise CapUnsupported("ipmitool unavailable for {}".format(device.name))
     rows = profile.sequence(action)
+    ipmi.retry_interval = profile.ipmi_timeout
+    ipmi.retries = profile.ipmi_retries
     for step, row in enumerate(rows, 1):
         try:
-            device.ipmi.raw(*row)
+            ipmi.raw(*row)
         except NodetoolsError as exc:
             raise TransportError(
                 "fan profile {} {} step {}/{} failed ({} steps completed): {}".format(

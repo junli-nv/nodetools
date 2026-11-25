@@ -44,6 +44,8 @@ class Ipmi:
         self.user = user
         self.password = password
         self.timeout = timeout
+        self.retry_interval = 2
+        self.retries = 1
         self.tool = tool or find_ipmitool()
         self.use_env = env_mode_default() if use_env is None else use_env
         self._deadline = None
@@ -66,7 +68,7 @@ class Ipmi:
             argv += ["-E"]
         elif self.password is not None:
             argv += ["-P", self.password]
-        argv += ["-N", "2", "-R", "1"]
+        argv += ["-N", str(self.retry_interval), "-R", str(self.retries)]
         return argv + list(command)
 
     def _run(self, command):

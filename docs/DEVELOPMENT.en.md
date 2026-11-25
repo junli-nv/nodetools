@@ -17,7 +17,7 @@ them into one **role-prefixed** command family, keeping the legacy naming:
   - `node*` → compute tray, `nvsw*` → NVSwitch, `ps*` → power shelf;
   - subjects: `fan` / `psu` / `temp` (sensors) and `power` / `eventlog` /
     `inventory` (info);
-  - examples: `nodepsu`, `nvswfan`, `pspsu`, `nodepower`, `nvswinventory`.
+  - examples: `nodepsu`, `pspsu`, `nodepower`, `nvswinventory`.
     GBXX uses all three prefixes; BXX only needs `node*`.
 - Read paths form a **fallback ladder**, so one implementation covers every ODM;
 - Devices, credentials, roles and ODM all come from the inventory plus runtime
@@ -445,6 +445,23 @@ KAYTUS keep separate OEM identities. Use `platform=`, `oem=`, `generation=`,
 and `system_id=` where needed. Hardware validation is pending for the new
 paths. Verify writes separately per section 7.
 
+### Wistron GB300 NVL hardware interfaces
+
+The Wistron `GB300 Bianca PDB` (BMC `01.05.26.0305`) exposes its host as
+`Systems/system`, managed by `Managers/BMC_0`. The separate
+`Systems/HGX_Baseboard_0` exposes the GPU resources and is managed by
+`Managers/HGX_BMC_0`. Firmware can repeat a module serial across several GPUs.
+In that case, `nodeinventory --gpu` reports the per-GPU serial as unavailable
+and displays the GPU UUID.
+
+Hardware checks passed for `nodebmc info/time`, `nodefw show`, `nodemon`, and
+`psfan` on the paired Delta Power Shelf. `nodemon` reads total tray power and
+both PDB HSC power readings. `nodebios --set` was verified to stage a value and
+restore the original. This firmware lacks the fields required by the `base`
+and `bf3` presets. The PXE check used `nodenetboot prefer --mac` to promote one
+port, read back the full `BootOrder`, and restore the original order. The
+existing boot override retained its original value.
+
 ### HGX B300 hardware interfaces
 
 Supermicro `SYS-822GS-NB3RT` (BMC `01.12.02.03`) uses `Chassis/1` for host PSUs.
@@ -500,7 +517,7 @@ Use the original nodetools scripts as the baseline. Track compatibility per oper
 | --- | --- | --- |
 | BIOS | `nodebios` current values and `pending` settings | Keep existing OEM actions. Qualify individual writes, apply timing, and reboot requirements |
 | Boot | `nodebootorder` persistent order, `nodenetboot` boot and PXE data | `nodeboot` one-time override. Qualify persistent ordering and port selection by OEM |
-| Assets and firmware | `*inventory` versions, `--details` identity, compute `--gpu`, `nodefru`, `nodefw show` | Qualify full FRU, part numbers, firmware updates, and rollback by model |
+| Assets and firmware | `*inventory` versions, `--details` identity, compute `--gpu`, `nodefru`, `nodefw show` | Qualify full FRU and part numbers by model |
 | MAC and network | `nodemacs` host MACs, BMC/PXE for some legacy adapters | Extend BMC/PXE discovery, network settings, and cable diagnostics by interface |
 | Temperature, fan, PSU | `*temp`, `*fan`, `*psu`, including health | Fan control is OEM-specific. PSU and temperature are read-only |
 | Virtual media | `nodevm` status | Existing OEM mount/eject. Qualify media protocols, enable, and insert per model |
@@ -667,6 +684,65 @@ the per-node deadline (`subprocess` stubbed, no network). Cache tests override
 **Note**: `--action` (fan `auto/max`) really changes device
 state; test on a single, known-reversible machine first, never the whole batch.
 
+### Hardware validation for fan speed control
+
+When adding or changing fan speed control, test the actual CLI on an authorized
+representative node for each affected OEM and model. Record the model, BMC
+firmware, and fans tested. Unit tests and `--dry-run` verify command selection.
+Hardware validation includes the following steps.
+
+1. Run `nodefan check` to record baseline RPM and health. Record the current
+   control mode if the BMC reports it.
+2. Run `nodefan <node> max` and record the result. Let the fans settle, then
+   read the same fans again. Verify the RPM or the BMC's reported target PWM
+   against the expected maximum setting.
+3. Run `nodefan <node> auto` and read the fans again. Verify automatic mode
+   when it is exposed, and check RPM and health. Finish in the mode specified
+   by the restoration plan. Attempt and verify restoration even if the
+   maximum-speed command only ran partially.
+4. Record the CLI result, BMC response, speed readback, and restoration outcome
+   separately. Mark the test as passed once the write succeeded, the expected
+   behavior was observed, and restoration was verified. If recovery required
+   a direct BMC call, record the recovery and mark the CLI operation as failed.
+   Mark cases without a representative node as pending hardware validation.
+
+### RemoteMedia hardware validation
+
+After adding or changing a virtual media adapter, test a mount and eject on
+representative hardware for each model, BMC firmware version, and share protocol.
+
+1. Run `nodevm HOST status` and record the initial slot states. Use an empty slot
+   and a small test ISO.
+2. Run `nodevm HOST mount URL`. Pass `--vm-user` and `--vm-password` if the share
+   requires authentication. Run `status` again and confirm the selected slot
+   reports `inserted=True` and identifies the test ISO.
+3. Run `nodevm HOST eject URL`. If the adapter only supports `nodevm HOST eject`,
+   first confirm the test ISO is the only mounted image. Run `status` again and
+   confirm the slot reports `inserted=False` and the other slots
+   match their initial state.
+4. Record the model, BMC firmware, share protocol, slot, and both readbacks.
+   Mark cases without representative hardware as pending hardware validation.
+
+#### CIFS test share
+
+On Debian or Ubuntu, install `samba` and `smbclient`. Create a local test
+account, set its Samba password with `smbpasswd -a ISO_USER`, and grant it access
+to the directory and read access to the ISO. Add this share to the existing
+Samba configuration and replace `ISO_USER` with the actual account.
+
+```ini
+[share]
+    path = /var/www/html/isos/
+    read only = yes
+    valid users = ISO_USER
+```
+
+Place the test ISO in the share. Validate the configuration with `testparm -s`,
+reload it, and check authentication and file visibility with
+`smbclient //SMB_HOST/share -U ISO_USER -c 'ls'`. Confirm the BMC can reach TCP
+port 445 on the Samba server. Wistron GB300 uses `smb://SMB_HOST/share/probe.iso`.
+Verify supported protocols for each adapter on its hardware.
+
 ### Read-only hardware validation by model
 
 When adding or changing a device interface, track hardware validation by actual
@@ -679,7 +755,7 @@ of each associated NVSwitch and power-shelf model.
 | Device | Read-only coverage |
 | --- | --- |
 | HGX / NVL compute | `nodeping`, `nodefan`, `nodepsu`, `nodetemp`, `nodeinlet`, `nodemon`, `nodepower status`, `nodeeventlog status`, `nodeinventory`, `nodebootorder`, `nodenetboot list`, `nodemacs`, `nodebios status` / `pending`, `nodevm status`, `nodefru`, `nodebmc` / `time`, `nodetask`, `nodefw show` / `status` |
-| NVSwitch | `nvswfan`, `nvswpsu`, `nvswtemp`, `nvswpower status`, `nvsweventlog status`, `nvswinventory` |
+| NVSwitch | `nvswpsu`, `nvswtemp`, `nvswpower status`, `nvsweventlog status`, `nvswinventory` |
 | Power shelf | `psfan`, `pspsu`, `pstemp`, `pspower status`, `pseventlog status`, `psinventory` |
 
 Include any other read-only entry points affected by the change. With `nodetask`,
@@ -734,8 +810,8 @@ Mark cases without hardware as pending real-hardware validation.
 ## Adding a firmware update adapter
 
 `nodefw show` and `nodefw status` use the standard Redfish queries in
-`subjects/firmware.py`. For a new vendor, implement the adapter in the matching
-platform's OEM directory and register verified system models in
+`subjects/firmware.py`. When adding firmware update support for a vendor, implement the adapter in the
+matching platform's OEM directory and register verified system models in
 `firmware_cli.ADAPTERS`. The adapter validates hardware, package, version,
 component, and power and task state, then reads the submission result.
 `check` and `update` share preflight validation. Only `update` writes.

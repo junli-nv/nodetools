@@ -10,7 +10,6 @@ from ..errors import CapUnsupported, TransportError
 from . import common
 
 _FIELDS = {
-    "fan": ("fan", "current-speed", "RPM"),
     "psu": ("psu", "power", "W"),
     "temp": ("temperature", "current", "°C"),
 }
@@ -96,8 +95,6 @@ def collect(host, capability, options):
         if "'{}' is not one of".format(command) in result.stderr:
             if capability == "psu":
                 return _hsc(host, options, deadline)
-            if capability == "fan":
-                return []
             raise CapUnsupported("NVOS exposes no {} sensors on this tray".format(command))
         raise TransportError("NVOS {} query failed (SSH exit {})".format(command, result.returncode))
     try:
@@ -108,7 +105,7 @@ def collect(host, capability, options):
         common.reading(name, name, common.num(item.get(field)), item.get("state"), unit=unit)
         for name, item in sorted(data.items()) if isinstance(item, dict)
     ] if isinstance(data, dict) else []
-    if not readings and (capability != "fan" or data != {}):
+    if not readings:
         raise CapUnsupported("NVOS reported no {} sensors".format(command))
     return readings
 

@@ -36,6 +36,14 @@ def _power(device):
     rf = device.redfish
     selected = device.vars.get("chassis_id") or getattr(device.odm, "monitor_chassis", None)
     chassis = [selected] if selected else common.chassis_list(device, ("1",))
+    sensor_id = getattr(device.odm, "monitor_power_sensor", None)
+    if sensor_id and selected:
+        path = "/redfish/v1/Chassis/{}/Sensors/{}".format(selected, sensor_id)
+        sensor = rf.get(path) or {}
+        if sensor.get("ReadingType") == "Power" and sensor.get("Id") == sensor_id:
+            value = _node_power([sensor], "Reading", path, {_key(sensor.get("Name") or sensor_id)})
+            if value is not None:
+                return [value]
     suffix = getattr(device.odm, "monitor_sensor_collection", None)
     control_name = getattr(device.odm, "monitor_power_control", None)
     names = _NODE_POWER | {_key(control_name)} if control_name else _NODE_POWER
@@ -109,7 +117,8 @@ def _estimate_watts(entry, settings):
 
 
 def _hsc_supplies(device, sensors):
-    chassis = device.vars.get("chassis_id") or device.odm.monitor_chassis
+    chassis = (getattr(device.odm, "monitor_hsc_chassis", None)
+               or device.vars.get("chassis_id") or device.odm.monitor_chassis)
     base = "/redfish/v1/Chassis/{}/Sensors/".format(chassis)
     readings = []
     for slot, (sensor_id, name) in sensors.items():

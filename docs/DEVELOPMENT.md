@@ -11,7 +11,7 @@ nodetools 把它们收敛成一个 **按角色分前缀** 的命令族，命名�
 - 命令名 = 前缀 + 对象：**前缀定角色**，**对象定主体**；
   - `node*` → compute tray，`nvsw*` → NVSwitch，`ps*` → power shelf；
   - 对象：`fan` / `psu` / `temp`（传感器）与 `power` / `eventlog` / `inventory`（信息）；
-  - 例：`nodepsu`、`nvswfan`、`pspsu`、`nodepower`、`nvswinventory`。GBXX 三个前缀都要；BXX 只用 `node*`。
+  - 例：`nodepsu`、`pspsu`、`nodepower`、`nvswinventory`。GBXX 三个前缀都要；BXX 只用 `node*`。
 - 读取路径做成 **回退阶梯**，一套实现覆盖所有 ODM；
 - 设备、凭据、角色、ODM 都从 inventory + 运行时探测得到，不再写死在脚本里。
 
@@ -379,6 +379,19 @@ Aivres `KRS8000` / `KRS8000V3` 为 GB200，`KRS8500V3` 为 GB300。Aivres 和
 KAYTUS 保留独立 OEM 标识。必要时用 `platform=`、`oem=`、`generation=`、`system_id=`
 指定设备。新路径待实机验收，写能力按第 7 节单独验证。
 
+### Wistron GB300 NVL 实机接口
+
+Wistron `GB300 Bianca PDB`（BMC `01.05.26.0305`）的主系统是 `Systems/system`，
+关联管理器为 `Managers/BMC_0`。独立的 `Systems/HGX_Baseboard_0` 由
+`Managers/HGX_BMC_0` 管理，并公布 GPU 资源。固件可能把同一个模块序列号
+填到多颗 GPU 上。此时 `nodeinventory --gpu` 将逐卡序列号标为缺失，并显示逐卡 UUID。
+
+实测 `nodebmc info/time`、`nodefw show`、`nodemon` 和配套 Delta 电源架的
+`psfan` 都能读取数据。`nodemon` 读取托盘总功率及两路 PDB HSC 功率。
+`nodebios --set` 可写入 pending，再恢复原值。当前固件不具备 `base` 和 `bf3`
+预设需要的字段。PXE 验证用 `nodenetboot prefer --mac` 提升一个端口并回读完整
+`BootOrder`，然后恢复原顺序，并确认已有的启动覆盖保持原值。
+
 ### HGX B300 实机接口
 
 Supermicro `SYS-822GS-NB3RT`（BMC `01.12.02.03`）使用主机机箱 `Chassis/1`，
@@ -424,7 +437,7 @@ Delta 的固件清单回退有公开文档依据，Delta、Megmeet、Flex 仍待
 | --- | --- | --- |
 | BIOS | `nodebios` 当前值，`pending` 待读取的设置 | 已有 OEM 动作保留。逐项写入、应用时机和重启条件按机型补齐 |
 | 启动 | `nodebootorder` 持久顺序，`nodenetboot` 启动与 PXE 信息 | `nodeboot` 一次性覆盖。持久重排、网口绑定按 OEM 补齐 |
-| 资产和固件 | `*inventory` 版本，`--details` 厂商/型号/序列号，计算节点 `--gpu`、`nodefru`、`nodefw show` | 完整 FRU、部件号、固件更新和回滚按机型补齐 |
+| 资产和固件 | `*inventory` 版本，`--details` 厂商/型号/序列号，计算节点 `--gpu`、`nodefru`、`nodefw show` | 完整 FRU 和部件号按机型补齐 |
 | MAC 和网络 | `nodemacs` 主机 MAC，部分旧 OEM 适配可读 BMC/PXE MAC | BMC/PXE 通用查询、网络配置和连线诊断按接口补齐 |
 | 温度、风扇、PSU | `*temp`、`*fan`、`*psu`，含健康状态 | 风扇调速走 OEM。PSU 和温度只读 |
 | 虚拟介质 | `nodevm` 查询 | 已有 OEM 支持挂载、推出等动作。新机型按介质协议、启用和插入流程补齐 |
@@ -574,6 +587,52 @@ python -m pytest -q
 **注意**：`--action`（fan `auto/max`）会真正改动设备状态，
 测试时先在单台、且确认可回退的机器上做，不要整批跑。
 
+### 风扇调速实机验收
+
+新增或修改风扇调速适配时，每个受影响的 OEM 和机型都要在一台获准调速的代表机上
+用实际 CLI 验证。记录机型、BMC 固件版本和测试的风扇。单元测试和 `--dry-run`
+只能证明命令选择正确，实机验证应包含以下步骤。
+
+1. 先用 `nodefan check` 记录基线 RPM 和健康状态。BMC 提供调速模式时，也记录当前模式。
+2. 实际执行 `nodefan <节点> max`，记录命令结果。等待转速稳定后重新读取同一批风扇，
+   核对转速或 BMC 提供的目标 PWM 是否符合最大档预期。
+3. 实际执行 `nodefan <节点> auto` 并读回。能查询模式时确认已恢复自动模式，同时检查
+   转速和健康状态。测试以恢复计划规定的模式结束。即使最大档只执行了一部分，也要尝试恢复
+   并核对结果。
+4. 分开记录 CLI 返回、BMC 响应、转速读回和恢复结果。只有写入成功、观察到预期行为，
+   且恢复已验证时才标为通过。需要直接调用 BMC 才能恢复时，记录恢复成功，并将 CLI
+   操作记为失败。没有可用代表机时标记为待实机验证。
+
+### RemoteMedia 实机验收
+
+新增或修改虚拟介质适配后，在代表性设备上按机型、BMC 固件和共享协议做一次挂载与弹出。
+
+1. 用 `nodevm HOST status` 记录起始槽位状态，选空槽和小型测试 ISO。
+2. 用 `nodevm HOST mount URL` 挂载。共享需要认证时，传入 `--vm-user` 和 `--vm-password`。
+   再运行 `status`，核对目标槽位为 `inserted=True`，镜像地址对应测试 ISO。
+3. 用 `nodevm HOST eject URL` 弹出测试镜像。适配器只支持无 URL 弹出时，
+   先确认唯一挂载的是本次测试 ISO，再用 `nodevm HOST eject`。
+   再运行 `status`，核对目标槽位为 `inserted=False`，其余槽位保持原状。
+4. 记录机型、BMC 固件、共享协议、槽位和两次回读结果。没有代表性设备时标记为待实机验证。
+
+#### CIFS 测试共享
+
+Debian/Ubuntu 可安装 `samba` 和 `smbclient`。创建用于测试的本地账号，
+用 `smbpasswd -a ISO_USER` 设置 Samba 密码，并授予该账号目录访问及 ISO 读取权限。
+可在现有 Samba 配置中加入以下共享，将 `ISO_USER` 替换为实际账号。
+
+```ini
+[share]
+    path = /var/www/html/isos/
+    read only = yes
+    valid users = ISO_USER
+```
+
+把测试 ISO 放入共享目录。用 `testparm -s` 校验配置，加载配置后用
+`smbclient //SMB_HOST/share -U ISO_USER -c 'ls'` 检查认证及文件可见性。
+确认 BMC 自身能访问 Samba 主机的 TCP 445。Wistron GB300 使用
+`smb://SMB_HOST/share/probe.iso`，协议支持范围以各适配器的实测为准。
+
 ### 按机型做只读实机验收
 
 新增或修改设备接口时，按实际设备型号维护验收记录。HGX 和 NVL 应分别对每个可用机型
@@ -584,7 +643,7 @@ NVSwitch 和 Power Shelf 选至少一台代表设备，各跑一遍适用的只�
 | 对象 | 只读覆盖范围 |
 | --- | --- |
 | HGX / NVL 计算节点 | `nodeping`、`nodefan`、`nodepsu`、`nodetemp`、`nodeinlet`、`nodemon`、`nodepower status`、`nodeeventlog status`、`nodeinventory`、`nodebootorder`、`nodenetboot list`、`nodemacs`、`nodebios status` / `pending`、`nodevm status`、`nodefru`、`nodebmc` / `time`、`nodetask`、`nodefw show` / `status` |
-| NVSwitch | `nvswfan`、`nvswpsu`、`nvswtemp`、`nvswpower status`、`nvsweventlog status`、`nvswinventory` |
+| NVSwitch | `nvswpsu`、`nvswtemp`、`nvswpower status`、`nvsweventlog status`、`nvswinventory` |
 | Power Shelf | `psfan`、`pspsu`、`pstemp`、`pspower status`、`pseventlog status`、`psinventory` |
 
 同时验证改动涉及的其他只读入口。`nodetask` 先列任务，有记录时用 BMC 返回的真实 ID
@@ -625,6 +684,6 @@ NVSwitch 和 Power Shelf 选至少一台代表设备，各跑一遍适用的只�
 ## 接入固件升级适配器
 
 `nodefw show` 和 `nodefw status` 复用 `subjects/firmware.py` 的标准 Redfish 查询。
-新增厂商时，在对应平台的 OEM 目录实现适配器，在 `firmware_cli.ADAPTERS` 中登记
+需要为某个厂商新增固件升级支持时，在对应平台的 OEM 目录实现适配器，在 `firmware_cli.ADAPTERS` 中登记
 验证过的系统型号。适配器负责匹配硬件与固件包、校验版本和组件、核对电源和任务状态，
 并返回实际提交结果。`check` 与 `update` 共用预检，只有 `update` 执行写入。

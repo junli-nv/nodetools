@@ -2,7 +2,7 @@
 
 from .. import model
 from ..errors import CapUnsupported
-from ..subjects import common, inventory, power
+from ..subjects import common, inventory, power, vm
 from .base import Oem
 
 
@@ -152,41 +152,13 @@ class ReadOnlyCompute(RedfishDiscovery):
         return self.infrastructure_inventory(device)
 
     def vm(self, device, action, options=None):
-        media_paths = set()
-        lines = []
-        empty_collections = {}
+        parents = []
         for collection, field in (("Managers", "manager_id"), ("Systems", "system_id")):
             if any(device.vars.get(key) for key in ("manager_id", "system_id")) and not device.vars.get(field):
                 continue
             selected = device.vars.get(field)
             base = "/redfish/v1/" + collection
-            paths = [base + "/" + selected] if selected else common.member_ids(
+            parents.extend([base + "/" + selected] if selected else common.member_ids(
                 common.resource(device, base)
-            )
-            for parent_path in paths:
-                parent = common.resource(device, parent_path)
-                media = parent.get("VirtualMedia")
-                if not isinstance(media, dict) or not media.get("@odata.id"):
-                    continue
-                media_path = media["@odata.id"]
-                members = common.resource(device, media_path, required=True)
-                if (members.get("Members") == [] and not members.get("Members@odata.count")
-                        and not members.get("Members@odata.nextLink")):
-                    ami = (parent.get("Oem") or {}).get("Ami") or {}
-                    state = (ami.get("VirtualMedia") or {}).get("RMediaStatus")
-                    detail = "VirtualMedia collection is empty"
-                    if isinstance(state, str) and state:
-                        detail += " (RMediaStatus={})".format(state)
-                    empty_collections[media_path] = detail
-                for path in common.member_ids(members):
-                    if path in media_paths:
-                        continue
-                    media_paths.add(path)
-                    data = common.resource(device, path, required=True)
-                    lines.append("{}\tinserted={}\timage={}".format(
-                        data.get("Id") or path, data.get("Inserted", "unknown"),
-                        data.get("ImageName") or data.get("Image") or "-",
-                    ))
-        if not lines and not empty_collections:
-            raise CapUnsupported("BMC did not return a usable VirtualMedia collection")
-        return self._label_lines(device, lines or list(empty_collections.values()))
+            ))
+        return self._label_lines(device, vm.status_lines(device, parents))

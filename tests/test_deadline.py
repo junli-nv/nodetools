@@ -249,3 +249,42 @@ def test_command_backend_debug_shows_credentials(monkeypatch, capsys):
     assert f"[racadm:tray-01] get {credentials}" in output.err
     assert f"[ipmi:tray-01] SOL activate {credentials}" in output.err
     assert "payload" not in output.err
+
+
+def test_redfish_timeout_defaults_and_inventory_precedence(tmp_path):
+    from nodetools_runtime import cli, runtime
+    from nodetools_runtime.arguments import parse_args
+    from nodetools_runtime.inventory import Inventory
+
+    path = tmp_path / "inventory.ini"
+    hosts = (
+        "[compute]\n"
+        "global ansible_host=192.0.2.10\n"
+        "grouped ansible_host=192.0.2.11\n"
+        "single ansible_host=192.0.2.12 redfish_timeout=17 redfish_connect_timeout=5\n"
+        "[slow]\ngrouped\nsingle\n"
+        "[slow:vars]\nredfish_timeout=12\nredfish_connect_timeout=4\n"
+    )
+
+    def timeouts(host, *flags):
+        inventory = Inventory.from_file(str(path))
+        args = parse_args(["nodefan", host, *flags])
+        options = cli.Options(args)
+        cli._apply_defaults(options, inventory, args)
+        device = runtime.build_device(inventory.hosts[host], options,
+                                      apply_deadline=False, load_profile=False)
+        try:
+            return device.redfish._timeout(), device.ipmi.timeout
+        finally:
+            device.close()
+
+    path.write_text(hosts, encoding="utf-8")
+    assert timeouts("global") == ((3.0, 8), 10)
+    path.write_text("[nodehealth:defaults]\ntimeout=11\n" + hosts, encoding="utf-8")
+    assert timeouts("global") == ((3.0, 11), 11)
+    path.write_text("[nodehealth:defaults]\ntimeout=11\nredfish_timeout=9\nredfish_connect_timeout=2\n" + hosts,
+                    encoding="utf-8")
+    assert timeouts("global") == ((2, 9), 11)
+    assert timeouts("grouped") == ((4, 12), 11)
+    assert timeouts("single") == ((5, 17), 11)
+    assert timeouts("single", "--timeout", "2") == ((2, 2), 2)
