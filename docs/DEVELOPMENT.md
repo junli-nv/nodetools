@@ -759,10 +759,11 @@ HGX654 复测通过。`nodeeventlog status` 用分页读取全部 4096 条记录
   （`ping -M do -f -c 1 -W <t> -w <t>`），需要与旧脚本相同的权限（root），因此会
   像旧脚本一样产生瞬时突发流量。无 BMC 地址的主机按 `No BMC IP found` 归类
   （`--long` 时逐台显示）。
-- 尚未做：`nodesensors`（MetricReports 遥测）、结果落库/告警、`--json` 输出、IB/SPX
-  交换机能力、`nodealive`/`nodecable`/`nodeflapping`（SSH）、`nodemon.ipmi`。
+- 尚未做：`nodesensors`（MetricReports 遥测）、结果落库/告警、其余命令的结构化输出、`nodecable`/`nodeflapping`（SSH）、`nodemon.ipmi`。
 - 信息对象的 `clear`（清日志）与 `reseat` 等动作因旧脚本本身依赖外部工具
   （`onecli`、`racadm`）或返回体为空，输出细节未逐一比对；改动前回读旧脚本。
+
+- `ibswhc`、`spxswhc`、`ibswmon` 和 `spxswmon` 已迁入，待有可访问的 IB/SPX 交换机时验证日志读取权限和温度告警。
 
 ## 接入固件升级适配器
 

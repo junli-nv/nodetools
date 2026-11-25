@@ -50,6 +50,47 @@
 ./nodetools inventory import hosts.list --apply
 ```
 
+### 主机可用性与结构化读数
+
+```sh
+./nodealive HGX390
+./nodealive 'HGX[390-394]' --slurm --errors-only
+./nodealive 'HGX[390-394]' --slurm --json
+./nodepower HGX390 status --json
+./nodepsu 'HGX[390-394]' --json
+```
+
+`nodealive` 分别显示 BMC ping、电源、主机 ping 和 SSH 服务握手。默认用节点名
+连接主机，也可在 inventory 中设置 `ssh_host`。`--slurm` 另外读取调度状态。
+有节点降级时退出码为 1。SSH 检查只读取服务握手信息。
+
+`nodealive`、`nodeping`、`nodepower` 的状态查询和传感器查询支持 `--json`
+或 `--format json`，每台节点一条 JSON 记录。`schema_version=1` 的记录包含
+`node`、`command`、`role` 和 `status`。传感器记录包含 `readings` 和 `error`，
+逐路健康状态见 `health`。缺失读数为 `null`。`nodemon --json` 等同于原有的 `--format json`。
+
+### IB 和 SPX 交换机健康检查
+
+在 `inventory.ini` 的 `[switch]` 中添加交换机。`host` 是 SSH 管理地址，
+`ssh_host` 可覆盖它，`ssh_user` 可设置登录用户名。登录方式沿用 OpenSSH 配置。
+
+```sh
+./ibswhc 'ib-leaf[01-04]'
+./spxswhc 'spx-leaf[01-04]'
+./spxswhc spx-leaf01 --dry-run
+./spxswhc spx-leaf01 --checks ./my-checks.sh
+./ibswmon 'ib-leaf[01-04]'
+./spxswmon spx-leaf01 --count 3 --interval 5
+```
+
+每台输出一行。`EnvNG` 是异常环境项，`TmpNG` 汇总 syslog 中匹配的告警，
+`NA` 表示这次未能读取。改温度规则时编辑 `ibswhc` 的 `patterns` 或
+`spxswhc` 的 `alarm_pattern`。也可用 `--checks` 指定自己的 Bash 文件。
+
+`ibswmon` 和 `spxswmon` 默认采一次 CSV，按各自机型显示两路温度、风扇方向、风扇和 PSU 状态。
+每台采集完成后立即输出。缺值为 `NA`。SSH 错误写到 stderr，CSV 仍保留该节点。
+要改采样项，编辑各自脚本的 `CHECKS` 段。自定义 `--checks` 按表头顺序输出五行，缺值填 `NA`。
+
 ## 安装 / 运行
 
 无需安装，直接用仓库里的启动器：

@@ -1,0 +1,38 @@
+#!/bin/bash
+# SPX switch health check. Edit the Bash section below to change the checks.
+topdir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || exit 1
+export PYTHONPATH="$topdir${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m nodetools_runtime.switch_health spxswhc "$@" <<'CHECKS'
+set -e
+version=$(nv show system version)
+health=$(nv show system health)
+interfaces=$(nv show interface)
+environment=$(nv show platform environment)
+
+if kernel_log=$(sudo -n dmesg -T 2>/dev/null) || kernel_log=$(dmesg -T 2>/dev/null); then
+    rip=$(awk '/RIP:/{n++} END{print n+0}' <<<"$kernel_log")
+else
+    rip=NA
+fi
+
+# Match the switch healthd alarm records used by the original SPX check.
+alarm_pattern='healthd:.*EVENT_PUBLISHED.*HEALTH_NOT_OK'
+shopt -s nullglob
+logs=(/var/log/syslog*)
+tmp_ng=NA
+if ((${#logs[@]})); then
+    if matches=$(zgrep -ha "$alarm_pattern" -- "${logs[@]}" 2>/dev/null); then
+        tmp_ng=$(awk '{print $1 "-" $2}' <<<"$matches" | sort | uniq -c |
+            awk '{print $2 "=" $1}' | paste -sd ';')
+    elif [[ $? -eq 1 ]]; then
+        tmp_ng=
+    fi
+fi
+
+printf 'Version:%s,\n' "$(awk '/product-release/{print $2}' <<<"$version")"
+printf 'Health:%s,\n' "$(grep status <<<"$health" | tr -s ' ' | paste -sd ',')"
+printf 'IPConfedPortDown:%s,\n' "$(awk '/^swp[0-9].*down.*IPv4/{n++} END{print n+0}' <<<"$interfaces")"
+printf 'RIP:%s,\n' "$rip"
+printf 'EnvNG:%s,\n' "$(grep -v -e UID -e ok -e Name -e '--' -e green <<<"$environment" | tr -s ' ' | paste -sd ',')"
+printf 'TmpNG:%s,\n' "$tmp_ng"
+CHECKS

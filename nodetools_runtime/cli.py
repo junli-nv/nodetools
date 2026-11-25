@@ -9,7 +9,7 @@ import sys
 import time
 from datetime import datetime, timezone
 
-from . import bak, fan_profiles, hostlist, model, oem, reach, selection
+from . import alive, bak, fan_profiles, hostlist, model, oem, reach, selection
 from .arguments import (
     INFO_COMMANDS,
     NODE_PROGRAMS,
@@ -238,6 +238,12 @@ def _cmd_ping(args):
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
         results = list(pool.map(probe, hosts))
 
+    if args.format == "json":
+        for host, message in results:
+            state = "no_data" if not host.address else "ok" if message == "BMC pingable" else "unreachable"
+            _write_json(_record("nodeping", host.name, host.role, state,
+                                reachable=None if state == "no_data" else state == "ok"))
+        return 0
     if args.long:
         for host, message in results:
             print("{}: {}".format(host.name, message))
@@ -251,6 +257,66 @@ def _cmd_ping(args):
         print("----------------")
         print(message)
     return 0
+
+
+def _json_value(value):
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, list):
+        return [_json_value(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _json_value(item) for key, item in value.items()}
+    return value
+
+
+def _write_json(record):
+    print(json.dumps(_json_value(record), ensure_ascii=False, allow_nan=False), flush=True)
+
+
+def _record(command, node, role, status, **data):
+    return {"schema_version": 1, "node": node, "command": command, "role": role, "status": status, **data}
+
+
+def _cmd_alive(args):
+    if not math.isfinite(args.probe_timeout) or args.probe_timeout <= 0:
+        raise NodetoolsError("--probe-timeout must be finite and positive")
+    if not 1 <= args.ssh_port <= 65535:
+        raise NodetoolsError("--ssh-port must be between 1 and 65535")
+    inv = Inventory.from_file(_inventory_path(args.inventory))
+    options = Options(args)
+    _apply_defaults(options, inv, args)
+    hosts = _role_hosts(args, inv, "compute")
+    if not hosts:
+        raise NodetoolsError("no compute hosts selected")
+    slurm = alive.slurm_states(options.timeout) if args.slurm else None
+
+    def probe(host):
+        return alive.collect(host, options, args.probe_timeout, args.ssh_port, slurm)
+
+    unhealthy = False
+    previous_handler = signal.signal(signal.SIGINT, _interrupt_sensor_query)
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, options.jobs)) as pool:
+            pending = [pool.submit(probe, host) for host in hosts]
+            for task in concurrent.futures.as_completed(pending):
+                result = task.result()
+                failed = result["status"] != "ok"
+                unhealthy |= failed
+                if args.errors_only and not failed:
+                    continue
+                if args.format == "json":
+                    _write_json(result)
+                    continue
+                checks = result["checks"]
+                state = checks["power"]["state"] or checks["power"]["status"]
+                text = (f"BMC={checks['bmc_ping']} Power={state} Host={checks['host_ping']} "
+                        f"SSH={checks['ssh']}")
+                if "slurm" in checks:
+                    text += f" Slurm={checks['slurm']['state'] or checks['slurm']['status']}"
+                print(f"{result['node']}: {text}", flush=True)
+    finally:
+        signal.signal(signal.SIGINT, previous_handler)
+    return int(unhealthy)
 
 
 def _cmd_bak(args):
@@ -321,10 +387,31 @@ def _interrupt_sensor_query(signum, frame):
         os._exit(130)
 
 
+def _json_readings(result):
+    readings = []
+    for item in result.get("readings", []):
+        fields = dict(item)
+        value = fields.get("value")
+        if value in ("", "NA", "N/A"):
+            fields["value"] = None
+        if result["cap"] in ("temp", "inlet", "fan") and isinstance(fields.get("value"), str):
+            try:
+                fields["value"] = float(fields["value"])
+            except ValueError:
+                pass
+        if result["cap"] in ("temp", "inlet"):
+            fields.setdefault("unit", "C")
+        readings.append(fields)
+    return readings
+
+
 def _cmd_sensor(args):
     command = normalize_command(args.command)
     role, capability = SENSOR_COMMANDS[command]
     action = _sensor_action_word(args)
+    json_output = args.format == "json"
+    if json_output and action not in _READ_WORDS:
+        raise NodetoolsError("--json is available for read-only sensor queries")
     if action not in _READ_WORDS:
         if capability != "fan" or role == "nvswitch":
             raise NodetoolsError("{} is read-only; use status or check".format(command))
@@ -362,7 +449,17 @@ def _cmd_sensor(args):
         previous_handler = signal.signal(signal.SIGINT, _interrupt_sensor_query)
     try:
         for result in runner.stream(hosts):
-            if result.get("fan_plan"):
+            if json_output:
+                status = alive.error_status(result.get("error"))
+                readings = _json_readings(result)
+                if status == "ok" and not any(item.get("value") is not None for item in readings):
+                    status = "no_data"
+                if not args.errors_only or status != "ok" or any(
+                    str(item.get("health", "")).casefold() not in ("ok", "normal") for item in readings
+                ):
+                    _write_json(_record(command, result["name"], role, status,
+                                        readings=readings, error=result.get("error")))
+            elif result.get("fan_plan"):
                 for line in result["fan_plan"]:
                     print("{}: {}".format(result["name"], line), flush=True)
             elif simple_inlet:
@@ -436,6 +533,9 @@ def _cmd_info(args):
     action = (
         getattr(args, "action", None) or getattr(args, "action_opt", None) or ""
     ).strip().lower()
+    json_power = command == "nodepower" and args.format == "json"
+    if json_power and action not in _READ_WORDS:
+        raise NodetoolsError("--json is available for nodepower status only")
     if subject == "eventlog" and role != "compute" and action == "hmc":
         raise NodetoolsError("the hmc action is only available for compute trays (nodeeventlog)")
     if command == "pseventlog" and action == "bmc":
@@ -476,7 +576,12 @@ def _cmd_info(args):
         plan = result.get("netboot_plan")
         if plan is not None:
             plans[result["name"]] = plan
-        if plan is None or args.dry_run:
+        if json_power:
+            status, state = alive.power_status(result)
+            if not args.errors_only or status != "ok":
+                _write_json(_record(command, result["name"], role, status,
+                                    power_state=state, error=result.get("error")))
+        elif plan is None or args.dry_run:
             for line in render([result], summary=False, errors_only=args.errors_only):
                 print(line, flush=True)
         if result.get("error"):
@@ -563,6 +668,8 @@ def main(argv=None):
             return _cmd_list(args)
         if command == "nodeping":
             return _cmd_ping(args)
+        if command == "nodealive":
+            return _cmd_alive(args)
         if command == "bak":
             return _cmd_bak(args)
         if command == "redfish":

@@ -1,0 +1,15 @@
+#!/bin/bash
+# SPX switch monitor. Edit the five reads in the CHECKS section.
+topdir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || exit 1
+export PYTHONPATH="$topdir${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m nodetools_runtime.switch_health spxswmon "$@" <<'CHECKS'
+value() {
+    printf '%s\n' "${1:-NA}"
+}
+
+value "$(nv show platform environment temperature Port-Ambient-Sensor | awk '/current/{print $NF; exit}')"
+value "$(nv show platform environment temperature Main-Board-Ambient-Sensor | awk '/current/{print $NF; exit}')"
+value "$(nv show platform environment fan FAN1/1 | awk '/direction/{print $NF; exit}')"
+value "$(nv show platform environment fan | awk '/FAN/ && NF>=3 {print $3}' | paste -sd '+')"
+value "$(nv show platform environment psu | awk '/PSU/ && NF>=4 {print $4}' | paste -sd '+')"
+CHECKS

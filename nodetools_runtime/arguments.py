@@ -53,7 +53,7 @@ COMMAND_ALIASES = {"list": "nodelist", "ping": "nodeping"}
 NODE_PROGRAMS = (
     tuple(SENSOR_COMMANDS)
     + tuple(INFO_COMMANDS)
-    + ("nodelist", "nodeping", "nodeconsole", "nodemon")
+    + ("nodelist", "nodeping", "nodeconsole", "nodemon", "nodealive")
 )
 
 
@@ -316,6 +316,12 @@ def _add_info_opts(parser, subject, role):
     parser.add_argument("--no-cache", action="store_true", help="skip caches")
 
 
+def _add_output_options(parser, formats=("text", "json"), default="text"):
+    output = parser.add_mutually_exclusive_group()
+    output.add_argument("--format", choices=formats, default=default, help=f"output format (default {default})")
+    output.add_argument("--json", dest="format", action="store_const", const="json", help="one JSON record per node")
+
+
 def add_examples(parser, *commands):
     parser.epilog = ((parser.epilog + "\n\n") if parser.epilog else "") + "Examples\n" + "\n".join(
         "  " + command for command in commands
@@ -397,6 +403,20 @@ def build_parser():
         "--ping-timeout", type=float, default=1.0, help="seconds to wait per reply"
     )
     pg.add_argument("--long", action="store_true", help="one line per host")
+    _add_output_options(pg)
+
+    alive = sub.add_parser(
+        "nodealive", help="diagnose whether compute nodes are reachable",
+        description="Check BMC ping, power, host ping, and SSH service. Add --slurm for scheduler state.",
+    )
+    alive.add_argument("noderange", nargs="?", metavar="HOSTS", help="hostlist expression")
+    _add_read_opts(alive)
+    alive.add_argument("--errors-only", action="store_true", help="show only degraded nodes")
+    alive.add_argument("--slurm", action="store_true", help="include Slurm node state")
+    alive.add_argument("--probe-timeout", type=float, default=2, help="seconds per ICMP or SSH probe (default 2)")
+    alive.add_argument("--ssh-port", type=int, default=22, help="SSH port (default 22)")
+    _add_output_options(alive)
+    add_examples(alive, "nodealive HGX390", "nodealive 'HGX[390-394]' --slurm --json")
 
     for name, (role, subject) in SENSOR_COMMANDS.items():
         description = _COMMAND_HELP[subject]
@@ -412,6 +432,7 @@ def build_parser():
   auto/max Request automatic or maximum speed, where supported."""
         sensor = sub.add_parser(name, help="{} {}".format(role, subject), description=description)
         _add_sensor_opts(sensor)
+        _add_output_options(sensor)
         hosts = {"compute": "'HGX[390-394]'", "nvswitch": "nvsw01", "powershelf": "shelf01"}[role]
         examples = [f"{name} {hosts}"]
         if subject == "fan":
@@ -422,6 +443,8 @@ def build_parser():
             examples.append(f"{name} {hosts} --details")
         elif subject == "temp":
             examples.append(f"{name} {hosts} --summary")
+        if name == "nodepsu":
+            examples.append("nodepsu HGX390 --json")
         add_examples(sensor, *examples)
         if subject == "fan":
             sensor.add_argument("--fan-profiles", metavar="FILE", help="use exact-model IPMI fan profiles from an INI file")
@@ -458,6 +481,8 @@ def build_parser():
             description = description.format(bmc=bmc, hmc=hmc)
         info = sub.add_parser(name, help="{} {}".format(role, subject), description=description)
         _add_info_opts(info, subject, role)
+        if name == "nodepower":
+            _add_output_options(info)
         hosts = {"compute": "'HGX[390-394]'", "nvswitch": "nvsw01", "powershelf": "shelf01"}[role]
         if subject == "inventory":
             examples = [f"{name} {hosts}", f"{name} {hosts} --details"]
@@ -479,7 +504,7 @@ def build_parser():
     _add_read_opts(mon)
     mon.add_argument("--count", type=int, default=1, help="number of samples (default 1)")
     mon.add_argument("--interval", type=float, default=5, help="seconds between rounds (default 5)")
-    mon.add_argument("--format", choices=("csv", "json", "text"), default="csv", help="CSV (default; text is an alias) or JSON Lines")
+    _add_output_options(mon, formats=("csv", "json", "text"), default="csv")
     mon.add_argument("--psu-voltage", type=float, help="fallback PSU input voltage for watt estimates")
     mon.add_argument("--psu-power-factor", type=float, help="fallback power factor for single-phase PSU input")
     mon.add_argument("--user", default=None, help="override BMC username")
@@ -582,7 +607,7 @@ def build_parser():
         "--clear", action="store_true", help="delete cached maps instead of writing"
     )
     add_examples(lst, "nodelist", "nodelist 'HGX[390-394]' --long")
-    add_examples(pg, "nodeping 'HGX[390-394]'", "nodeping HGX390 --long")
+    add_examples(pg, "nodeping 'HGX[390-394]'", "nodeping HGX390 --long", "nodeping HGX390 --json")
     add_examples(mon, "nodemon 'HGX[390-394]'", "nodemon HGX390 --count 3 --interval 5")
     add_examples(cs, "nodeconsole HGX390 open", "nodeconsole HGX390 open --console")
     add_examples(bak, "nodepower 'HGX[390-394]' status | nodetools bak -c")

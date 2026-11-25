@@ -1,0 +1,44 @@
+#!/bin/bash
+# IB switch health check. Edit the Bash section below to change the checks.
+topdir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd) || exit 1
+export PYTHONPATH="$topdir${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m nodetools_runtime.switch_health ibswhc "$@" <<'CHECKS'
+set -e
+version=$(nv show system version)
+health=$(nv show system health)
+environment=$(nv show platform environment)
+
+if kernel_log=$(sudo -n dmesg -T 2>/dev/null) || kernel_log=$(dmesg -T 2>/dev/null); then
+    rip=$(awk '/RIP:/{n++} END{print n+0}' <<<"$kernel_log")
+else
+    rip=NA
+fi
+
+# Patterns counted in TmpNG.
+patterns=(
+    -e 'temperature-too-high'
+    -e 'temperature is too hot'
+    -e 'HEALTH_NOT_OK.*Temperature'
+    -e "Transceiver's temperature is higher than critical threshold"
+    -e 'PSU.*is out of power'
+    -e 'PSU.*voltage is out of range'
+    -e 'Fan removed warning'
+)
+shopt -s nullglob
+logs=(/var/log/syslog*)
+tmp_ng=NA
+if ((${#logs[@]})); then
+    if matches=$(zgrep -hai "${patterns[@]}" -- "${logs[@]}" 2>/dev/null); then
+        tmp_ng=$(awk '{print $1 "-" $2}' <<<"$matches" | sort | uniq -c |
+            awk '{print $2 "=" $1}' | paste -sd ';')
+    elif [[ $? -eq 1 ]]; then
+        tmp_ng=
+    fi
+fi
+
+printf 'Version:%s,\n' "$(awk '/product-release/{print $2}' <<<"$version")"
+printf 'Health:%s,\n' "$(grep status <<<"$health" | tr -s ' ' | paste -sd ',')"
+printf 'RIP:%s,\n' "$rip"
+printf 'EnvNG:%s,\n' "$(grep -v -e UID -e ok -e Name -e '--' -e green <<<"$environment" | tr -s ' ' | paste -sd ',')"
+printf 'TmpNG:%s,\n' "$tmp_ng"
+CHECKS

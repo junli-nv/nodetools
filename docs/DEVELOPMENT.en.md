@@ -892,12 +892,13 @@ model-specific hardware validation.
   Hosts without a BMC address are grouped as `No BMC IP found` (per-host under
   `--long`).
 - Not yet done: `nodesensors` (MetricReports telemetry), result
-  persistence/alerting, `--json` output, IB/SPX switch capabilities,
-  `nodealive`/`nodecable`/`nodeflapping` (SSH), `nodemon.ipmi`.
+  persistence/alerting, structured output for remaining commands,
+  `nodecable`/`nodeflapping` (SSH), `nodemon.ipmi`.
 - Info subjects' `clear` (log clearing) and `reseat` etc. depend on external
   tools (`onecli`, `racadm`) or return empty bodies in the legacy scripts, so
   their output details are not compared one by one; re-read the legacy script
   before changing them.
+- `ibswhc`, `spxswhc`, `ibswmon`, and `spxswmon` have been migrated. Verify log access and temperature alarms on reachable IB/SPX switches.
 
 ## Adding a firmware update adapter
 

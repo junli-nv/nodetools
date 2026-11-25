@@ -52,6 +52,52 @@ Conflicting addresses are reported and existing entries are preserved. New hosts
 ./nodetools inventory import hosts.list --apply
 ```
 
+### Host reachability and structured readings
+
+```sh
+./nodealive HGX390
+./nodealive 'HGX[390-394]' --slurm --errors-only
+./nodealive 'HGX[390-394]' --slurm --json
+./nodepower HGX390 status --json
+./nodepsu 'HGX[390-394]' --json
+```
+
+`nodealive` checks BMC ping, power, host ping, and the SSH service separately.
+It connects to the node name by default, or uses `ssh_host` from inventory.
+`--slurm` includes scheduler state. Exit code 1 means at least one node is
+degraded. The SSH check reads the server's handshake.
+
+`nodealive`, `nodeping`, `nodepower` status, and sensor queries accept
+`--json` or `--format json` and emit one JSON record per node. Version 1
+records have `node`, `command`, `role`, and `status`. Sensor records have
+`readings` and `error`, with per-sensor health under `health`. Missing
+readings are `null`. `nodemon --json` is an alias for the existing `--format json`.
+
+### IB and SPX switch health
+
+Add switches under `[switch]` in `inventory.ini`. `host` is the SSH management
+address, `ssh_host` can override it, and `ssh_user` sets the login name.
+Authentication follows the OpenSSH configuration.
+
+```sh
+./ibswhc 'ib-leaf[01-04]'
+./spxswhc 'spx-leaf[01-04]'
+./spxswhc spx-leaf01 --dry-run
+./spxswhc spx-leaf01 --checks ./my-checks.sh
+./ibswmon 'ib-leaf[01-04]'
+./spxswmon spx-leaf01 --count 3 --interval 5
+```
+
+Each switch emits one line. `EnvNG` shows abnormal environmental entries and
+`TmpNG` counts matching syslog alarms. `NA` means the check could not read
+the data. Edit `patterns` in `ibswhc` or `alarm_pattern` in `spxswhc`,
+or supply a separate Bash check file with `--checks`.
+
+`ibswmon` and `spxswmon` take one CSV sample by default. Each model has two temperature columns,
+then fan direction, fan readings, and PSU status. Rows are printed as the hosts finish.
+Missing values are `NA`. SSH failures go to stderr and the host still gets a CSV row.
+Edit the `CHECKS` section or use `--checks` with five output lines in column order, using `NA` for missing readings.
+
 ## Install / run
 
 No installation is required — run the launcher in place:
