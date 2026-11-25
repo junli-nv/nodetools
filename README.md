@@ -42,6 +42,14 @@
 ./nodetools nodefan cp01 max    # 也可写成 `nodetools <command>`
 ```
 
+已有 `inventory.ini` 时，用 `inventory import` 同步缺失节点。默认只预览。
+地址冲突会列出并保留原条目。新增节点使用现有分组的默认值，BMC 登录配置按实际环境补齐。
+
+```sh
+./nodetools inventory import hosts.list
+./nodetools inventory import hosts.list --apply
+```
+
 ## 安装 / 运行
 
 无需安装，直接用仓库里的启动器：
@@ -125,6 +133,7 @@ nodelist [selector] [--long]
 nodeping [selector] [--long] [--ping-timeout S]
 nodetools scan <host> [<host> ...] [--timeout S] [--clear]
 nodetools inventory init [--from hosts.list] [-o inventory.ini]
+nodetools inventory import [HOSTS_LIST] [-i inventory.ini] [--apply]
 nodetools inventory show [-i inventory.ini]
 ```
 
@@ -294,6 +303,8 @@ Redfish 读响应设 `redfish_timeout`（秒），建连设 `redfish_connect_tim
 ./nodeinventory HGX390 --gpu
 ./nodeinventory HGX390 --tasks
 ```
+
+`nodefw show NODE` 是固件版本查询入口。`nodeinventory NODE` 保留原输出格式，继续支持 `--details`、`--gpu` 和 `--tasks`。
 
 在 Supermicro 和 Aivres/KAYTUS 上，`nodebios NODE --set KEY=VALUE`
 提交待生效设置。KR9288 的嵌套设置使用 `组.属性=值`。先用 `nodebios NODE`

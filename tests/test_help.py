@@ -120,3 +120,18 @@ def test_scan_rejects_removed_one_per_type_option():
     with pytest.raises(SystemExit) as exc:
         parse_args(["scan", "--one-per-type", "cp01"])
     assert exc.value.code == 2
+
+
+def test_inventory_import_accepts_a_path_and_reports_local_usage(capsys):
+    from nodetools_runtime.arguments import parse_args
+
+    args = parse_args(["inventory", "import", "/tmp/hosts.list"])
+    assert args.source == "/tmp/hosts.list" and not args.apply
+    args = parse_args(["inventory", "import", "--from", "/tmp/hosts.list", "--apply"])
+    assert args.source_option == "/tmp/hosts.list" and args.apply
+    with pytest.raises(SystemExit) as exc:
+        parse_args(["inventory", "import", "hosts.list", "extra"])
+    assert exc.value.code == 2
+    error = capsys.readouterr().err
+    assert "usage: nodetools inventory import" in error
+    assert "add --apply" in error

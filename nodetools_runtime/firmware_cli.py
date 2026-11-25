@@ -8,6 +8,7 @@ import zipfile
 from pathlib import Path
 
 from . import selection
+from .arguments import add_examples
 from .errors import CapUnsupported, NodetoolsError
 from .inventory import Inventory
 from .oem.hgx import smc_firmware
@@ -18,7 +19,11 @@ ADAPTERS = {smc_firmware.MODEL: smc_firmware}
 
 
 def parser(prog):
-    cli = argparse.ArgumentParser(prog=prog, description="Query and manage BMC-managed firmware.")
+    cli = argparse.ArgumentParser(
+        prog=prog, description="Query and manage BMC-managed firmware.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_examples(cli, "nodefw show HGX654", "nodefw status HGX654")
     actions = cli.add_subparsers(dest="action")
     for action, help_text in (
         ("show", "list installed firmware"),
@@ -26,7 +31,20 @@ def parser(prog):
         ("check", "verify a package and update prerequisites without writing"),
         ("update", "submit a firmware update and report the accepted task"),
     ):
-        command = actions.add_parser(action, help=help_text, description=help_text.capitalize() + ".")
+        command = actions.add_parser(
+            action, help=help_text, description=help_text.capitalize() + ".",
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+        )
+        examples = {
+            "show": ("nodefw show HGX654", "nodefw show 'HGX[650-654]' --jobs 2"),
+            "status": ("nodefw status HGX654", "nodefw status HGX654 --task 1"),
+            "check": ("nodefw check HGX654 bmc bmc-package.zip",),
+            "update": ("nodefw check HGX654 bmc bmc-package.zip", "nodefw update HGX654 bmc bmc-package.zip"),
+        }
+        add_examples(command, *examples[action])
+        if action in ("show", "status"):
+            command.add_argument("--timeout", type=float, help="limit for each Redfish read")
+            command.add_argument("--node-timeout", type=float, help="total reading budget per node")
         command.add_argument("nodes", metavar="NODE(S)")
         command.add_argument("-i", "--inventory", help="inventory file")
         jobs_help = "concurrent uploads; required for multiple nodes" if action == "update" else "parallel node queries"
@@ -84,7 +102,7 @@ def run_selected(args, prog, runner, single, write=False):
     from .cli import Options, _apply_defaults, _interrupt_sensor_query, _inventory_path
 
     args.jobs = getattr(args, "jobs", None)
-    args.timeout = None
+    args.timeout = getattr(args, "timeout", None)
     try:
         inv = Inventory.from_file(_inventory_path(args.inventory))
         options = Options(args)

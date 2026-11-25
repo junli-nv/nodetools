@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime
 
 from . import firmware_cli
+from .arguments import add_examples
 from .subjects import management
 
 DESCRIPTIONS = {
@@ -24,7 +25,14 @@ def datetime_with_zone(value):
 
 
 def main(argv, prog):
-    cli = argparse.ArgumentParser(prog=prog, description=DESCRIPTIONS[prog])
+    cli = argparse.ArgumentParser(
+        prog=prog, description=DESCRIPTIONS[prog], formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    add_examples(cli, *{
+        "nodetask": ("nodetask HGX654", "nodetask HGX654 1"),
+        "nodebmc": ("nodebmc HGX654", "nodebmc HGX654 time"),
+        "nodefru": ("nodefru 'HGX[650-654]'",),
+    }[prog])
     cli.add_argument("nodes", metavar="NODE(S)")
     cli.add_argument("-i", "--inventory", help="inventory file")
     cli.add_argument("--jobs", type=int, help="parallel node queries")

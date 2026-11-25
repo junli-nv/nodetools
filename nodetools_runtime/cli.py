@@ -122,6 +122,21 @@ def _cmd_inventory(args):
             handle.write(text)
         print("wrote {} from {}".format(args.output, args.source))
         return 0
+    if args.inventory_command == "import":
+        from .inventory_import import import_hostslist
+
+        path = _inventory_path(args.inventory)
+        source = args.source or args.source_option or "hosts.list"
+        additions, registered, conflicts = import_hostslist(source, path, apply=args.apply)
+        for group, entries in additions.items():
+            for name, address in entries:
+                print(f"+ [{group}] {name} host={address}")
+        for conflict in conflicts:
+            print(f"Kept existing {conflict}")
+        verb = "Added" if args.apply else "Would add"
+        count = sum(len(entries) for entries in additions.values())
+        print(f"{verb} {count}; already present {registered}; conflicts {len(conflicts)}.")
+        return 0
     if args.inventory_command == "show":
         path = _inventory_path(args.inventory)
         inv = Inventory.from_file(path)
@@ -135,7 +150,7 @@ def _cmd_inventory(args):
                 host.get("generation") or "auto", host.address or "-",
             ))
         return 0
-    print("usage: nodetools inventory {init|show}", file=sys.stderr)
+    print("usage: nodetools inventory {init|import|show}", file=sys.stderr)
     return 2
 
 

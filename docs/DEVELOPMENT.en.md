@@ -809,6 +809,22 @@ node, commands, and results. Check key fields against the device interface.
 Distinguish passes, failures, unsupported operations, and unavailable hardware.
 Mark cases without hardware as pending real-hardware validation.
 
+#### HGX read-only hardware results
+
+HGX390 (KAYTUS KR9288-X3-A0-F0-01, BMC 2.03.ef) and HGX654
+(Supermicro SYS-822GS-NB3RT, BMC 01.07.04.00) were checked against the
+table above. Both passed reachability, sensors, monitoring, power state,
+active and pending BIOS, boot entries, NICs, virtual media, FRU, BMC
+identity and clock, and task list and detail queries. HGX390 had no
+pending BIOS settings. Task details used BIOSSetup on HGX390 and 1 on HGX654.
+
+Event logs, full inventory, firmware inventory, and firmware task queries
+passed on HGX390 and on the HGX654 retest. `nodeeventlog status` paged
+through all 4,096 entries. `nodefw show` and the compatibility command
+`nodeinventory` share firmware reads and expanded all 80 components in
+pages. `nodefw show` also includes BIOS and BMC summaries. `nodefw status`
+returned four tasks.
+
 #### HGX direct-read coverage
 
 The two verified B300 models were checked with automatic discovery and with
@@ -839,6 +855,10 @@ model-specific hardware validation.
 
 ## 8. Code style and commit conventions
 
+- Include runnable examples in `--help` for every public command and each subcommand
+  with its own arguments. Lead with common reads using defaults and host ranges where
+  applicable. Show a preview or precheck for writes that support one. Verify examples
+  after changing arguments and report common input errors with command-specific usage.
 - Standard library + `requests` only; no extra dependencies (keep
   `pip install .` light).
 - No incidental comments; keep naming consistent with existing files; put new

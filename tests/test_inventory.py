@@ -110,3 +110,50 @@ def test_custom_role_group_and_inline_overrides():
     assert [host.name for host in _role_hosts(SimpleNamespace(), inv, "compute")] == [
         "tray-01", "tray-02"
     ]
+
+
+def test_legacy_import_previews_preserves_and_is_repeatable(tmp_path):
+    from nodetools_runtime.inventory_import import import_hostslist
+
+    source = tmp_path / "hosts.list"
+    source.write_text(
+        "PowerShelf shelf-01 192.0.2.5\n"
+        "SMC-L1POD4 HGX654 192.0.2.9\n"
+        "SMC HGX655 192.0.2.2\n"
+        "AVR-L5POD4 HGX390 192.0.2.3\n"
+        "AVR-L5POD4 hgx390 192.0.2.3\n"
+    )
+    target = tmp_path / "inventory.ini"
+    original = b"# example\n[compute]\nHGX654 host=192.0.2.1 oem=smc temp_chassis_id=1"
+    target.write_bytes(original)
+    target.chmod(0o640)
+    added, present, conflicts = import_hostslist(source, target)
+    assert added == {"compute": [("HGX655", "192.0.2.2"), ("HGX390", "192.0.2.3")],
+                     "powershelf": [("shelf-01", "192.0.2.5")]}
+    assert present == 0 and conflicts == ["HGX654: BMC address differs"]
+    assert target.read_bytes() == original
+
+    assert import_hostslist(source, target, apply=True) == (added, present, conflicts)
+    merged = target.read_bytes()
+    inv = Inventory.from_file(target)
+    assert merged.startswith(original)
+    assert inv.members("compute") == ["HGX654", "HGX655", "HGX390"]
+    assert inv.members("powershelf") == ["shelf-01"]
+    assert inv.get("HGX654").get("temp_chassis_id") == "1"
+    assert target.stat().st_mode & 0o777 == 0o640
+    assert import_hostslist(source, target, apply=True) == ({}, 3, conflicts)
+    assert target.read_bytes() == merged
+
+
+def test_legacy_import_rejects_conflicting_duplicate_before_writing(tmp_path):
+    import pytest
+    from nodetools_runtime.errors import InventoryError
+    from nodetools_runtime.inventory_import import import_hostslist
+
+    source = tmp_path / "hosts.list"
+    source.write_text("SMC HGX655 192.0.2.2\nAVR hgx655 192.0.2.3\n")
+    target = tmp_path / "inventory.ini"
+    target.write_text("[compute]\n")
+    with pytest.raises(InventoryError, match="conflicting hosts.list entries"):
+        import_hostslist(source, target, apply=True)
+    assert target.read_text() == "[compute]\n"

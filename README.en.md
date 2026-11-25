@@ -44,6 +44,14 @@ Recommended order (step 0 once; step 2 optional):
 ./nodetools nodefan cp01 max    # also works as `nodetools <command>`
 ```
 
+Use `inventory import` to add missing hosts to an existing `inventory.ini`. It previews by default.
+Conflicting addresses are reported and existing entries are preserved. New hosts inherit group defaults. Configure BMC credentials for your environment.
+
+```sh
+./nodetools inventory import hosts.list
+./nodetools inventory import hosts.list --apply
+```
+
 ## Install / run
 
 No installation is required — run the launcher in place:
@@ -128,6 +136,7 @@ nodelist [selector] [--long]
 nodeping [selector] [--long] [--ping-timeout S]
 nodetools scan <host> [<host> ...] [--timeout S] [--clear]
 nodetools inventory init [--from hosts.list] [-o inventory.ini]
+nodetools inventory import [HOSTS_LIST] [-i inventory.ini] [--apply]
 nodetools inventory show [-i inventory.ini]
 ```
 
@@ -330,6 +339,8 @@ Inventory commands list firmware by default. Select a view for hardware identifi
 ./nodeinventory HGX390 --gpu
 ./nodeinventory HGX390 --tasks
 ```
+
+Use `nodefw show NODE` for firmware versions. `nodeinventory NODE` retains its existing output format and its `--details`, `--gpu`, and `--tasks` views.
 
 On Supermicro and Aivres/KAYTUS, `nodebios NODE --set KEY=VALUE` stages
 a pending BIOS setting. Use `Group.Attribute=value` for nested KR9288 settings.

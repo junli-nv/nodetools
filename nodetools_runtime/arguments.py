@@ -94,6 +94,7 @@ _COMMAND_HELP = {
 
 Examples
   nodenetboot 'HGX[600-602]' list
+  nodenetboot HGX600 status
   nodenetboot 'HGX[600-602]' prefer --type cx7 --dry-run
   nodenetboot 'HGX[600-602]' prefer --type bf3 --slot 3 --port 1 --dry-run
   nodenetboot HGX601 prefer --uefi-path 'Acpi(0x168E09,0x133)/Pci(0x2,0x0)' --port 2 --dry-run
@@ -120,6 +121,9 @@ Prefer moves all matching entries ahead in their current order. Remove
   stop URL          OEM-specific stop. On Lenovo GB300, eject first, then
                     use stop to disable Remote Media.
   enable/media/lic  OEM-specific enablement, media information or license view.
+
+Examples
+  nodevm HGX390 status
 
 Lenovo GB300 CIFS example
   node=gb300-ctr-01
@@ -312,6 +316,12 @@ def _add_info_opts(parser, subject, role):
     parser.add_argument("--no-cache", action="store_true", help="skip caches")
 
 
+def add_examples(parser, *commands):
+    parser.epilog = ((parser.epilog + "\n\n") if parser.epilog else "") + "Examples\n" + "\n".join(
+        "  " + command for command in commands
+    )
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="nodetools",
@@ -319,6 +329,8 @@ def build_parser():
         epilog=("Run COMMAND --help for actions. Also available: nodefw, nodetask, nodebmc, nodefru. "
                 "Common inventory, authentication, and timeout options are in README.md."),
     )
+    parser.formatter_class = argparse.RawDescriptionHelpFormatter
+    add_examples(parser, "nodetools nodelist", "nodetools nodepsu 'HGX[390-394]'")
     _add_common_flags(parser)
     parser.add_argument("--version", action="store_true", help="print version")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND", parser_class=_CommandParser)
@@ -345,8 +357,30 @@ def build_parser():
     init = inv_sub.add_parser("init", help="generate inventory from hosts.list")
     init.add_argument("--from", dest="source", default="hosts.list")
     init.add_argument("-o", "--output", default=DEFAULT_INVENTORY)
+    merge = inv_sub.add_parser(
+        "import", help="preview or add missing hosts from hosts.list",
+        description="Add only missing hosts to an existing inventory. Previews by default.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Examples
+  nodetools inventory import hosts.list
+  nodetools inventory import /path/to/hosts.list --apply
+  nodetools inventory import hosts.list -i /path/to/inventory.ini --apply""",
+    )
+    source = merge.add_mutually_exclusive_group()
+    source.add_argument("source", nargs="?", metavar="HOSTS_LIST", help="legacy host list (default: hosts.list)")
+    source.add_argument("--from", dest="source_option", metavar="HOSTS_LIST", help="alternative way to specify the host list")
+    merge.set_defaults(_usage_parser=merge)
+    merge.add_argument("-i", "--inventory", help="existing inventory")
+    merge.add_argument("--apply", action="store_true", help="write additions after validation")
     show = inv_sub.add_parser("show", help="show parsed inventory")
     show.add_argument("-i", "--inventory", default=None)
+
+    add_examples(redfish, "nodetools redfish dump HGX390 -o hgx390.json")
+    add_examples(dump, "nodetools redfish dump HGX390 -o hgx390.json")
+    add_examples(replay, "nodetools redfish replay hgx390.json nodepsu --details")
+    add_examples(inv, "nodetools inventory show", "nodetools inventory import hosts.list")
+    add_examples(init, "nodetools inventory init --from hosts.list -o inventory.ini")
+    add_examples(show, "nodetools inventory show", "nodetools inventory show -i lab.ini")
 
     lst = sub.add_parser("nodelist", aliases=["list"], help="list hosts",
                          description="List selected inventory hosts as compact ranges. With no HOSTS, list all hosts.")
@@ -378,6 +412,17 @@ def build_parser():
   auto/max Request automatic or maximum speed, where supported."""
         sensor = sub.add_parser(name, help="{} {}".format(role, subject), description=description)
         _add_sensor_opts(sensor)
+        hosts = {"compute": "'HGX[390-394]'", "nvswitch": "nvsw01", "powershelf": "shelf01"}[role]
+        examples = [f"{name} {hosts}"]
+        if subject == "fan":
+            examples.append(f"{name} {hosts} check")
+            if role == "compute":
+                examples.append("nodefan HGX390 max --dry-run")
+        elif subject == "psu":
+            examples.append(f"{name} {hosts} --details")
+        elif subject == "temp":
+            examples.append(f"{name} {hosts} --summary")
+        add_examples(sensor, *examples)
         if subject == "fan":
             sensor.add_argument("--fan-profiles", metavar="FILE", help="use exact-model IPMI fan profiles from an INI file")
             sensor.add_argument("--dry-run", action="store_true", help="show the fan control plan without writing")
@@ -413,6 +458,19 @@ def build_parser():
             description = description.format(bmc=bmc, hmc=hmc)
         info = sub.add_parser(name, help="{} {}".format(role, subject), description=description)
         _add_info_opts(info, subject, role)
+        hosts = {"compute": "'HGX[390-394]'", "nvswitch": "nvsw01", "powershelf": "shelf01"}[role]
+        if subject == "inventory":
+            examples = [f"{name} {hosts}", f"{name} {hosts} --details"]
+        elif subject == "bios":
+            examples = [f"{name} {hosts} status", "nodebios HGX390 pending"]
+        elif subject == "boot":
+            examples = ["nodeboot HGX390 disk", "nodeboot HGX390 pxe"]
+        elif subject in ("power", "eventlog"):
+            examples = [f"{name} {hosts} status"]
+        else:
+            examples = [f"{name} {hosts}"]
+        if subject not in ("netboot", "vm"):
+            add_examples(info, *examples)
 
     mon = sub.add_parser("nodemon", help="sample node temperature and power",
                          description="Read inlet temperature, whole-node power, and per-PSU input watts.\n"
@@ -523,11 +581,25 @@ def build_parser():
     sc.add_argument(
         "--clear", action="store_true", help="delete cached maps instead of writing"
     )
+    add_examples(lst, "nodelist", "nodelist 'HGX[390-394]' --long")
+    add_examples(pg, "nodeping 'HGX[390-394]'", "nodeping HGX390 --long")
+    add_examples(mon, "nodemon 'HGX[390-394]'", "nodemon HGX390 --count 3 --interval 5")
+    add_examples(cs, "nodeconsole HGX390 open", "nodeconsole HGX390 open --console")
+    add_examples(bak, "nodepower 'HGX[390-394]' status | nodetools bak -c")
+    add_examples(sc, "nodetools scan HGX390 --timeout 5")
     return parser
 
 
 def parse_args(argv=None):
-    return build_parser().parse_args(argv)
+    parser = build_parser()
+    args, extras = parser.parse_known_args(argv)
+    usage_parser = vars(args).pop("_usage_parser", None)
+    if extras:
+        if usage_parser is not None:
+            usage_parser.error("unexpected arguments: {}. Try: nodetools inventory import HOSTS_LIST "
+                               "(preview), or add --apply to write.".format(" ".join(extras)))
+        parser.error("unrecognized arguments: " + " ".join(extras))
+    return args
 
 
 __all__ = [

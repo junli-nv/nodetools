@@ -78,7 +78,7 @@ class Smc(Oem):
             target, _ = common.action_target(data, "LogService.ClearLog", _LOG)
             common.require_write_success(target, common.post(device, target))
             return [self._label(device, "Accepted clear Log1")]
-        lines = common.log_lines(device, _LOG + "/Entries", sep=" ")
+        lines = common.log_lines(device, _LOG + "/Entries", sep=" ", page_size=256)
         return ["{}: {}".format(device.name, line) for line in lines]
 
     # -- boot-family overrides ------------------------------------------

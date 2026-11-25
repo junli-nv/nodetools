@@ -194,29 +194,38 @@ class Inventory:
         return _as_bool(self.defaults.get(key), fallback)
 
 
-def generate_from_hostslist(path):
-    """Build inventory text from a ``DeviceType Hostname BMC_IP`` hosts.list."""
+def hostslist_entries(path, strict=False):
+    """Read legacy device labels, host names, and BMC addresses."""
     if not os.path.exists(path):
         raise InventoryError("hosts.list not found: {}".format(path))
-    buckets = {"compute": [], "nvswitch": [], "powershelf": [], "switch": []}
     with open(path, "r", encoding="utf-8") as handle:
-        for raw in handle:
-            line = _strip_comment(raw)
-            if not line.strip():
+        for number, raw in enumerate(handle, 1):
+            line = _strip_comment(raw).strip()
+            if not line:
                 continue
             parts = line.split()
             if len(parts) < 3:
+                if strict:
+                    raise InventoryError(f"{path}:{number}: expected device type, hostname, and BMC address")
                 continue
-            device_type, hostname, bmc_ip = parts[0], parts[1], parts[2]
-            if device_type == "PhysicalNode":
+            device_type, hostname, bmc_ip = parts[:3]
+            label = device_type.casefold()
+            if label in ("physicalnode", "smc", "avr") or label.startswith(("smc-", "avr-")):
                 group = "compute"
-            elif device_type == "PowerShelf":
+            elif label == "powershelf":
                 group = "powershelf"
-            elif device_type == "Switch":
-                group = "nvswitch" if "-gpu-nvl-" in hostname else "switch"
+            elif label == "switch" and "-gpu-nvl-" in hostname.casefold():
+                group = "nvswitch"
             else:
                 group = "switch"
-            buckets.setdefault(group, []).append((hostname, bmc_ip))
+            yield group, hostname, bmc_ip
+
+
+def generate_from_hostslist(path):
+    """Build initial inventory text from a hosts.list."""
+    buckets = {}
+    for group, hostname, bmc_ip in hostslist_entries(path):
+        buckets.setdefault(group, []).append((hostname, bmc_ip))
 
     lines = [
         "# nodetools inventory (generated from hosts.list)",

@@ -2,6 +2,7 @@
 
 import re
 
+from .. import model
 from ..errors import CapUnsupported, TransportError
 from . import common
 
@@ -20,8 +21,13 @@ def link(value):
     raise CapUnsupported("expected a local Redfish resource link")
 
 
-def collection(device, path, required=False, expand=False):
+def collection(device, path, required=False, expand=False, page_size=None):
     path = link(path)
+    if page_size:
+        members = common.paged_members(device, path, page_size, expand=expand)
+        if members is not None:
+            yield from _member_details(device, path, members, expand)
+            return
     page = path
     seen = set()
     while page:
@@ -39,15 +45,26 @@ def collection(device, path, required=False, expand=False):
         members = data.get("Members")
         if not isinstance(members, list):
             raise TransportError("invalid Redfish collection at {}".format(path))
-        for member in members:
-            member_path = link(member)
-            if not member_path.startswith(path + "/"):
-                raise TransportError("unexpected member outside {}".format(path))
-            item = member if expand and isinstance(member, dict) and "Version" in member else None
-            yield member_path, item if item is not None else common.resource(device, member_path, required=True)
+        yield from _member_details(device, path, members, expand)
         page = data.get("Members@odata.nextLink")
         if page and (not isinstance(page, str) or not page.startswith(path + "?")):
             raise TransportError("unexpected Redfish collection page")
+
+
+def _member_details(device, path, members, expand):
+    for member in members:
+        member_path = link(member)
+        if not member_path.startswith(path + "/"):
+            raise TransportError("unexpected member outside {}".format(path))
+        item = member if expand and isinstance(member, dict) and "Version" in member else None
+        yield member_path, item if item is not None else common.resource(device, member_path, required=True)
+
+
+def components(device, path, supermicro=False):
+    """Read firmware components for both nodefw and the legacy inventory view."""
+    supermicro = supermicro or getattr(getattr(device, "odm", None), "name", None) == "smc"
+    supermicro = supermicro or model.odm_for(device) == "smc"
+    return collection(device, path, required=True, expand=True, page_size=16 if supermicro else None)
 
 
 def update_service(device):
@@ -56,7 +73,10 @@ def update_service(device):
 
 
 def inventory(device):
+    supermicro = False
     for _, system in collection(device, "/redfish/v1/Systems"):
+        manufacturer = str(system.get("Manufacturer") or "").casefold()
+        supermicro |= "supermicro" in manufacturer or "super micro" in manufacturer
         if not system.get("BiosVersion"):
             continue
         yield "{} BIOS  {}".format(system.get("Model") or system.get("Id") or "System",
@@ -71,7 +91,7 @@ def inventory(device):
         return
     service = common.resource(device, link(root["UpdateService"]), required=True)
     if service.get("FirmwareInventory"):
-        for path, item in collection(device, link(service["FirmwareInventory"]), required=True, expand=True):
+        for path, item in components(device, link(service["FirmwareInventory"]), supermicro=supermicro):
             label = item.get("Name")
             if not label or label == "Software Inventory":
                 label = item.get("Id") or path.rsplit("/", 1)[-1]

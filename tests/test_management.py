@@ -134,3 +134,25 @@ def test_bmc_read_prefers_explicit_manager_and_falls_back():
     device.vars["manager_id"] = "missing"
     assert management.bmc(device, "info") == ["Model primary", "FirmwareVersion 1.0"]
     assert calls[:2] == ["/redfish/v1/Managers/missing", "/redfish/v1/Managers"]
+
+
+def test_firmware_paged_collection_returns_all_components_and_rejects_repeat():
+    from types import SimpleNamespace
+
+    from nodetools_runtime.errors import TransportError
+    from nodetools_runtime.subjects import firmware
+
+    path = "/redfish/v1/UpdateService/FirmwareInventory"
+    first = {"@odata.id": path + "/A", "Version": "1"}
+    second = {"@odata.id": path + "/B", "Version": "2"}
+    query = path + "?$expand=.&$top=16"
+    pages = {
+        query: {"Members@odata.count": 2, "Members": [first]},
+        query + "&$skip=1": {"Members@odata.count": 2, "Members": [second]},
+    }
+    device = SimpleNamespace(redfish=SimpleNamespace(get=pages.get))
+    read = lambda: list(firmware.collection(device, path, required=True, expand=True, page_size=16))
+    assert read() == [(path + "/A", first), (path + "/B", second)]
+    pages[query + "&$skip=1"]["Members"] = [first]
+    with pytest.raises(TransportError, match="repeated collection member"):
+        read()

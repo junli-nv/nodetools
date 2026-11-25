@@ -37,16 +37,55 @@ def member_ids(collection):
     return out
 
 
-def entries(device, path):
+def paged_members(device, path, size, expand=False):
+    """Fetch a complete collection using bounded numeric pages."""
+    query = ("$expand=.&" if expand else "") + f"$top={size}"
+    result = []
+    seen = set()
+    total = None
+    while True:
+        offset = len(result)
+        page = f"{path}?{query}" + (f"&$skip={offset}" if offset else "")
+        data = resource(device, page, required=bool(offset))
+        members = data.get("Members")
+        if not isinstance(members, list):
+            if not offset:
+                return None
+            raise TransportError(f"invalid collection page at {page}")
+        count = data.get("Members@odata.count")
+        if isinstance(count, int) and count >= 0:
+            if total is not None and count != total:
+                raise TransportError(f"collection count changed at {path}; retry")
+            total = count
+        for member in members:
+            key = (member.get("@odata.id") or member.get("Id")) if isinstance(member, dict) else None
+            if not isinstance(key, str) or key in seen:
+                raise TransportError(f"invalid or repeated collection member at {page}")
+            seen.add(key)
+        result.extend(members)
+        if total is not None:
+            if len(result) == total:
+                return result
+            if not members or len(result) > total:
+                raise TransportError(f"incomplete collection at {path}")
+        elif not data.get("Members@odata.nextLink") and len(members) < size:
+            return result
+        elif not members:
+            raise TransportError(f"empty collection page at {page}")
+
+
+def entries(device, path, page_size=None):
     """Detail dicts for every member of an event-log style collection.
 
     The legacy scripts read ``.Members[]`` directly, which only works when the
     collection inlines its entries. When a vendor returns references instead,
     the member is fetched so output is the same either way.
     """
-    coll = resource(device, path, required=True)
+    members = paged_members(device, path, page_size) if page_size else None
+    if members is None:
+        members = resource(device, path, required=True).get("Members") or []
     out = []
-    for member in coll.get("Members") or []:
+    for member in members:
         if not isinstance(member, dict):
             continue
         if len(member) > 1:
@@ -61,10 +100,10 @@ def entries(device, path):
     return out
 
 
-def log_lines(device, path, sep=" "):
+def log_lines(device, path, sep=" ", page_size=None):
     """``Created<sep>Severity<sep>Message`` lines, sorted like the scripts."""
     rows = []
-    for entry in entries(device, path):
+    for entry in entries(device, path, page_size):
         rows.append(
             "{}{}{}{}{}".format(
                 entry.get("Created", ""),
