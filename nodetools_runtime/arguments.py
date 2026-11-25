@@ -115,8 +115,22 @@ Prefer moves all matching entries ahead in their current order. Remove
   status            Show the selected or mounted image (default).
   mount/insert URL  Attach an ISO. Supported URL schemes depend on the OEM.
   eject/umount      Detach the image.
-  stop URL          Request OEM-specific forced detach for the matching image.
-  enable/media/lic  OEM-specific enablement, media information or license view.""",
+  stop URL          OEM-specific stop. On Lenovo GB300, eject first, then
+                    use stop to disable Remote Media.
+  enable/media/lic  OEM-specific enablement, media information or license view.
+
+Lenovo GB300 CIFS example
+  node=gb300-ctr-01
+  image=smb://files.example.com/isos/example.iso
+  ./nodevm "$node" mount "$image" --vm-user "$SMB_USER" --vm-password "$SMB_PASSWORD"
+  ./nodevm "$node" status
+  ./nodevm "$node" eject "$image"
+  ./nodevm "$node" stop "$image"
+  ./nodevm "$node" status
+
+Set SMB_USER and SMB_PASSWORD to the share credentials first. The share
+must be reachable from the BMC. Run lsblk -o NAME,TYPE,LABEL,MODEL on
+the compute host before ejecting. See --help-full for timeout options.""",
 }
 
 
