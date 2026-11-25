@@ -12,7 +12,7 @@ def _is_temp(name):
     return any(hint in lowered for hint in _TEMP_HINTS)
 
 
-def _from_thermal(device):
+def _from_thermal(device, chassis=None):
     rf = device.redfish
 
     def scan(cid):
@@ -31,7 +31,8 @@ def _from_thermal(device):
             )
         return out
 
-    chassis = common.rung_chassis(device, "Thermal", DEFAULT_CHASSIS)
+    if chassis is None:
+        chassis = common.rung_chassis(device, "Thermal", DEFAULT_CHASSIS)
     if not chassis:
         return []
     if common.profile(device) is None and common.absent(
@@ -134,11 +135,16 @@ def _from_ipmi(device):
 
 
 def collect(device):
-    steps = [
+    steps = []
+    ipmi_first = getattr(getattr(device, "odm", None), "temp_read_ipmi", False)
+    if ipmi_first:
+        steps.append(("oem_ipmi", lambda: _from_ipmi(device)))
+    steps += [
         ("thermal", lambda: _from_thermal(device)),
         ("thermal_metrics", lambda: _from_thermal_metrics(device)),
         ("telemetry", lambda: _from_telemetry(device)),
         ("sensors", lambda: _from_sensors(device)),
-        ("ipmi", lambda: _from_ipmi(device)),
     ]
+    if not ipmi_first:
+        steps.append(("ipmi", lambda: _from_ipmi(device)))
     return first(steps, default=[])

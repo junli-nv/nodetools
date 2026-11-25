@@ -1,9 +1,9 @@
 """PSU capability: health plus input/output power for trays and shelves.
 
-The PSU list, and every chassis/system id, is discovered from the BMC at run
-time. Readings come from whichever Redfish shape the vendor exposes
+Known OEM sensor layouts can be read directly. Otherwise the PSU list and
+chassis IDs are discovered from the BMC. Readings use the vendor's Redfish shape
 (``PowerSubsystem/PowerSupplies`` with a per-supply ``Metrics``, the legacy
-``Power`` object, or ``Sensors``), never from a hardcoded path.
+``Power`` object, or ``Sensors``).
 """
 
 from ..config import DEFAULT_CHASSIS
@@ -116,18 +116,24 @@ def _supply_reading(redfish, detail):
     )
 
 
-def _from_power_supplies(device):
+def _from_power_supplies(device, endpoint=None):
     rf = device.redfish
-    modern = common.cached_chassis(device, "PowerSupplies")
-    legacy = common.cached_chassis(device, "Power")
-    selected = getattr(device, "vars", {}).get("chassis_id")
-    preferred = (selected,) if selected else getattr(getattr(device, "odm", None), "psu_read_chassis", ())
-    if modern is None:
-        modern = list(preferred) if preferred else common.chassis_list(device, DEFAULT_CHASSIS)
-        legacy = modern
-    elif preferred:
-        modern = [cid for cid in modern if cid in preferred]
-        legacy = [cid for cid in legacy if cid in preferred]
+    if endpoint:
+        chassis_id, backend = endpoint
+        chassis_id = device.vars.get("chassis_id") or chassis_id
+        modern = [chassis_id] if backend in ("modern", "both") else []
+        legacy = [chassis_id] if backend in ("legacy", "both") else []
+    else:
+        modern = common.cached_chassis(device, "PowerSupplies")
+        legacy = common.cached_chassis(device, "Power")
+        selected = getattr(device, "vars", {}).get("chassis_id")
+        preferred = (selected,) if selected else getattr(getattr(device, "odm", None), "psu_read_chassis", ())
+        if modern is None:
+            modern = list(preferred) if preferred else common.chassis_list(device, DEFAULT_CHASSIS)
+            legacy = modern
+        elif preferred:
+            modern = [cid for cid in modern if cid in preferred]
+            legacy = [cid for cid in legacy if cid in preferred]
     chassis = list(dict.fromkeys(modern + legacy))
 
     def scan(cid):
@@ -158,9 +164,10 @@ def _from_power_supplies(device):
     return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 
-def _from_sensors(device):
+def _from_sensors(device, chassis=None):
     rf = device.redfish
-    chassis = common.rung_chassis(device, "Sensors", DEFAULT_CHASSIS)
+    if chassis is None:
+        chassis = common.rung_chassis(device, "Sensors", DEFAULT_CHASSIS)
 
     def scan(cid):
         out = []
@@ -192,8 +199,32 @@ def _from_ipmi(device):
     return out
 
 
+def _from_known_sensors(device, expected):
+    rows = _from_sensors(device, expected)
+    if len(rows) != sum(expected.values()) or len({row["id"] for row in rows}) != len(rows):
+        return []
+    if any(not row["id"] or row["value"] is None or not row.get("source") for row in rows):
+        return []
+    for chassis, count in expected.items():
+        prefix = f"/redfish/v1/Chassis/{chassis}/Sensors/"
+        if sum(row["source"].startswith(prefix) for row in rows) != count:
+            return []
+    return rows
+
+
 def collect(device):
-    steps = [("power_supplies", lambda: _from_power_supplies(device))]
+    steps = []
+    expected = getattr(getattr(device, "odm", None), "psu_sensor_chassis", None)
+    if expected:
+        selected = device.vars.get("chassis_id")
+        if selected:
+            expected = {selected: expected[selected]} if selected in expected else None
+        if expected:
+            steps.append(("oem_psu_sensors", lambda: _from_known_sensors(device, expected)))
+    endpoint = getattr(getattr(device, "odm", None), "psu_read_endpoint", None)
+    if endpoint:
+        steps.append(("oem_power_supplies", lambda: _from_power_supplies(device, endpoint)))
+    steps.append(("power_supplies", lambda: _from_power_supplies(device)))
     if device.role == "powershelf":
         from ..oem import powershelf_psu_fallback
 

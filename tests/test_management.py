@@ -114,3 +114,23 @@ def test_firmware_collection_uses_expanded_items_and_fetches_missing_details():
     device = SimpleNamespace(redfish=SimpleNamespace(get=resources.__getitem__))
     result = list(firmware.collection(device, path, required=True, expand=True))
     assert result == [(path + "/CX8_0", inline), (path + "/CX8_1", {"Version": "2"})]
+
+
+def test_bmc_read_prefers_explicit_manager_and_falls_back():
+    device, _ = make_device()
+    device.vars = {"manager_id": "1"}
+    original_get = device.redfish.get
+    calls = []
+
+    def get(path):
+        calls.append(path)
+        return original_get(path)
+
+    device.redfish.get = get
+    assert management.bmc(device, "info") == ["Model primary", "FirmwareVersion 1.0"]
+    assert calls == [MANAGER]
+
+    calls.clear()
+    device.vars["manager_id"] = "missing"
+    assert management.bmc(device, "info") == ["Model primary", "FirmwareVersion 1.0"]
+    assert calls[:2] == ["/redfish/v1/Managers/missing", "/redfish/v1/Managers"]

@@ -25,6 +25,10 @@ class Lenovo(Oem):
     family = "hgx"
     bios_base_preset = True
     fan_chassis = ("1",)
+    fan_read_chassis = fan_chassis
+    inventory_fixed_caps = ("fan", "psu")
+    psu_read_endpoint = ("1", "modern")
+    monitor_preferred_chassis = "1"
 
     bootorder_system = "1"
     bios_system = "1"

@@ -123,3 +123,37 @@ def test_kaytus_oem_is_retained_without_an_avr_override():
     device.identity = {"manufacturer": "KAYTUS", "model": "KR9288-X3-A0-F0-01"}
     assert model.platform_for(device) == "hgx"
     assert model.odm_for(device) == "kaytus"
+
+
+def test_pinned_hgx_status_uses_only_the_oem_endpoint(monkeypatch):
+    host = Host("hgx-01", "192.0.2.42", {
+        "platform": "hgx", "oem": "smc", "generation": "b300",
+    }, ["compute"])
+    calls = []
+
+    def get(path):
+        calls.append(path)
+        assert path == "/redfish/v1/Systems/1"
+        return {"PowerState": "On"}
+
+    def build(selected, options, *, load_profile):
+        assert not load_profile
+        dev = model.Device(selected)
+        dev.redfish = types.SimpleNamespace(get=get, close=lambda: None)
+        return dev
+
+    monkeypatch.setattr(runtime, "build_device", build)
+    options = _Options()
+    runner = runtime.InfoRunner("power", options)
+    result = runner._one(host)
+    assert not result["error"]
+    assert result["lines"] == ["hgx-01: On"]
+    assert calls == ["/redfish/v1/Systems/1"]
+
+    options.action = "off"
+    assert runner._needs_profile(host)
+    options.action = None
+    host.vars["oem"] = "hpe"
+    assert runner._needs_profile(host)
+    host.vars["system_id"] = "1"
+    assert not runner._needs_profile(host)

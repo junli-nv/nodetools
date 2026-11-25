@@ -660,10 +660,15 @@ def _firmware_id_version(device, path):
 
 
 def _members_static(device, path):
-    coll = common.resource(device, path, required=True)
+    coll = common.resource(device, path + "?$expand=.")
+    if not isinstance(coll.get("Members"), list) or coll.get("Members@odata.nextLink"):
+        coll = common.resource(device, path, required=True)
     out = []
-    for oid in common.member_ids(coll):
-        data = device.redfish.get(oid)
+    for member in coll.get("Members") or []:
+        oid = member.get("@odata.id") if isinstance(member, dict) else None
+        if not oid:
+            continue
+        data = member if "Version" in member else device.redfish.get(oid)
         if isinstance(data, dict) and "error" not in data:
             out.append(data)
     return out

@@ -35,6 +35,10 @@ class Dell(Oem):
     name = "dell"
     family = "hgx"
     fan_chassis = ("System.Embedded.1",)
+    fan_subsystem_chassis = fan_chassis
+    inventory_fixed_caps = ("fan", "psu", "temp")
+    psu_read_endpoint = ("System.Embedded.1", "modern")
+    temp_read_ipmi = True
 
     bootorder_system = "System.Embedded.1"
     bootorder_fields = ("Id", "DisplayName")

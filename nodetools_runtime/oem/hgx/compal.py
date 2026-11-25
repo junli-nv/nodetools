@@ -39,6 +39,10 @@ class Compal(Oem):
     fan_profile = "compal-hgx"
     bios_base_preset = True
     fan_chassis = ("Self", "1")
+    fan_read_chassis = ("Self",)
+    inventory_fixed_caps = ("fan", "psu")
+    psu_read_endpoint = ("Self", "modern")
+    monitor_preferred_chassis = "Self"
 
     bootorder_system = "Self"
     bios_system = "Self"

@@ -14,6 +14,10 @@ class Gigabyte(Oem):
     family = "hgx"
     fan_profile = "gigabyte-hgx"
     fan_chassis = ("1", "Chassis_0")
+    fan_subsystem_from_manager = True
+    inventory_fixed_caps = ("fan", "psu")
+    psu_read_endpoint = ("1", "both")
+    monitor_preferred_chassis = "1"
 
     bootorder_system = "1"
     bios_system = "1"

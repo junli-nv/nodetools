@@ -8,6 +8,8 @@ class Byd(Oem):
     family = "hgx"
     fan_profile = "byd-hgx"
     fan_chassis = ("1", "Chassis_0")
+    fan_read_ipmi = True
+    inventory_fixed_caps = ("fan",)
 
     bootorder_system = "Self"
     bios_system = "Self"

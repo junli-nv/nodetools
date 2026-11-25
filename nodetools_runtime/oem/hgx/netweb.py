@@ -33,6 +33,12 @@ class Netweb(Oem):
     fan_profile = "netweb-hgx"
     bios_base_preset = True
     fan_chassis = ("BMC_0", "System_0")
+    fan_read_ipmi = True
+    inventory_fixed_caps = ("fan", "psu")
+    psu_read_endpoint = ("BMC_0", "legacy")
+    monitor_preferred_chassis = "BMC_0"
+    monitor_power_chassis = "HGX_Chassis_0"
+    monitor_power_sensor = "HGX_Chassis_0_TotalHSC_Power_0"
 
     bootorder_system = "System_0"
     bios_system = "System_0"

@@ -13,6 +13,11 @@ class Wistron(Oem):
     family = "nvl"
     fan_profile = "wistron-nvl"
     fan_chassis = ("Chassis_0",)
+    fan_subsystem_chassis = fan_chassis
+    fan_subsystem_count = 16
+    psu_sensor_chassis = {"Chassis_0": 1, "PDB_0": 10}
+    inlet_sensor = ("Chassis_0", "Chassis_0_Front_IO_Temp_0")
+    inventory_fixed_caps = ("fan", "psu")
     bootorder_system = Oem.system_id
     bios_write_target = "settings"
     gpu_reports_module_serials = True

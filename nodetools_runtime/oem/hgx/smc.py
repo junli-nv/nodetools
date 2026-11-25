@@ -38,6 +38,10 @@ class Smc(Oem):
     family = "hgx"
     bios_base_preset = True
     fan_chassis = ("1",)
+    fan_subsystem_chassis = fan_chassis
+    inventory_fixed_caps = ("fan", "psu")
+    psu_read_endpoint = ("1", "both")
+    monitor_preferred_chassis = "1"
     psu_read_chassis = ("1",)
 
     bootorder_system = "1"

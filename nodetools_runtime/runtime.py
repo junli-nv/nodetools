@@ -27,6 +27,17 @@ _CRED_KEYS = {
 # identity read (a few extra BMC round-trips per node).
 _PROFILELESS_CAPS = ("inlet",)
 
+_INFO_READ_ACTIONS = {
+    "bios": (None, "pending"),
+    "bootorder": (None,),
+    "eventlog": (None, "bmc", "hmc"),
+    "inventory": (None,),
+    "macs": (None,),
+    "netboot": (None, "list", "mac", "net"),
+    "power": (None,),
+    "vm": (None,),
+}
+
 
 def _resolve_creds(host, options):
     role = host.role
@@ -188,7 +199,7 @@ class Runner:
                 )
             if self.capability == "monitor":
                 device.redfish.get = lru_cache(maxsize=None)(device.redfish.get)
-            if self.capability in ("fan", "psu", "monitor"):
+            if self.capability in ("fan", "psu", "temp", "inlet", "monitor"):
                 device.odm = oem.for_device(device, self.capability)
             if device.vars.get("chassis_id"):
                 device.ipmi = None
@@ -236,13 +247,37 @@ class InfoRunner:
             "error": error,
         }
 
+    def _needs_profile(self, host):
+        if (host.role != "compute" or getattr(self.options, "no_cache", False)
+                or getattr(self.options, "bios_updates", None)
+                or self.options.action not in _INFO_READ_ACTIONS.get(self.subject, ())
+                or not all(host.vars.get(key) for key in ("platform", "oem", "generation"))):
+            return True
+        device = model.Device(host)
+        platform = model.platform_for(device)
+        if platform == "unknown" or model.generation_for(device) == "unknown":
+            return True
+        if platform == "hgx":
+            vendor = model.odm_for(device)
+            if vendor in ("aivres", "kaytus"):
+                return True
+            if vendor in ("hpe", "cisco") and not host.vars.get("system_id"):
+                return True
+        return oem.for_device(device).name == "generic"
+
+    def _device(self, host):
+        if self.device_factory is not None:
+            return self.device_factory(host)
+        if self._needs_profile(host):
+            return build_device(host, self.options)
+        return build_device(host, self.options, load_profile=False)
+
     def _one(self, host):
         if not host.address:
             return self._result(host, error="no BMC address (missing from inventory)")
         device = None
         try:
-            device = (self.device_factory(host) if self.device_factory is not None
-                      else build_device(host, self.options))
+            device = self._device(host)
             device.odm = oem.for_device(device)
             supported = getattr(device.odm, "info_subjects", None)
             network_discovery = self.subject == "netboot" and self.options.action != "pxe"

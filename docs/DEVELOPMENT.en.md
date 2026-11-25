@@ -574,6 +574,12 @@ power shelves through Redfish, IPMI, or OS interfaces.
    or endpoints are missing, and readback after writes. Handle endpoint
    differences in the vendor adapter.
 
+For each new model, review every applicable command and action by role.
+Implement direct access for verified fixed endpoints and document the matching
+`platform`, `oem`, and `generation` values in the inventory template. When
+resources vary by device, discover only the collections the command needs.
+Record request counts and test fallback and output completeness before merging.
+
 Lenovo GB300 `nodefan` is an implemented read-only example. With `platform=nvl`,
 `oem=lenovo`, and `generation=gb300` in inventory, the adapter uses
 `inventory_fixed_caps` to skip startup discovery for `fan` and sends one GET

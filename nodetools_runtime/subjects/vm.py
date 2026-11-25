@@ -98,7 +98,9 @@ def status_lines(device, parent_paths):
         if not isinstance(media, dict) or not media.get("@odata.id"):
             continue
         media_path = media["@odata.id"]
-        members = common.resource(device, media_path, required=True)
+        members = common.resource(device, media_path + "?$expand=.")
+        if not isinstance(members.get("Members"), list) or members.get("Members@odata.nextLink"):
+            members = common.resource(device, media_path, required=True)
         if (members.get("Members") == [] and not members.get("Members@odata.count")
                 and not members.get("Members@odata.nextLink")):
             ami = (parent.get("Oem") or {}).get("Ami") or {}
@@ -107,11 +109,12 @@ def status_lines(device, parent_paths):
             if isinstance(state, str) and state:
                 detail += " (RMediaStatus={})".format(state)
             empty_collections[media_path] = detail
-        for path in common.member_ids(members):
-            if path in media_paths:
+        for member in members.get("Members") or []:
+            path = member.get("@odata.id") if isinstance(member, dict) else None
+            if not path or path in media_paths:
                 continue
             media_paths.add(path)
-            data = common.resource(device, path, required=True)
+            data = member if "Inserted" in member else common.resource(device, path, required=True)
             lines.append("{}\tinserted={}\timage={}".format(
                 data.get("Id") or path, data.get("Inserted", "unknown"),
                 data.get("ImageName") or data.get("Image") or "-",

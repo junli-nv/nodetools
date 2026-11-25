@@ -482,6 +482,11 @@ NVSwitch、power shelf 的 Redfish、IPMI 和 OS 接口按同一原则选路。
 4. **按命令验收。** 保持现有命令接口和输出格式。测试配置齐全时的请求数、
    配置缺失或端点失效时的回退，以及写后的状态验证。端点差异由厂商适配器处理。
 
+每接入一个新机型，按角色逐条检查命令和动作。已验证的固定端点应接入直读，
+并在 inventory 模板中给出可用的 `platform`、`oem`、`generation` 配置。
+对确实随设备变化的资源，仅发现本次命令需要的子集合。提交前记录请求数，
+并测试直读失败时的回退及输出是否完整。
+
 Lenovo GB300 的 `nodefan` 是已落地的只读示例。inventory 指定 `platform=nvl`、
 `oem=lenovo`、`generation=gb300` 时，适配器通过 `inventory_fixed_caps` 声明
 `fan` 可以跳过启动探测，一次 GET 读取 `/redfish/v1/Chassis/<chassis_id>/Thermal`。

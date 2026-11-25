@@ -512,3 +512,62 @@ def test_fixed_fan_endpoint_skips_profile_for_pinned_read_only_nodes():
     assert runner._needs_profile(host)
     del host.vars["generation"]
     assert runner._needs_profile(host)
+
+
+def test_wistron_fan_reads_scoped_collection_then_falls_back(monkeypatch):
+    from nodetools_runtime.oem.nvl.wistron import Wistron
+
+    base = "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/Fans"
+    members = [{
+        "@odata.id": f"{base}/{index}",
+        "Id": str(index),
+        "Name": f"Fan {index}",
+        "SpeedPercent": {"SpeedRPM": index * 100},
+    } for index in range(16)]
+    data = {base + "?$expand=.": {"Members": members}}
+    device = _device(data)
+    device.odm = Wistron()
+    device.profile = {"caps": {"Chassis_0": {"Fans": 16}}}
+    requests = []
+
+    def get(path, timeout=None):
+        requests.append(path)
+        return data.get(path)
+
+    monkeypatch.setattr(device.redfish, "get", get)
+    readings = fan.collect(device)
+    assert [row["value"] for row in readings] == [i * 100 for i in range(16)]
+    assert requests == [base + "?$expand=."]
+
+    requests.clear()
+    del data[base + "?$expand=."]
+    data[base] = {"Members": [{"@odata.id": base + "/0"}]}
+    data[base + "/0"] = members[0]
+    assert fan.collect(device)[0]["value"] == 0
+    assert base + "/0" in requests
+
+
+def test_hgx_psu_uses_oem_collection_and_falls_back(monkeypatch):
+    from nodetools_runtime.oem.hgx.ami import Ami
+
+    base = "/redfish/v1/Chassis/1"
+    direct = base + "/PowerSubsystem/PowerSupplies?$expand=."
+    data = {direct: {"Members": [{"Id": "main", "Name": "PSU 1"}]}}
+    device = _device(data)
+    device.odm = Ami()
+    device.profile = {"caps": {"Chassis_1": {"Power": True}}}
+    requests = []
+
+    def get(path, timeout=None):
+        requests.append(path)
+        return data.get(path)
+
+    monkeypatch.setattr(device.redfish, "get", get)
+    assert psu.collect(device)[0]["id"] == "main"
+    assert requests == [direct]
+
+    del data[direct]
+    alternate = "/redfish/v1/Chassis/Chassis_1/Power"
+    data[alternate] = {"PowerSupplies": [{"MemberId": "backup", "Name": "PSU 2"}]}
+    assert psu.collect(device)[0]["id"] == "backup"
+    assert alternate in requests

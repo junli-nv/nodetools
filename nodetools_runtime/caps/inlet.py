@@ -52,6 +52,24 @@ def _find(device):
     consulted when the conventional ids miss; the full ladder is the last
     resort for a non-ThermalMetrics backend.
     """
+    known = getattr(getattr(device, "odm", None), "inlet_sensor", None)
+    if known:
+        chassis, sensor_id = known
+        if device.vars.get("chassis_id") in (None, chassis):
+            path = f"/redfish/v1/Chassis/{chassis}/Sensors/{sensor_id}"
+            sensor = device.redfish.get(path) or {}
+            reading = common.num(sensor.get("Reading"))
+            if (sensor.get("Id") == sensor_id and sensor.get("ReadingType") == "Temperature"
+                    and sensor.get("ReadingUnits") == "Cel" and reading is not None):
+                return [common.reading(sensor_id, sensor.get("Name"), reading, source=path)]
+
+    preferred = getattr(getattr(device, "odm", None), "monitor_preferred_chassis", None)
+    if preferred:
+        chassis = device.vars.get("chassis_id") or preferred
+        readings = [r for r in temp._from_thermal(device, (chassis,)) if _is_inlet(r)]
+        if any(r["value"] is not None for r in readings):
+            return readings
+
     seen = []
 
     def probe(cid):

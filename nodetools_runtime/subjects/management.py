@@ -45,7 +45,18 @@ def manager(device):
 
 
 def bmc(device, action, value=None):
-    path, data = manager(device)
+    selected = getattr(device, "vars", {}).get("manager_id")
+    path, data = None, {}
+    if selected and action in ("info", "time") and value is None:
+        base = "/redfish/v1/Managers/"
+        target = boot_nics.local_link(base + selected)
+        if not target or target.rsplit("/", 1)[0] + "/" != base:
+            raise CapUnsupported("invalid Redfish manager_id")
+        data = common.resource(device, target)
+        if data and (action != "time" or data.get("DateTime")):
+            path = target
+    if path is None:
+        path, data = manager(device)
     if action == "info":
         if not path:
             return device.ipmi.run("mc", "info").splitlines()

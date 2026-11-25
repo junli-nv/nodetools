@@ -24,13 +24,13 @@ def _fan_unit(detail):
     return _speed_unit(detail) or "RPM"
 
 
-def _from_thermal_subsystem(device):
+def _from_thermal_subsystem(device, chassis=None, *, expand_only=False):
     rf = device.redfish
 
     def scan(cid):
         out = []
         for detail in common.enumerate_collection(
-            rf, "/redfish/v1/Chassis/{}/ThermalSubsystem/Fans".format(cid)
+            rf, "/redfish/v1/Chassis/{}/ThermalSubsystem/Fans".format(cid), expand_only=expand_only
         ):
             out.append(
                 common.reading(
@@ -43,7 +43,8 @@ def _from_thermal_subsystem(device):
             )
         return out
 
-    chassis = common.rung_chassis(device, "Fans", DEFAULT_CHASSIS)
+    if chassis is None:
+        chassis = common.rung_chassis(device, "Fans", DEFAULT_CHASSIS)
     return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
 
 
@@ -122,9 +123,40 @@ def _from_ipmi(device):
     return out
 
 
+def _from_known_subsystem(device, chassis, count=None):
+    rows = _from_thermal_subsystem(device, chassis, expand_only=count is not None)
+    ids = {row["id"] for row in rows if row["id"]}
+    if not rows or len(rows) != len(ids) or any(row["value"] is None for row in rows):
+        return []
+    if count is not None and (len(rows) != count or any(row.get("unit") != "RPM" for row in rows)):
+        return []
+    return rows
+
+
+def _from_host_manager(device):
+    selected = device.vars.get("chassis_id") or device.vars.get("manager_id")
+    if selected:
+        return _from_known_subsystem(device, (selected,))
+    managers = [ident for ident in common.discover_ids(device.redfish, "/redfish/v1/Managers")
+                if "hgx" not in ident.lower()]
+    if len(managers) == 1:
+        return _from_known_subsystem(device, managers)
+    return []
+
+
 def collect(device):
     steps = []
     odm = getattr(device, "odm", None)
+    ipmi_first = getattr(odm, "fan_read_ipmi", False)
+    if ipmi_first:
+        steps.append(("oem_ipmi", lambda: _from_ipmi(device)))
+    if getattr(odm, "fan_subsystem_from_manager", False):
+        steps.append(("oem_manager_fans", lambda: _from_host_manager(device)))
+    subsystem = getattr(odm, "fan_subsystem_chassis", ())
+    if subsystem:
+        chassis = (device.vars["chassis_id"],) if device.vars.get("chassis_id") else subsystem
+        count = getattr(odm, "fan_subsystem_count", None)
+        steps.append(("oem_fans", lambda: _from_known_subsystem(device, chassis, count)))
     preferred = getattr(odm, "fan_read_chassis", ())
     if preferred:
         selected = device.vars.get("chassis_id")
@@ -136,6 +168,7 @@ def collect(device):
         ("thermal_subsystem", lambda: _from_thermal_subsystem(device)),
         ("thermal", lambda: _from_thermal(device)),
         ("sensors", lambda: _from_sensors(device)),
-        ("ipmi", lambda: _from_ipmi(device)),
     ]
+    if not ipmi_first:
+        steps.append(("ipmi", lambda: _from_ipmi(device)))
     return first(steps, default=[])

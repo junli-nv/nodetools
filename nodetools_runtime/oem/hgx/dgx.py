@@ -15,6 +15,10 @@ class Dgx(Oem):
     family = "hgx"
     fan_profile = "dgx-hgx"
     fan_chassis = ("DGX", "1")
+    fan_read_ipmi = True
+    inventory_fixed_caps = ("fan", "psu")
+    psu_read_endpoint = ("DGX", "modern")
+    monitor_preferred_chassis = "DGX"
 
     bootorder_system = "DGX"
     bios_system = "DGX"

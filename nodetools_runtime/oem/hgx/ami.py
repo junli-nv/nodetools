@@ -14,6 +14,10 @@ class Ami(Oem):
     family = "hgx"
     fan_profile = "ami-hgx"
     fan_chassis = ("1", "Chassis_0")
+    fan_read_ipmi = True
+    inventory_fixed_caps = ("fan", "psu")
+    psu_read_endpoint = ("1", "modern")
+    monitor_preferred_chassis = "1"
 
     bootorder_system = "1"
     bios_system = "1"

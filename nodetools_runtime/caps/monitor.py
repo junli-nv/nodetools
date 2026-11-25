@@ -35,10 +35,10 @@ def _node_power(items, field, source, names=_NODE_POWER):
 def _power(device):
     rf = device.redfish
     selected = device.vars.get("chassis_id") or getattr(device.odm, "monitor_chassis", None)
-    chassis = [selected] if selected else common.chassis_list(device, ("1",))
     sensor_id = getattr(device.odm, "monitor_power_sensor", None)
-    if sensor_id and selected:
-        path = "/redfish/v1/Chassis/{}/Sensors/{}".format(selected, sensor_id)
+    sensor_chassis = getattr(device.odm, "monitor_power_chassis", None) or selected
+    if sensor_id and sensor_chassis and (not selected or sensor_chassis == selected):
+        path = "/redfish/v1/Chassis/{}/Sensors/{}".format(sensor_chassis, sensor_id)
         sensor = rf.get(path) or {}
         if sensor.get("ReadingType") == "Power" and sensor.get("Id") == sensor_id:
             value = _node_power([sensor], "Reading", path, {_key(sensor.get("Name") or sensor_id)})
@@ -47,7 +47,7 @@ def _power(device):
     suffix = getattr(device.odm, "monitor_sensor_collection", None)
     control_name = getattr(device.odm, "monitor_power_control", None)
     names = _NODE_POWER | {_key(control_name)} if control_name else _NODE_POWER
-    for cid in chassis:
+    def read_power(cid):
         base = "/redfish/v1/Chassis/{}".format(cid)
         path = base + "/Power"
         controls = (rf.get(path) or {}).get("PowerControl") or []
@@ -63,8 +63,19 @@ def _power(device):
         if value is None and suffix:
             path = base + suffix
             value = _node_power((rf.get(path) or {}).get("Sensors") or [], "Reading", path)
+        return value
+
+    preferred = None if selected else getattr(device.odm, "monitor_preferred_chassis", None)
+    if preferred:
+        value = read_power(preferred)
         if value is not None:
             return [value]
+    chassis = [selected] if selected else common.chassis_list(device, ("1",))
+    for cid in chassis:
+        if cid != preferred:
+            value = read_power(cid)
+            if value is not None:
+                return [value]
 
     for cid in chassis:
         sensors = (sensor for sensor in common.enumerate_sensors(rf, cid)
