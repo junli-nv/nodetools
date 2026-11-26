@@ -14,11 +14,15 @@ and carries its BMC address plus optional per-host variables::
     [nodehealth:defaults]
     jobs=18
 
+A group can reference already defined hosts with a bare range such as HGX[531-602].
+
 Variable precedence: ``[all:vars]`` < group ``:vars`` < per-host inline.
 """
 
 import os
+import re
 
+from . import hostlist
 from .config import (
     DEFAULT_REDFISH_CONNECT_TIMEOUT, DEFAULT_REDFISH_TIMEOUT, DEFAULTS_SECTION,
     NAME_ROLE_PATTERNS, ROLE_GROUPS,
@@ -133,8 +137,21 @@ class Inventory:
                 host_lines.append((section, stripped))
 
         inline_vars = {}
+        defined_names = {raw.split(maxsplit=1)[0] for _, raw in host_lines}
         for group, raw in host_lines:
-            inv._add_host_line(group, raw, inline_vars)
+            name, *settings = raw.split(maxsplit=1)
+            if not any(mark in name for mark in "[]{},"):
+                inv._add_host_line(group, raw, inline_vars)
+                continue
+            if settings:
+                raise InventoryError(f"[{group}] range {name!r} must be a membership-only line")
+            members = hostlist.expand(name)
+            if not members or any(any(mark in member for mark in "[]{},") for member in members):
+                raise InventoryError(f"[{group}] invalid host range {name!r}")
+            for member in members:
+                if member not in defined_names:
+                    raise InventoryError(f"[{group}] range {name!r} references undefined host {member}")
+                inv._add_host_line(group, member, inline_vars)
         for host in inv.hosts.values():
             host.vars.update(inv.all_vars)
             for group in host.groups:
@@ -218,14 +235,22 @@ def hostslist_entries(path, strict=False):
                 group = "nvswitch"
             else:
                 group = "switch"
-            yield group, hostname, bmc_ip
+            legacy_group = None
+            if group == "compute" and label != "physicalnode":
+                if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", device_type):
+                    raise InventoryError(f"{path}:{number}: invalid device label")
+                legacy_group = device_type.upper()
+            yield group, legacy_group, hostname, bmc_ip
 
 
 def generate_from_hostslist(path):
     """Build initial inventory text from a hosts.list."""
     buckets = {}
-    for group, hostname, bmc_ip in hostslist_entries(path):
+    aliases = {}
+    for group, legacy_group, hostname, bmc_ip in hostslist_entries(path):
         buckets.setdefault(group, []).append((hostname, bmc_ip))
+        if legacy_group:
+            aliases.setdefault(legacy_group, {})[hostname] = None
 
     lines = [
         "# nodetools inventory (generated from hosts.list)",
@@ -241,6 +266,9 @@ def generate_from_hostslist(path):
         for hostname, bmc_ip in entries:
             lines.append("{} host={}".format(hostname, bmc_ip))
         lines.append("")
+
+    for group, names in aliases.items():
+        lines.extend([f"[{group}]", hostlist.compact(names), ""])
 
     lines += [
         "[all:vars]",

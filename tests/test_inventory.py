@@ -129,7 +129,8 @@ def test_legacy_import_previews_preserves_and_is_repeatable(tmp_path):
     target.chmod(0o640)
     added, present, conflicts = import_hostslist(source, target)
     assert added == {"compute": [("HGX655", "192.0.2.2"), ("HGX390", "192.0.2.3")],
-                     "powershelf": [("shelf-01", "192.0.2.5")]}
+                     "powershelf": [("shelf-01", "192.0.2.5")],
+                     "SMC": [("HGX655", None)], "AVR-L5POD4": [("HGX390", None)]}
     assert present == 0 and conflicts == ["HGX654: BMC address differs"]
     assert target.read_bytes() == original
 
@@ -157,3 +158,45 @@ def test_legacy_import_rejects_conflicting_duplicate_before_writing(tmp_path):
     with pytest.raises(InventoryError, match="conflicting hosts.list entries"):
         import_hostslist(source, target, apply=True)
     assert target.read_text() == "[compute]\n"
+
+
+def test_import_restores_pod_group_on_existing_nodes(tmp_path, capsys):
+    from nodetools_runtime.cli import main
+    from nodetools_runtime.inventory_import import import_hostslist
+
+    source = tmp_path / "hosts.list"
+    source.write_text("SMC-L1POD2 hgx531 192.0.2.31\nSMC-L1POD2 HGX532 192.0.2.32\n")
+    target = tmp_path / "inventory.ini"
+    target.write_text(
+        "[smc_hgx]\nHGX531 host=192.0.2.31\nHGX532 host=192.0.2.32\n"
+        "[smc_hgx:vars]\nrole=compute\noem=smc\n"
+    )
+    original = target.read_bytes()
+    preview = {"SMC-L1POD2": [("HGX531", None), ("HGX532", None)]}
+    assert import_hostslist(source, target) == (preview, 2, [])
+    assert target.read_bytes() == original
+    assert import_hostslist(source, target, apply=True) == (preview, 2, [])
+    inv = Inventory.from_file(target)
+    node = inv.get("HGX531")
+    assert (node.address, node.role, node.get("oem")) == ("192.0.2.31", "compute", "smc")
+    assert main(["nodelist", "-i", str(target), "--by-group", "--group", "SMC-L1POD2"]) == 0
+    assert capsys.readouterr().out.strip() == "SMC-L1POD2: HGX[531-532]"
+    assert import_hostslist(source, target, apply=True) == ({}, 2, [])
+
+
+def test_group_ranges_are_membership_only():
+    from nodetools_runtime.errors import InventoryError
+
+    definitions = "[compute]\nHGX061 host=192.0.2.10\nHGX062 host=192.0.2.11\n"
+    result = Inventory.from_text("[POD]\nHGX[061-062],HGX061\n" + definitions)
+    assert result.members("POD") == ["HGX061", "HGX062"]
+    assert result.get("HGX061").address == "192.0.2.10"
+    assert result.get("HGX061").role == "compute"
+    for line, detail in (("HGX[061-063]", "undefined host HGX063"),
+                         ("HGX[061-062] host=192.0.2.20", "membership-only")):
+        try:
+            Inventory.from_text(definitions + "[POD]\n" + line)
+        except InventoryError as exc:
+            assert detail in str(exc)
+        else:
+            raise AssertionError(f"accepted invalid line: {line}")

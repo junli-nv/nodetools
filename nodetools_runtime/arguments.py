@@ -15,6 +15,7 @@ still works, and the legacy short names (``list``/``ping``) are aliases.
 
 import argparse
 
+from .help_language import ChineseHelp, LocalizedArgumentParser
 from .config import (
     CAPS,
     DEFAULT_INVENTORY,
@@ -168,7 +169,7 @@ class _FullHelpAction(argparse.Action):
         parser.exit()
 
 
-class _CommandParser(argparse.ArgumentParser):
+class _CommandParser(LocalizedArgumentParser):
     def __init__(self, **kwargs):
         kwargs.setdefault("formatter_class", _CommandHelp)
         super().__init__(**kwargs)
@@ -178,6 +179,7 @@ class _CommandParser(argparse.ArgumentParser):
 def _add_common_flags(parser):
     parser.add_argument("--help-full", action=_FullHelpAction, nargs=0,
                         help="show all options, including common options")
+    parser.add_argument("--help-full-zh", action=ChineseHelp, nargs=0, help="show full help in Chinese")
     parser.add_argument("-x", "--debug", action="store_true", default=argparse.SUPPRESS,
                         help="show diagnostic information on stderr")
 
@@ -329,7 +331,7 @@ def add_examples(parser, *commands):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(
+    parser = LocalizedArgumentParser(
         prog="nodetools",
         description="Inspect and manage HGX and NVL nodes over Redfish and IPMI.",
         epilog=("Run COMMAND --help for actions. Also available: nodefw, nodetask, nodebmc, nodefru. "
@@ -368,8 +370,8 @@ def build_parser():
     init.add_argument("--from", dest="source", default="hosts.list")
     init.add_argument("-o", "--output", default=DEFAULT_INVENTORY)
     merge = inv_sub.add_parser(
-        "import", help="preview or add missing hosts from hosts.list",
-        description="Add only missing hosts to an existing inventory. Previews by default.",
+        "import", help="preview or add hosts and POD groups from hosts.list",
+        description="Add missing hosts and preserve SMC/AVR labels as inventory groups. Previews by default.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Examples
   nodetools inventory import hosts.list
@@ -385,7 +387,8 @@ def build_parser():
     show = inv_sub.add_parser("show", help="show parsed inventory")
     show.add_argument("-i", "--inventory", default=None)
 
-    add_examples(redfish, "nodetools redfish dump HGX390 -o hgx390.json")
+    add_examples(redfish, "nodetools redfish dump HGX390 -o hgx390.json",
+                 "nodetools redfish replay hgx390.json nodepsu --details")
     add_examples(dump, "nodetools redfish dump HGX390 -o hgx390.json")
     add_examples(replay, "nodetools redfish replay hgx390.json nodepsu --details")
     add_examples(inv, "nodetools inventory show", "nodetools inventory import hosts.list")
@@ -395,9 +398,9 @@ def build_parser():
     lst = sub.add_parser("nodelist", aliases=["list"], help="list hosts",
                          description="List selected inventory hosts as compact ranges. With no HOSTS, list all hosts.")
     _add_selection(lst)
-    lst.add_argument(
-        "--long", action="store_true", help="one line per host (role and BMC address)"
-    )
+    list_format = lst.add_mutually_exclusive_group()
+    list_format.add_argument("--long", action="store_true", help="one line per host (role and BMC address)")
+    list_format.add_argument("--by-group", action="store_true", help="one compact host range per inventory group")
 
     pg = sub.add_parser("nodeping", aliases=["ping"], help="ping BMC addresses",
                         description="Check BMC reachability over ICMP. Output reachable and unreachable host ranges.")
@@ -610,7 +613,8 @@ def build_parser():
     sc.add_argument(
         "--clear", action="store_true", help="delete cached maps instead of writing"
     )
-    add_examples(lst, "nodelist", "nodelist 'HGX[390-394]' --long")
+    add_examples(lst, "nodelist --by-group", "nodelist --by-group --group SMC-L1POD2",
+                 "nodelist 'HGX[390-394]' --long")
     add_examples(pg, "nodeping 'HGX[390-394]'", "nodeping HGX390 --long", "nodeping HGX390 --json")
     add_examples(mon, "nodemon 'HGX[390-394]'", "nodemon HGX390 --count 3 --interval 5")
     add_examples(cs, "nodeconsole HGX390 open", "nodeconsole HGX390 open --console")

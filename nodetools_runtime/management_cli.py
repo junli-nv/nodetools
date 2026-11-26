@@ -3,6 +3,7 @@
 import argparse
 from datetime import datetime
 
+from .help_language import LocalizedArgumentParser
 from . import firmware_cli
 from .arguments import add_examples
 from .subjects import management
@@ -25,7 +26,7 @@ def datetime_with_zone(value):
 
 
 def main(argv, prog):
-    cli = argparse.ArgumentParser(
+    cli = LocalizedArgumentParser(
         prog=prog, description=DESCRIPTIONS[prog], formatter_class=argparse.RawDescriptionHelpFormatter
     )
     add_examples(cli, *{

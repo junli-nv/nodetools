@@ -130,12 +130,15 @@ def _cmd_inventory(args):
         additions, registered, conflicts = import_hostslist(source, path, apply=args.apply)
         for group, entries in additions.items():
             for name, address in entries:
-                print(f"+ [{group}] {name} host={address}")
+                suffix = f" host={address}" if address is not None else ""
+                print(f"+ [{group}] {name}{suffix}")
         for conflict in conflicts:
             print(f"Kept existing {conflict}")
         verb = "Added" if args.apply else "Would add"
-        count = sum(len(entries) for entries in additions.values())
-        print(f"{verb} {count}; already present {registered}; conflicts {len(conflicts)}.")
+        rows = [address for entries in additions.values() for _, address in entries]
+        memberships = rows.count(None)
+        print(f"{verb} {len(rows) - memberships}; already present {registered}; conflicts {len(conflicts)}.")
+        print(f"{verb} {memberships} group memberships.")
         return 0
     if args.inventory_command == "show":
         path = _inventory_path(args.inventory)
@@ -201,6 +204,14 @@ def _cmd_list(args):
     if args.long:
         for host in hosts:
             print("{}: {} {}".format(host.name, host.role, host.address or "-"))
+        return 0
+    if args.by_group:
+        selected = {host.name for host in hosts}
+        groups = args.group or inv.groups
+        for group in dict.fromkeys(groups):
+            names = [name for name in inv.members(group) if name in selected]
+            if names:
+                print("%15s: %s" % (group, hostlist.compact(names)))
         return 0
     by_role = {}
     for host in hosts:

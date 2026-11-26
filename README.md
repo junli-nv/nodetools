@@ -50,6 +50,23 @@
 ./nodetools inventory import hosts.list --apply
 ```
 
+### 分组和帮助
+
+库存模板 [inventory.example.ini](inventory.example.ini) 有节点、POD、共用配置和导入示例。
+先预览旧清单，再用 --apply 写入。旧 SMC/AVR 标签会保留为可用 --group 选中的组。
+纯分组可用 HGX[531-602] 这样的范围引用库存中已定义的节点。
+
+```bash
+./nodetools inventory import /path/to/hosts.list
+./nodetools inventory import /path/to/hosts.list --apply
+./nodelist --by-group
+./nodelist --by-group --group SMC-L1POD2
+./nodepsu --group AVR-L5POD4
+./nodebios --help
+./nodebios --help-zh
+./nodebios --help-full-zh
+```
+
 ### 主机可用性与结构化读数
 
 ```sh
@@ -170,7 +187,7 @@ nodevm        <noderange> [status|enable|mount|umount|insert|eject|stop|media|li
 nodeconsole   <noderange> [open|close]        # SOL 串口控制台
 
 # 通用
-nodelist [selector] [--long]
+nodelist [selector] [--long | --by-group]
 nodeping [selector] [--long] [--ping-timeout S]
 nodetools scan <host> [<host> ...] [--timeout S] [--clear]
 nodetools inventory init [--from hosts.list] [-o inventory.ini]

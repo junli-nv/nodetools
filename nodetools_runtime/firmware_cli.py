@@ -7,6 +7,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+from .help_language import LocalizedArgumentParser
 from . import selection
 from .arguments import add_examples
 from .errors import CapUnsupported, NodetoolsError
@@ -19,7 +20,7 @@ ADAPTERS = {smc_firmware.MODEL: smc_firmware}
 
 
 def parser(prog):
-    cli = argparse.ArgumentParser(
+    cli = LocalizedArgumentParser(
         prog=prog, description="Query and manage BMC-managed firmware.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

@@ -12,6 +12,7 @@ import subprocess
 import sys
 import time
 
+from .help_language import LocalizedArgumentParser
 from .config import DEFAULT_INVENTORY
 from .errors import NodetoolsError
 from .hostlist import expand
@@ -44,7 +45,7 @@ def main(command, argv):
     sample = "ib-leaf" if command.startswith("ib") else "spx-leaf"
     description = "Sample switch temperatures, fans and PSU status as CSV." if monitor else "Read switch health and alarm logs."
     repeat_example = f"\n  ./{command} {sample}01 --count 3 --interval 5" if monitor else ""
-    parser = argparse.ArgumentParser(
+    parser = LocalizedArgumentParser(
         prog=command, description=description,
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""Examples

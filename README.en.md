@@ -52,6 +52,22 @@ Conflicting addresses are reported and existing entries are preserved. New hosts
 ./nodetools inventory import hosts.list --apply
 ```
 
+### Inventory groups and help
+
+See [inventory.example.ini](inventory.example.ini) for node, POD, shared variable, and import examples.
+Preview the import before applying it. Legacy SMC/AVR labels become selectable inventory groups.
+Use bare ranges such as HGX[531-602] in group sections to reference hosts already defined in the inventory.
+
+```bash
+./nodetools inventory import /path/to/hosts.list
+./nodetools inventory import /path/to/hosts.list --apply
+./nodelist --by-group
+./nodelist --by-group --group SMC-L1POD2
+./nodebios --help       # English (default)
+./nodebios --help-zh    # Chinese
+./nodebios --help-full-zh
+```
+
 ### Host reachability and structured readings
 
 ```sh
@@ -178,7 +194,7 @@ nodevm        <noderange> [status|enable|mount|umount|insert|eject|stop|media|li
 nodeconsole   <noderange> [open|close]        # SOL serial console
 
 # general
-nodelist [selector] [--long]
+nodelist [selector] [--long | --by-group]
 nodeping [selector] [--long] [--ping-timeout S]
 nodetools scan <host> [<host> ...] [--timeout S] [--clear]
 nodetools inventory init [--from hosts.list] [-o inventory.ini]
