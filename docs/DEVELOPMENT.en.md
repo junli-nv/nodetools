@@ -586,6 +586,43 @@ Lenovo GB300 `nodefan` is an implemented read-only example. With `platform=nvl`,
 to `/redfish/v1/Chassis/<chassis_id>/Thermal`. The default is `Chassis_0`.
 One response supplies all eight PWM and sixteen RPM readings.
 
+### Direct-read certification completion criteria
+
+`AGENTS.md` makes the endpoint-selection rule a repository requirement.
+`docs/certified-reads.json` records evidence per model, firmware and capability.
+Passing one capability does not certify the entire model, other commands or writes.
+Legacy adapters are not automatically recertified by this review.
+
+For a new or changed certified capability:
+- Exercise `runtime.Runner`, device construction, adapter selection and collection.
+  Assert the complete ordered request list and count with full configuration.
+  Parser-only tests are insufficient. Normal reads must not rediscover the root,
+  Managers or unrelated collections.
+- Test missing resources, wrong IDs/types/units, non-finite or incomplete readings,
+  valid zero values, health alarms and explicit resource selection.
+- Verify real-device output, firmware and request counts, update evidence and
+  unverified scope, and run the full regression suite. Generic discovery returning
+  values is not certification. Do not relax request-count assertions to hide a regression.
+
+`tests/test_direct_read_contract.py` checks runtime paths using independent transport
+fixtures. The GitHub Actions job `direct-read-contract` runs the full suite.
+The workflow does not configure branch protection. A required status check must
+be enabled in repository settings for GitHub to block merges on failure.
+
+Validated in this review:
+- Supermicro GB NVL / GB300, BMC `70.02.02.01`: `nodepsu` directly reads
+  `PDB_0_HSC_0_Pwr_0` and `PDB_0_HSC_1_Pwr_0`; two GETs, two tray DC HSC inputs.
+  These are not rack AC PSU modules. Other capabilities and writes remain unverified.
+- Lite-On PF-1333-9RB / CM-14MP-1RB, BMC `r1.3.9`: with explicit configuration,
+  `pspsu` uses the `powershelf` view; eight GETs, six physical PSU rows.
+  Merge modern identity and legacy `Power` watts by serial rather than reading value.
+
+The optional shared extension `psu_read_sensors` expresses a fixed list of sensor
+GETs. Existing `psu_sensor_chassis` bulk collection reads cannot express the
+two-request SMC path. Adapters without the new field retain their existing
+collection ladder and CLI. The SMC fixed reader is registered only for
+`nvl/smc/compute/gb300`; GB200 and unknown generations keep discovery.
+
 ### IPMI password modes
 
 - Default: `-U user -P pass` (matching the legacy scripts).

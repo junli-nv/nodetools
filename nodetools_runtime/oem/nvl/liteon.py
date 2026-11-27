@@ -1,4 +1,4 @@
-"""Lite-On NVL power shelf firmware inventory and event log support."""
+"""Lite-On NVL power-shelf PSU, firmware inventory and event log support."""
 
 from ...subjects import common, inventory
 from ..redfish import RedfishDiscovery
@@ -6,6 +6,10 @@ from ..redfish import RedfishDiscovery
 
 class LiteOnPowerShelf(RedfishDiscovery):
     name = "liteon"
+    # PF-1333-9RB has two chassis aliases for the same shelf.
+    # Modern resources supply identity; legacy Power supplies input watts.
+    psu_read_endpoint = ("powershelf", "both")
+    inventory_fixed_caps = ("psu",)
     _infrastructure_eventlog_actions = ("status", "clear")
 
     def infrastructure_inventory(self, device):

@@ -492,6 +492,37 @@ Lenovo GB300 的 `nodefan` 是已落地的只读示例。inventory 指定 `platf
 `fan` 可以跳过启动探测，一次 GET 读取 `/redfish/v1/Chassis/<chassis_id>/Thermal`。
 默认机箱为 `Chassis_0`，同一次响应提供 8 路 PWM 和 16 路 RPM。
 
+### 直读认证的完成条件
+
+仓库入口规则见 `AGENTS.md`。`docs/certified-reads.json` 按“机型、固件、能力”
+记录实机证据和正常路径的精确 GET 列表。一个能力通过不能代表整机、其他命令或写操作通过。
+历史适配器不因加入此文件自动获得重新认证。
+
+新增或修改已认证能力时，必须完成：
+- 配置完整时，从 `runtime.Runner` 经过设备构造、适配器选择和采集，断言完整请求列表及数量。
+  不得只测解析函数；正常路径不应访问与该能力无关的根目录、Managers 或集合。
+- 测试直读缺失、资源 ID/类型/单位错误、非有限读数和不完整结果的回退；
+  同时验证零值、告警状态和显式资源选择。
+- 实机复核输出、固件与请求数，补充清单中的证据和未验证范围，运行完整回归。
+  不得仅因通用发现能返回结果就宣布认证完成，也不得通过放宽请求数断言掩盖退化。
+
+`tests/test_direct_read_contract.py` 消费认证记录并使用独立传输夹具校验运行时路径。
+GitHub Actions 的 `direct-read-contract` 作业运行完整测试。
+工作流本身不改变分支保护；仓库设置将该作业要求为必需状态检查后，才会阻止失败更改合并。
+
+本次验证：
+- Supermicro `GB NVL`、GB300（BMC `70.02.02.01`）：`nodepsu` 固定读取
+  `PDB_0_HSC_0_Pwr_0`、`PDB_0_HSC_1_Pwr_0`，2 次 GET、2 路 HSC 直流输入。
+  这些不是机柜电源架的 AC PSU。其他能力和写操作仍需逐项认证。
+- Lite-On `PF-1333-9RB / CM-14MP-1RB`（BMC `r1.3.9`）：配置明确时，
+  `pspsu` 使用 `powershelf` 视图，8 次 GET、6 路 PSU；按序列号合并现代接口的身份信息
+  和旧 `Power` 的功耗，避免把不同视图或动态读数输出为重复 PSU。
+
+SMC 新增的可选扩展点为 `psu_read_sensors`：已有 `psu_sensor_chassis` 读取整组传感器，
+不能表达“仅 GET 两个已知功耗传感器”。新扩展点保留原采集阶梯，只有声明它的适配器会使用，
+现有适配器接口和 CLI 不变。SMC 固定路径只注册在 `nvl/smc/compute/gb300`；
+GB200 和未知代际继续原有发现流程。
+
 ### IPMI 密码双模式
 
 - 默认：`-U user -P pass`（与旧脚本一致）。

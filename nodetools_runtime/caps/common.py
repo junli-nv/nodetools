@@ -155,7 +155,7 @@ def chassis_list(device, defaults=()):
         except Exception:
             discovered = []
     seen = []
-    for ident in discovered + list(defaults):
+    for ident in discovered or list(defaults):
         if ident and ident not in seen:
             seen.append(ident)
     device._chassis_cache = seen

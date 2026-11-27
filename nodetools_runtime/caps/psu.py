@@ -6,6 +6,8 @@ chassis IDs are discovered from the BMC. Readings use the vendor's Redfish shape
 ``Power`` object, or ``Sensors``).
 """
 
+import math
+
 from ..config import DEFAULT_CHASSIS
 from ..ladder import first
 from . import common
@@ -116,6 +118,33 @@ def _supply_reading(redfish, detail):
     )
 
 
+def _supply_serial(detail):
+    serial = str(detail.get("SerialNumber") or "").strip()
+    if serial.casefold() in ("", "0", "unknown", "n/a", "na", "none", "null", "not available"):
+        return None
+    return serial
+
+
+def _unique_supplies(details):
+    """Merge physical PSU aliases before sampling metrics; never key on watts."""
+    out, seen = [], {}
+    for detail in details:
+        serial = _supply_serial(detail)
+        resource = detail.get("@odata.id")
+        key = (("serial", str(detail.get("Manufacturer") or "").casefold(), serial) if serial
+               else ("resource", resource) if resource else None)
+        if key is None or key not in seen:
+            if key is not None:
+                seen[key] = len(out)
+            out.append(dict(detail))
+            continue
+        combined = out[seen[key]]
+        if detail.get("Id") and "MemberId" not in detail:
+            combined.pop("MemberId", None)
+        combined.update({k: v for k, v in detail.items() if v not in (None, "", [], {})})
+    return out
+
+
 def _from_power_supplies(device, endpoint=None):
     rf = device.redfish
     if endpoint:
@@ -144,11 +173,11 @@ def _from_power_supplies(device, endpoint=None):
             power = rf.get(base + "/Power")
             if isinstance(power, dict):
                 old = [item for item in power.get("PowerSupplies", []) or [] if isinstance(item, dict)]
-        old_by_serial = {item["SerialNumber"]: item for item in old if item.get("SerialNumber")}
+        old_by_serial = {_supply_serial(item): item for item in old if _supply_serial(item)}
         matched = set()
         out = []
         for detail in current:
-            serial = detail.get("SerialNumber")
+            serial = _supply_serial(detail)
             if serial in old_by_serial:
                 matched.add(serial)
                 combined = dict(old_by_serial[serial])
@@ -156,12 +185,13 @@ def _from_power_supplies(device, endpoint=None):
                     combined.pop("MemberId", None)
                 combined.update({key: value for key, value in detail.items() if value not in (None, "")})
                 detail = combined
-            out.append(_supply_reading(rf, detail))
-        out.extend(_supply_reading(rf, detail) for detail in old if detail.get("SerialNumber") not in matched)
+            out.append(detail)
+        out.extend(detail for detail in old if _supply_serial(detail) not in matched)
         return out
 
 
-    return common.dedup_readings(common.flatten(common.map_chassis(scan, chassis)))
+    details = _unique_supplies(common.flatten(common.map_chassis(scan, chassis)))
+    return [_supply_reading(rf, detail) for detail in details]
 
 
 def _from_sensors(device, chassis=None):
@@ -212,8 +242,39 @@ def _from_known_sensors(device, expected):
     return rows
 
 
+def _from_direct_sensors(device, sensors):
+    """Read a verified set of DC input sensors without collection discovery."""
+    selected = device.vars.get("chassis_id")
+    if selected and any(chassis != selected for chassis, _, _ in sensors):
+        return []
+    rows = []
+    valid = True
+    for chassis, sensor_id, label in sensors:
+        path = "/redfish/v1/Chassis/{}/Sensors/{}".format(chassis, sensor_id)
+        data = device.redfish.get(path)
+        if not isinstance(data, dict):
+            valid = False
+            continue
+        value = data.get("Reading")
+        if (data.get("Id") != sensor_id or data.get("@odata.id", path) != path
+                or data.get("ReadingType") != "Power"
+                or data.get("ReadingUnits") != "W" or isinstance(value, bool)
+                or not isinstance(value, (int, float)) or not math.isfinite(value)):
+            valid = False
+            continue
+        rows.append(common.reading(
+            label, data.get("Name"), "in={}W".format(value),
+            common.health_of(data.get("Status")), unit="W", source=path,
+            input_watts=value, input_is_dc=True,
+        ))
+    return rows if valid and len(rows) == len(sensors) else []
+
+
 def collect(device):
     steps = []
+    direct = getattr(getattr(device, "odm", None), "psu_read_sensors", ())
+    if direct:
+        steps.append(("oem_direct_sensors", lambda: _from_direct_sensors(device, direct)))
     expected = getattr(getattr(device, "odm", None), "psu_sensor_chassis", None)
     if expected:
         selected = device.vars.get("chassis_id")

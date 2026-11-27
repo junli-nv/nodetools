@@ -24,7 +24,7 @@ from .hgx.kaytus import KaytusKr9288
 from .hgx.lenovo import Lenovo
 from .hgx.netweb import Netweb
 from .hgx.smc import Smc
-from .nvl.smc import SmcNvl
+from .nvl.smc import SmcGb300, SmcNvl
 from .nvl.aivres import AivresNvl
 from .nvl.kaytus import KaytusNvl
 from .nvl.wiwynn import WiwynnNvl
@@ -61,6 +61,7 @@ _PLATFORM_MODULES = {
     ("hgx", "cisco", "compute", None): CiscoHgx(),
     ("hgx", "dgx", "compute", "b200"): _DGX_BLACKWELL,
     ("hgx", "dgx", "compute", "b300"): _DGX_BLACKWELL,
+    ("nvl", "smc", "compute", "gb300"): SmcGb300(),
     ("nvl", "smc", "compute", None): SmcNvl(),
     ("nvl", "wiwynn", "compute", None): WiwynnNvl(),
     ("nvl", "aivres", "compute", None): AivresNvl(),
