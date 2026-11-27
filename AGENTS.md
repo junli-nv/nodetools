@@ -97,3 +97,15 @@ read audit. The tested N5500_LD BMC 88.0002.1962 exposes empty fan collections
 and NVOS rejects the fan query. This is not a successful fan read.
 Keep compute-tray fans and actual power-supply module fans on power shelves.
 Reconsider another switch model only with independently verified evidence.
+
+## Help examples are required completion checks
+
+Follow docs/DEVELOPMENT.md section 8 and its English counterpart: every
+public command, nested subcommand and new action with dedicated options must
+include runnable typical examples in its own --help. Update help in the same
+change as the feature; a README or separate document is not a substitute.
+Cover default reads, host ranges and available preview/precheck workflows.
+For writes, explain password/environment prerequisites and show application.
+Run tests/test_help_examples.py: enumerate the command trees and public
+auxiliary entries, require visible examples, and parse their arguments without
+executing device operations. Check new action coverage, not just Examples text.

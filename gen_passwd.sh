@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 
 parser = argparse.ArgumentParser(prog='gen_passwd.sh', description="Create an editable passwd.sh template without querying BCM.")
+parser.formatter_class = argparse.RawDescriptionHelpFormatter
+parser.epilog = 'Examples\n  ./gen_passwd.sh\n  ./gen_passwd.sh -o /tmp/new-passwd.sh'
 parser.add_argument("-o", "--output", default="passwd.sh")
 args = parser.parse_args()
 template = """#!/bin/bash

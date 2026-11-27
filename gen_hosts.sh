@@ -13,6 +13,8 @@ import subprocess
 import tempfile
 
 parser = argparse.ArgumentParser(prog='gen_hosts.sh', description="Export BCM devices to a generic hosts.list; requires cmsh only when run.")
+parser.formatter_class = argparse.RawDescriptionHelpFormatter
+parser.epilog = 'Examples\n  ./gen_hosts.sh\n  ./gen_hosts.sh -o /tmp/hosts.list --timeout 30'
 parser.add_argument("-o", "--output", default="hosts.list")
 parser.add_argument("--timeout", type=float, default=30, help="seconds per cmsh query")
 args = parser.parse_args()

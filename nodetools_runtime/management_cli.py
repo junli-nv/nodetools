@@ -31,7 +31,17 @@ def main(argv, prog):
     )
     add_examples(cli, *{
         "nodetask": ("nodetask HGX654", "nodetask HGX654 1"),
-        "nodebmc": ("nodebmc HGX654", "nodebmc HGX654 time"),
+        "nodebmc": (
+            "nodebmc HGX654",
+            "nodebmc HGX654 time",
+            "nodebmc HGX654 time --set 2026-11-24T20:00:00+08:00",
+            "nodebmc HGX654 reset",
+            "nodebmc 'gb300-ct[01-04],nvsw[01-04]' user --name nvis --sol",
+            "nodebmc gb300-ct01 user --name nvis --sol --apply",
+            "nodebmc nvsw01 user --name nvis --id 8 --channel 1 --apply",
+            "nodebmc 'gb300-ct[01-04],nvsw[01-04]' user --name nvis --sol --password-env NEW_BMC_PASSWORD --jobs 4 --apply",
+            "nodebmc nvsw01 user --name nvis --password-env NEW_BMC_PASSWORD --verify-only",
+        ),
         "nodefru": ("nodefru 'HGX[650-654]'",),
     }[prog])
     cli.add_argument("nodes", metavar="NODE(S)")
@@ -42,11 +52,15 @@ def main(argv, prog):
         cli.add_argument("--task", help="show task details by ID")
     if prog == "nodebmc":
         cli.add_argument("action", nargs="?", choices=("info", "time", "reset", "user"), default="info",
-                         help="info shows firmware and clock; time reads the clock; reset restarts the BMC")
+                         help="info shows firmware and clock; time reads the clock; reset restarts BMC; user manages accounts through OS")
         cli.add_argument("--set", type=datetime_with_zone, help="with time, set an ISO 8601 timestamp with offset")
     if prog == "nodebmc":
         from . import bmc_user_cli
         bmc_user_cli.add_arguments(cli)
+        cli.epilog += ("\n\nUser action previews by default. --apply prompts for the new BMC password "
+                       "on a terminal; for batches export NEW_BMC_PASSWORD and use --password-env. "
+                       "--sol applies to compute only; NVSwitch skips SOL. User IDs are selected "
+                       "automatically unless --id is provided.")
     if not argv:
         cli.print_help()
         return 0

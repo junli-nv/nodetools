@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from . import cli, oem, runtime
-from .arguments import INFO_COMMANDS, SENSOR_COMMANDS, parse_args
+from .arguments import INFO_COMMANDS, SENSOR_COMMANDS, add_examples, parse_args
 from .errors import NodetoolsError
 from .inventory import Inventory
 from .subjects import firmware, management
@@ -148,7 +148,13 @@ def run_case(host, case, user=None, password=None, capture=None):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(prog="python3 -m nodetools_runtime.read_audit", description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    add_examples(parser,
+        'python3 -m nodetools_runtime.read_audit gb300-ct01 --list',
+        'python3 -m nodetools_runtime.read_audit gb300-ct01',
+        'python3 -m nodetools_runtime.read_audit shelf01 --only pspsu --only psfan',
+    )
     parser.add_argument("host")
     parser.add_argument("-i", "--inventory", default="inventory.ini")
     parser.add_argument("--only", action="append", help="one or more case IDs; default all")

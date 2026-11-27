@@ -896,6 +896,12 @@ model-specific hardware validation.
   with its own arguments. Lead with common reads using defaults and host ranges where
   applicable. Show a preview or precheck for writes that support one. Verify examples
   after changing arguments and report common input errors with command-specific usage.
+- Help acceptance is enforced by tests/test_help_examples.py across command trees,
+  independent entries and auxiliary scripts. Examples must be visible and accepted
+  by the real argument parser; they are parsed without executing device operations.
+  New actions with dedicated options require examples in that command's help,
+  covering normal reads, preview/precheck and application where relevant.
+  Assert action coverage too; checking only the Examples heading is insufficient.
 - Standard library + `requests` only; no extra dependencies (keep
   `pip install .` light).
 - No incidental comments; keep naming consistent with existing files; put new

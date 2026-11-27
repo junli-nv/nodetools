@@ -10,7 +10,7 @@ import threading
 import time
 
 from . import cli, hostlist, runtime
-from .arguments import SENSOR_COMMANDS, parse_args
+from .arguments import SENSOR_COMMANDS, add_examples, parse_args
 from .inventory import Inventory
 
 
@@ -110,7 +110,12 @@ def run(hosts, capability, options, expected, emit):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(prog="python3 -m nodetools_runtime.batch_audit", description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    add_examples(parser,
+        "python3 -m nodetools_runtime.batch_audit pspsu 'shelf[01-04]' --jobs 200 --expected-readings 6 --output /tmp/psu-audit.jsonl",
+        'python3 -m nodetools_runtime.batch_audit nodefan --selector-file compute.selector --expected-readings 24 --output /tmp/fan-audit.jsonl',
+    )
     parser.add_argument("command", choices=("nodefan", "nodepsu", "psfan", "pspsu", "nvswpsu"))
     parser.add_argument("selector", nargs="?")
     parser.add_argument("--selector-file")
