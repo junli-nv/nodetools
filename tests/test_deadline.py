@@ -214,7 +214,7 @@ def test_redfish_debug_shows_connection_status_and_path(monkeypatch, capsys):
         captured = capsys.readouterr()
         assert captured.out == ""
         assert captured.err.splitlines() == [
-            "[redfish:shelf-01] HTTPS address='example.test' user='private-user' password='private-password'",
+            "[redfish:shelf-01] curl -k -s --user private-user:private-password --globoff -L -H 'Accept: application/json' 'https://example.test/redfish/v1/Systems?secret=private-query'",
             "[redfish:shelf-01] GET '/redfish/v1/Systems' HTTP 200",
             "[redfish:shelf-01] source 'FW_PMC' <- '/redfish/v1/Systems' field=Version",
         ]

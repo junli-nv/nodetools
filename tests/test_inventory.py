@@ -200,3 +200,68 @@ def test_group_ranges_are_membership_only():
             assert detail in str(exc)
         else:
             raise AssertionError(f"accepted invalid line: {line}")
+
+
+def test_nvswitch_import_does_not_depend_on_hostname(tmp_path):
+    from nodetools_runtime.inventory_import import import_hostslist
+
+    source = tmp_path / "host.list"
+    source.write_text(
+        "Switch nvlsw-202-r12rack13-sw09 192.0.2.41\n"
+        "Switch rack-a-fabric 192.0.2.42\n"
+        "NVSwitch arbitrary-01 192.0.2.43\n"
+        "sWiTcH vdc1-t10-gpu-nvl-01 192.0.2.44\n"
+        "IBSwitch ib-leaf01 192.0.2.61\n"
+        "SPXSwitch spx-leaf01 192.0.2.62\n"
+    )
+    generated = Inventory.from_text(generate_from_hostslist(source))
+    target = tmp_path / "inventory.ini"
+    target.write_text("[compute]\n")
+    import_hostslist(source, target, apply=True)
+    imported = Inventory.from_file(target)
+    for inv in (generated, imported):
+        assert len(inv.members("nvswitch")) == 4
+        assert all(inv.hosts[n].role == "nvswitch" for n in inv.members("nvswitch"))
+        assert inv.members("switch") == ["ib-leaf01", "spx-leaf01"]
+        assert inv.get("nvlsw-202-r12rack13-sw09").address == "192.0.2.41"
+    assert import_hostslist(source, target, apply=True) == ({}, 6, [])
+
+
+def test_reimport_repairs_legacy_unknown_nvswitch_role(tmp_path):
+    from nodetools_runtime.inventory_import import import_hostslist
+
+    source = tmp_path / "host.list"
+    source.write_text("Switch nvlsw-01 192.0.2.41\n")
+    target = tmp_path / "inventory.ini"
+    original = (
+        "[switch]\nnvlsw-01 host=192.0.2.41 note=keep\n"
+        "[nvswitch:vars]\nnvswitch_bmc_user=root\n"
+        "nvswitch_bmc_password=example-password\n"
+    )
+    target.write_text(original)
+    target.chmod(0o640)
+    expected = ({"nvswitch": [("nvlsw-01", None)]}, 1, [])
+    assert import_hostslist(source, target) == expected
+    assert target.read_text() == original
+    assert import_hostslist(source, target, apply=True) == expected
+    repaired = Inventory.from_file(target).get("nvlsw-01")
+    assert repaired.role == "nvswitch"
+    assert repaired.get("note") == "keep"
+    assert repaired.get("nvswitch_bmc_password") == "example-password"
+    assert target.stat().st_mode & 0o777 == 0o640
+    assert import_hostslist(source, target, apply=True) == ({}, 1, [])
+
+
+def test_nvswitch_repair_preserves_explicit_role_and_address_conflicts(tmp_path):
+    from nodetools_runtime.inventory_import import import_hostslist
+
+    source = tmp_path / "host.list"
+    source.write_text("Switch named-01 192.0.2.41\nSwitch named-02 192.0.2.42\n")
+    target = tmp_path / "inventory.ini"
+    original = "[switch]\nnamed-01 host=192.0.2.41 role=compute\nnamed-02 host=192.0.2.99\n"
+    target.write_text(original)
+    added, registered, conflicts = import_hostslist(source, target, apply=True)
+    assert added == {}
+    assert registered == 1
+    assert conflicts == ["named-02: BMC address differs"]
+    assert target.read_text() == original

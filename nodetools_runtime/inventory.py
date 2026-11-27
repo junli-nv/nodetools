@@ -231,7 +231,7 @@ def hostslist_entries(path, strict=False):
                 group = "compute"
             elif label == "powershelf":
                 group = "powershelf"
-            elif label == "switch" and "-gpu-nvl-" in hostname.casefold():
+            elif label in ("switch", "nvswitch", "nvlswitch"):
                 group = "nvswitch"
             else:
                 group = "switch"

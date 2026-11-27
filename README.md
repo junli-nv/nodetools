@@ -50,9 +50,53 @@
 ./nodetools inventory import hosts.list --apply
 ```
 
+### 清单来源与凭据
+
+正常使用无需 BCM。可以直接编辑平台示例生成 `inventory.ini`，也可以手写
+`hosts.list`（文件名可自选，通过 `--from` 指定）：
+
+```text
+PhysicalNode cp01 192.0.2.11
+NVSwitch nvlsw-01 192.0.2.41
+PowerShelf shelf-01 192.0.2.51
+IBSwitch ib-leaf01 192.0.2.61
+EthernetSwitch eth-leaf01 192.0.2.62
+```
+
+需要独立凭据文件时，用通用模板或手工编写 `passwd.sh`：
+
+```bash
+./gen_passwd.sh -o passwd.sh
+# 编辑 passwd.sh，填写实际凭据。
+./nodetools inventory init --from hosts.list --passwd-file passwd.sh -o inventory.generated.ini
+```
+
+`gen_passwd.sh` 生成可编辑模板，不查询 BCM，不覆盖已有凭据文件。
+模板保留原有 `cmsh` 查询路径，供使用 BCM 的环境查阅；也可从自己的记录填写。
+`--passwd-file` 读取普通赋值和简单变量引用，不 source 或执行文件。
+旧字段 `bmc_username`、`nvswitch_bmc_pass`、`nvswitch_os_pass`、
+`powershelf_bmc_pass` 会转换为当前库存字段。IB/SPX 旧变量保留为兼容信息；
+当前交换机 SSH 工具使用 OpenSSH 配置/密钥或 `SSHPASS`。
+凭据模板及含导入凭据的输出权限为 0600。
+
+使用 BCM 时，可选运行独立导出适配器：
+
+```bash
+# 在配置好 cmsh 的 BCM 管理节点执行；其余工作流不需要 cmsh。
+./gen_hosts.sh -o hosts.bcm.list
+./nodetools inventory init --from hosts.bcm.list --passwd-file passwd.sh -o inventory.generated.ini
+```
+
+`gen_hosts.sh` 只读查询 BCM，导出 PhysicalNode、NVSwitch 和 PowerShelf，
+校验地址后原子写入清单；查询失败、数据缺失或空结果不会覆盖旧文件。
+IB/Ethernet 条目可在清单中补充。生成后的 inventory 可独立使用，
+后续维护不需要连接 BCM。已有库存继续使用 `inventory import` 预览和补充节点。
+
 ### 分组和帮助
 
-库存模板 [inventory.example.ini](inventory.example.ini) 有节点、POD、共用配置和导入示例。
+按平台选择库存模板：[HGX](inventory.hgx.example.ini) 基于 SMC/AVR 库存，含 POD 分组；
+[NVL](inventory.nvl.example.ini) 基于 Wistron 库存，含 compute tray、NVSwitch、power shelf，
+并分别配置 BMC 和 NVOS 登录信息。复制对应模板为 `inventory.ini`，替换示例地址和凭据。
 先预览旧清单，再用 --apply 写入。旧 SMC/AVR 标签会保留为可用 --group 选中的组。
 纯分组可用 HGX[531-602] 这样的范围引用库存中已定义的节点。
 
@@ -307,11 +351,26 @@ reachable=$(./nodeping --long cp[01-18] \
 | `--reconnect-attempts` / `--reconnect-delay` | 重连次数/间隔（默认 3 / 5s） |
 | `--no-cache` | 跳过扫描映射缓存 |
 | `--help-full` | 显示当前命令的完整帮助，包括简洁版隐藏的通用参数。 |
-| `-x`, `--debug` | 所有命令都支持。跟踪信息写入 stderr，包括所用后端、连接目标、实际使用的用户名和明文密码，以及请求状态。Redfish 固件库存还显示取值字段。 |
+| `-x`, `--debug` | 所有命令都支持。跟踪信息写入 stderr，包括所用后端、连接目标、实际使用的用户名和明文密码，以及请求状态。所有角色的 Redfish 请求都输出可复制的 curl，包含完整 URL、认证及 POST/PATCH 的 JSON 和 ETag；失败时显示 BMC 错误详情。固件库存还显示取值字段。 |
 
 ## Inventory
 
-Ansible 风格 INI，见 `inventory.example.ini`。每台主机用 `host=` 带 BMC 地址。
+从 `host.list` 新建或导入时，`Switch`、`NVSwitch`、`NVLSwitch` 均归入 `[nvswitch]`，
+不依赖主机名包含 `-gpu-nvl-`。IB/SPX 交换机使用 `IBSwitch`/`SPXSwitch` 标签，归入 `[switch]`。
+重新导入可为旧 `[switch]` 中角色未知的 NVSwitch 补上角色分组；默认只预览，
+用 `--apply` 应用。显式角色和地址冲突保留原配置。
+
+`-x` 对计算托盘、NVSwitch 和电源架使用相同的 Redfish 调试输出。例如：
+
+```text
+[redfish:nvlsw-01] curl -k -s --user root:CHANGE_ME --globoff -L -H 'Accept: application/json' https://192.0.2.41/redfish/v1/Systems
+[redfish:nvlsw-01] GET '/redfish/v1/Systems' HTTP 403
+```
+
+复制从 `curl` 开始的整行即可复现，也可在结尾加 `| jq`。密码和查询参数中的特殊字符会进行 shell 转义。
+
+
+Ansible 风格 INI，见 `inventory.hgx.example.ini` 和 `inventory.nvl.example.ini`。每台主机用 `host=` 带 BMC 地址。
 凭据按角色划分，优先级 `[all:vars] < group:vars < 行内 key=value`：
 
 | 角色 | 凭据变量 |
@@ -321,8 +380,8 @@ Ansible 风格 INI，见 `inventory.example.ini`。每台主机用 `host=` 带 B
 | powershelf | `powershelf_bmc_user` / `powershelf_bmc_password` |
 
 同一厂商可以有不同平台。`platform=hgx` 表示 B200/B300，`platform=nvl`
-表示 GB200/GB300，`oem=dell` 指定厂商。示例 inventory 包含 `dell_hgx` 和
-`dell_nvl` 两组，用 `role=compute` 声明角色。角色也可以设为 `nvswitch`
+表示 GB200/GB300，`oem=dell` 指定厂商。HGX 示例保留 SMC/AVR 和 POD 分组，
+NVL 示例为 Wistron 三类设备。自定义硬件组可用 `role=compute` 声明角色。角色也可以设为 `nvswitch`
 或 `powershelf`。原有的三个同名角色组仍可自动识别角色。机器在多个组时，
 后出现的组成员关系优先，行内设置优先于所有组。
 

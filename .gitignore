@@ -20,3 +20,7 @@ dist/
 *.tmp
 err.txt
 *.out
+host.list
+passwd.sh
+hosts.bcm.list
+inventory.generated.ini

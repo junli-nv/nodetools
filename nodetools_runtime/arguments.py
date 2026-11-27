@@ -369,6 +369,7 @@ def build_parser():
     init = inv_sub.add_parser("init", help="generate inventory from hosts.list")
     init.add_argument("--from", dest="source", default="hosts.list")
     init.add_argument("-o", "--output", default=DEFAULT_INVENTORY)
+    init.add_argument("--passwd-file", help="import literal credential assignments from passwd.sh without executing it")
     merge = inv_sub.add_parser(
         "import", help="preview or add hosts and POD groups from hosts.list",
         description="Add missing hosts and preserve SMC/AVR labels as inventory groups. Previews by default.",

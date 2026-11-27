@@ -1,13 +1,15 @@
 """Minimal Redfish client built on requests."""
 
+import json
+import shlex
 import sys
 import time
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 import urllib3
 
 from ..config import DEFAULT_REDFISH_CONNECT_TIMEOUT, DEFAULT_REDFISH_TIMEOUT
-from ..diagnostics import debug_connection
+from ..diagnostics import debug
 from ..errors import AuthError, TransportError
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -25,7 +27,6 @@ class Redfish:
                  verify=False, connect_timeout=DEFAULT_REDFISH_CONNECT_TIMEOUT):
         self.address = address
         self.debug_label = None
-        self._debug_endpoints = set()
         self.user = user
         self.timeout = timeout
         self.connect_timeout = connect_timeout
@@ -48,18 +49,48 @@ class Redfish:
             print("[redfish:{}] {} {!r} {}".format(self.debug_label, action, resource, detail),
                   file=sys.stderr, flush=True)
 
-    def _debug_connection(self, url):
+    def _debug_request(self, method, url, body=None, headers=None, follow_redirects=False):
         if not self.debug_label:
             return
-        try:
-            parsed = urlsplit(url)
-        except ValueError:
+        parsed = urlsplit(url)
+        auth = self._session.auth
+        if not auth and parsed.username is not None:
+            auth = (unquote(parsed.username), unquote(parsed.password or ""))
+        url = parsed._replace(netloc=parsed.netloc.rsplit("@", 1)[-1]).geturl()
+        argv = ["curl"]
+        if self._session.verify is False:
+            argv.append("-k")
+        argv.append("-s")
+        if auth:
+            user, password = auth
+            argv.extend(["--user", "{}:{}".format(user, password or "")])
+        argv.append("--globoff")
+        if follow_redirects:
+            argv.append("-L")
+        if method != "GET":
+            argv.extend(["-X", method])
+        request_headers = {"Accept": "application/json", **(headers or {})}
+        if body is not None:
+            request_headers["Content-Type"] = "application/json"
+        for key, value in request_headers.items():
+            argv.extend(["-H", "{}: {}".format(key, value)])
+        if body is not None:
+            argv.extend(["--data-raw", json.dumps(body, allow_nan=False)])
+        argv.append(url)
+        debug(True, "redfish:" + self.debug_label, shlex.join(argv))
+
+    def _debug_error(self, path, status, body):
+        if not self.debug_label or status < 400 or not isinstance(body, dict):
             return
-        endpoint = parsed.netloc.rsplit("@", 1)[-1]
-        if endpoint not in self._debug_endpoints:
-            user, password = self._session.auth or (parsed.username, parsed.password)
-            debug_connection(True, "redfish:" + self.debug_label, parsed.scheme.upper(), endpoint, user, password)
-            self._debug_endpoints.add(endpoint)
+        error = body.get("error") or body
+        if not isinstance(error, dict):
+            return
+        messages = error.get("@Message.ExtendedInfo") or [error]
+        for item in messages:
+            if isinstance(item, dict):
+                message = {k: item[k] for k in ("MessageId", "Message", "Resolution", "code", "message") if k in item}
+                if message:
+                    self._debug("error", path, json.dumps(message, ensure_ascii=False))
 
     def trace_source(self, label, path, field):
         self._debug("source {!r} <-".format(label), path, "field=" + field)
@@ -109,7 +140,7 @@ class Redfish:
             self.timeout_reason = "node deadline exceeded before Redfish GET"
             return None, None
         url = self.url(path)
-        self._debug_connection(url)
+        self._debug_request("GET", url, follow_redirects=follow_redirects)
         try:
             flags = {} if follow_redirects else {"allow_redirects": False}
             resp = self._session.get(url, timeout=self._timeout(timeout), **flags)
@@ -126,6 +157,7 @@ class Redfish:
             body = resp.json()
         except ValueError:
             body = resp.text
+        self._debug_error(path, resp.status_code, body)
         etag = resp.headers.get("ETag")
         if not etag and isinstance(body, dict) and isinstance(body.get("@odata.etag"), str):
             etag = body["@odata.etag"]
@@ -142,7 +174,7 @@ class Redfish:
             self._debug("POST", path, "deadline exceeded")
             raise TransportError("deadline exceeded before POST {}".format(path))
         url = self.url(path)
-        self._debug_connection(url)
+        self._debug_request("POST", url, body)
         try:
             resp = self._session.post(url, json=body, timeout=self._timeout(timeout))
         except requests.RequestException as exc:
@@ -163,10 +195,10 @@ class Redfish:
             raise TransportError("deadline exceeded before PATCH {}".format(path))
         try:
             url = self.url(path)
-            self._debug_connection(url)
             source = self.url(etag_source) if etag_source else url
             etag = self._etags.pop(source, None)
             kwargs = {"headers": {"If-Match": etag}} if etag else {}
+            self._debug_request("PATCH", url, body, kwargs.get("headers"))
             resp = self._session.patch(
                 url, json=body, timeout=self._timeout(timeout), **kwargs
             )

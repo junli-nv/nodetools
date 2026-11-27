@@ -52,9 +52,53 @@ Conflicting addresses are reported and existing entries are preserved. New hosts
 ./nodetools inventory import hosts.list --apply
 ```
 
+### Inventory sources and credentials
+
+BCM is optional. Edit a platform inventory template directly, or write a
+`hosts.list` using `DeviceType Hostname Management_IP`, for example:
+
+```text
+PhysicalNode cp01 192.0.2.11
+NVSwitch nvlsw-01 192.0.2.41
+PowerShelf shelf-01 192.0.2.51
+IBSwitch ib-leaf01 192.0.2.61
+EthernetSwitch eth-leaf01 192.0.2.62
+```
+
+An optional editable credential file can be created without BCM:
+
+```bash
+./gen_passwd.sh -o passwd.sh
+# Edit passwd.sh and fill in your credentials.
+./nodetools inventory init --from hosts.list --passwd-file passwd.sh -o inventory.generated.ini
+```
+
+`gen_passwd.sh` creates a template; it does not query BCM or overwrite an
+existing credential file. The original `cmsh` lookup notes remain available.
+The importer reads assignments and simple variable references without executing
+the file. Legacy `bmc_username` and role-specific `_pass` fields map to the
+current inventory names. Legacy IB/SPX fields are preserved for compatibility;
+current switch SSH commands use OpenSSH configuration/keys or `SSHPASS`.
+Credential templates and inventories written with `--passwd-file` use mode 0600.
+
+On a BCM management node, the optional exporter supplies the same input format:
+
+```bash
+./gen_hosts.sh -o hosts.bcm.list
+./nodetools inventory init --from hosts.bcm.list --passwd-file passwd.sh -o inventory.generated.ini
+```
+
+Only `gen_hosts.sh` needs `cmsh`. It reads BCM, validates management addresses,
+and atomically writes PhysicalNode/NVSwitch/PowerShelf records. Query errors,
+missing data and empty results preserve the existing output. Add IB/Ethernet
+records manually. Generated inventories work independently of BCM. Use
+`inventory import` to preview and add hosts to an existing inventory.
+
 ### Inventory groups and help
 
-See [inventory.example.ini](inventory.example.ini) for node, POD, shared variable, and import examples.
+Choose [HGX](inventory.hgx.example.ini) for SMC/AVR nodes and POD groups, or
+[NVL](inventory.nvl.example.ini) for Wistron compute trays, NVSwitches and power shelves.
+Copy the chosen template to `inventory.ini` and replace example addresses and credentials.
 Preview the import before applying it. Legacy SMC/AVR labels become selectable inventory groups.
 Use bare ranges such as HGX[531-602] in group sections to reference hosts already defined in the inventory.
 
@@ -338,11 +382,28 @@ reachable=$(./nodeping --long cp[01-18] \
 | `--reconnect-attempts` / `--reconnect-delay` | tries/interval (default 3 / 5s) |
 | `--no-cache` | skip the scan-map cache |
 | `--help-full` | Show full help for the current command, including common options hidden in concise help. |
-| `-x`, `--debug` | Available on every command. Show the backend, endpoint, username, plaintext password, and request status on stderr. Redfish firmware inventory also shows source fields. |
+| `-x`, `--debug` | Available on every command. Show the backend, endpoint, username, plaintext password, and request status on stderr. Every role gets a copyable curl command for each Redfish request, including the full URL, credentials, JSON and ETag headers for writes. Failed reads also show BMC error details. Firmware inventory shows source fields. |
 
 ## Inventory
 
-Ansible-style INI; see `inventory.example.ini`. Each host carries its BMC
+Both inventory init and import map legacy `Switch`, `NVSwitch` and `NVLSwitch`
+labels to `[nvswitch]`, regardless of hostname. Use `IBSwitch` / `SPXSwitch`
+for fabric switches under `[switch]`. Reimport can restore NVSwitch membership
+for old entries with an unknown role. Preview first, then use `--apply`.
+Explicit roles and address conflicts keep their original settings.
+
+Compute trays, NVSwitches and power shelves share Redfish debug output:
+
+```text
+[redfish:nvlsw-01] curl -k -s --user root:CHANGE_ME --globoff -L -H 'Accept: application/json' https://192.0.2.41/redfish/v1/Systems
+[redfish:nvlsw-01] GET '/redfish/v1/Systems' HTTP 403
+```
+
+Copy the line starting at `curl` to reproduce the request; optionally append
+`| jq`. Credentials, URLs and JSON are shell-quoted, including query parameters.
+
+
+Ansible-style INI; see `inventory.hgx.example.ini` and `inventory.nvl.example.ini`. Each host carries its BMC
 address via `host=`. Credentials are role-scoped and resolved with precedence
 `[all:vars] < group :vars < per-host inline`:
 
@@ -354,7 +415,7 @@ address via `host=`. Credentials are role-scoped and resolved with precedence
 
 One OEM can have multiple platforms. Use `platform=hgx` for B200/B300,
 `platform=nvl` for GB200/GB300, and `oem=dell` to identify the manufacturer.
-The example inventory defines `dell_hgx` and `dell_nvl` groups with `role=compute`.
+The HGX template has SMC/AVR and POD groups; the NVL template follows Wistron inventory. Custom hardware groups can declare `role=compute`.
 Use `role=nvswitch` or `role=powershelf` for the corresponding devices. The three
 built-in role groups still infer their roles. For hosts in multiple groups,
 later memberships take precedence among group variables. Inline settings take precedence

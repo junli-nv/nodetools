@@ -48,6 +48,10 @@ def plan_import(text, source):
         else:
             registered += 1
             host = matches[0]
+            # Legacy Switch records are NVSwitches regardless of hostname.
+            # Repair inventories generated before this classification fix.
+            if group == "nvswitch" and host.role == "unknown" and not host.get("role"):
+                additions[group].append((host.name, None))
             if legacy_group and legacy_group not in host.groups:
                 additions[legacy_group].append((host.name, None))
 
@@ -93,7 +97,13 @@ def plan_import(text, source):
             if node is None or group not in node.groups or (address is not None and node.address != address):
                 raise InventoryError(f"could not place {name} in [{group}]")
             before = inventory.get(name)
-            if address is None and before is not None and node.vars != before.vars:
+            role_repair = (
+                group == "nvswitch" and before is not None
+                and before.role == "unknown" and not before.get("role")
+            )
+            if role_repair and node.role != "nvswitch":
+                raise InventoryError(f"could not restore NVSwitch role for {name}")
+            if address is None and before is not None and node.vars != before.vars and not role_repair:
                 raise InventoryError(f"[{group}:vars] would change existing settings for {name}")
     return candidate, additions, registered, conflicts
 

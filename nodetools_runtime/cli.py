@@ -118,8 +118,14 @@ def _cmd_inventory(args):
     if args.inventory_command == "init":
         debug(getattr(args, "debug", False), "inventory", "generate from {!r} into {!r}".format(args.source, args.output))
         text = generate_from_hostslist(args.source)
-        with open(args.output, "w", encoding="utf-8") as handle:
-            handle.write(text)
+        if getattr(args, "passwd_file", None):
+            from .inventory_credentials import with_credentials, write_private
+
+            text = with_credentials(text, args.passwd_file)
+            write_private(args.output, text)
+        else:
+            with open(args.output, "w", encoding="utf-8") as handle:
+                handle.write(text)
         print("wrote {} from {}".format(args.output, args.source))
         return 0
     if args.inventory_command == "import":
