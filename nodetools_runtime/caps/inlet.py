@@ -12,6 +12,8 @@ Each reading's health is a verdict against the expected inlet temperature
 ``--target`` / ``--tolerance``): ``OK`` inside the band, else ``HIGH``/``LOW``.
 """
 
+import math
+
 from ..config import DEFAULT_CHASSIS, INLET_TARGET, INLET_TOLERANCE
 from . import common, temp
 
@@ -60,7 +62,9 @@ def _find(device):
             sensor = device.redfish.get(path) or {}
             reading = common.num(sensor.get("Reading"))
             if (sensor.get("Id") == sensor_id and sensor.get("ReadingType") == "Temperature"
-                    and sensor.get("ReadingUnits") == "Cel" and reading is not None):
+                    and sensor.get("ReadingUnits") == "Cel" and reading is not None
+                    and not isinstance(sensor.get("Reading"), bool) and math.isfinite(reading)
+                    and sensor.get("@odata.id", path) == path):
                 return [common.reading(sensor_id, sensor.get("Name"), reading, source=path)]
 
     preferred = getattr(getattr(device, "odm", None), "monitor_preferred_chassis", None)
@@ -78,7 +82,7 @@ def _find(device):
         seen.append(cid)
         return [r for r in temp.chassis_thermal_metrics(device, cid) if _is_inlet(r)]
 
-    for cid in DEFAULT_CHASSIS:
+    for cid in ((device.vars["chassis_id"],) if device.vars.get("chassis_id") else DEFAULT_CHASSIS):
         found = probe(cid)
         if found:
             return found

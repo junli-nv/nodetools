@@ -8,6 +8,7 @@ probing rather than assumption.
 """
 
 import concurrent.futures
+import math
 import re
 
 _NUM = re.compile(r"^[+-]?\d+(\.\d+)?")
@@ -60,10 +61,10 @@ def health_of(status):
 
 
 def num(value):
-    if value is None:
+    if value is None or isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        return value
+        return value if math.isfinite(value) else None
     m = _NUM.match(str(value).strip())
     return m.group(0) if m else None
 

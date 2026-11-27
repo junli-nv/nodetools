@@ -27,17 +27,232 @@
       "test": "tests/test_direct_read_contract.py",
       "live_validation": "2026-11-27: runtime and CLI readback, exactly two GETs and two finite input-watt readings",
       "unverified_scope": [
-        "fan",
-        "temp",
-        "inlet",
-        "monitor",
-        "other information commands",
-        "all writes"
+        "remaining management audit",
+        "writes",
+        "other firmware"
       ],
       "adapter": "nodetools_runtime.oem.nvl.smc.SmcGb300"
     },
     {
       "id": "liteon_pf1333_psu",
+      "status": "verified",
+      "model": "Lite-On PF-1333-7RB / PF-1333-9RB / CM-14MP-1RB",
+      "bmc_firmware": "r1.3.9",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "liteon",
+        "role": "powershelf",
+        "generation": "gb300"
+      },
+      "command": "pspsu",
+      "capability": "psu",
+      "direct_requests": [
+        "/redfish/v1/Chassis/powershelf/Power"
+      ],
+      "request_count": 1,
+      "expected_rows": 6,
+      "interpretation": "Six stable powerdevice0..5 IDs, validated against modern identities by serial; array order is not slot order",
+      "fallback": "If the preferred view is unavailable, use discovered chassis and stable physical identities; preserve explicit chassis_id.",
+      "fixture": "liteon_pf1333_psu",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-27: user selection at jobs=200; complete nodes use exactly one GET",
+      "unverified_scope": [
+        "other capabilities not covered by this record",
+        "all writes"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.liteon.LiteOnPowerShelf"
+    },
+    {
+      "id": "smc_gb300_fan",
+      "status": "verified",
+      "model": "Supermicro GB NVL / GB300 1CPU:2GPU Board PC",
+      "bmc_firmware": "70.02.02.01",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "gb300"
+      },
+      "command": "nodefan",
+      "capability": "fan",
+      "direct_requests": [
+        "/redfish/v1/Chassis/Chassis_0/Sensors?$expand=."
+      ],
+      "request_count": 1,
+      "expected_rows": 24,
+      "interpretation": "Firmware-specific complete fan readings; preserve units and absent-slot nulls",
+      "fallback": "Reject incomplete or invalid fixed sets; use the capability ladder and honor explicit chassis selection.",
+      "fixture": "smc_gb300_fan",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-27: runtime audit confirmed exact fixed request set and expected rows",
+      "unverified_scope": [
+        "remaining management audit",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.smc.SmcGb300"
+    },
+    {
+      "id": "smc_gb300_temp",
+      "status": "verified",
+      "model": "Supermicro GB NVL / GB300 1CPU:2GPU Board PC",
+      "bmc_firmware": "70.02.02.01",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "gb300"
+      },
+      "command": "nodetemp",
+      "capability": "temp",
+      "direct_requests": [
+        "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/PDB_0/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_CPU_1/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_Chassis_0/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_GPU_0/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_GPU_1/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_GPU_2/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_GPU_3/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_ProcessorModule_0/ThermalSubsystem/ThermalMetrics"
+      ],
+      "request_count": 9,
+      "expected_rows": 50,
+      "interpretation": "Firmware-specific complete temp readings; preserve units and absent-slot nulls",
+      "fallback": "Reject incomplete or invalid fixed sets; use the capability ladder and honor explicit chassis selection.",
+      "fixture": "smc_gb300_temp",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-27: runtime audit confirmed exact fixed request set and expected rows",
+      "unverified_scope": [
+        "remaining management audit",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.smc.SmcGb300"
+    },
+    {
+      "id": "liteon_pf1333_fan",
+      "status": "verified",
+      "model": "Lite-On PF-1333-9RB / CM-14MP-1RB",
+      "bmc_firmware": "r1.3.9",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "liteon",
+        "role": "powershelf",
+        "generation": "gb300"
+      },
+      "command": "psfan",
+      "capability": "fan",
+      "direct_requests": [
+        "/redfish/v1/Chassis/powershelf/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 6,
+      "interpretation": "Firmware-specific complete fan readings; preserve units and absent-slot nulls",
+      "fallback": "Reject incomplete or invalid fixed sets; use the capability ladder and honor explicit chassis selection.",
+      "fixture": "liteon_pf1333_fan",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-27: runtime audit confirmed exact fixed request set and expected rows",
+      "unverified_scope": [
+        "other capabilities not covered by this record",
+        "all writes"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.liteon.LiteOnPowerShelf"
+    },
+    {
+      "id": "liteon_pf1333_temp",
+      "status": "verified",
+      "model": "Lite-On PF-1333-9RB / CM-14MP-1RB",
+      "bmc_firmware": "r1.3.9",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "liteon",
+        "role": "powershelf",
+        "generation": "gb300"
+      },
+      "command": "pstemp",
+      "capability": "temp",
+      "direct_requests": [
+        "/redfish/v1/Chassis/powershelf/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 21,
+      "interpretation": "Firmware-specific complete temp readings; preserve units and absent-slot nulls",
+      "fallback": "Reject incomplete or invalid fixed sets; use the capability ladder and honor explicit chassis selection.",
+      "fixture": "liteon_pf1333_temp",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-27: runtime audit confirmed exact fixed request set and expected rows",
+      "unverified_scope": [
+        "other capabilities not covered by this record",
+        "all writes"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.liteon.LiteOnPowerShelf"
+    },
+    {
+      "id": "smc_gb300_inlet",
+      "status": "verified",
+      "model": "Supermicro GB NVL / GB300 1CPU:2GPU Board PC",
+      "bmc_firmware": "70.02.02.01",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "gb300"
+      },
+      "command": "nodeinlet",
+      "capability": "inlet",
+      "direct_requests": [
+        "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_Front_IO_Temp_0"
+      ],
+      "request_count": 1,
+      "expected_rows": 1,
+      "interpretation": "Tray inlet with finite readings and preserved units",
+      "fallback": "Validate the complete fixed sensor set; missing identity, units or finite readings fall back to the PSU collector. Honor chassis_id.",
+      "fixture": "smc_gb300_inlet",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-27: runtime read audit matched every fixed GET and returned all expected readings",
+      "unverified_scope": [
+        "remaining management audit",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.smc.SmcGb300"
+    },
+    {
+      "id": "smc_gb300_monitor",
+      "status": "verified",
+      "model": "Supermicro GB NVL / GB300 1CPU:2GPU Board PC",
+      "bmc_firmware": "70.02.02.01",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "gb300"
+      },
+      "command": "nodemon",
+      "capability": "monitor",
+      "direct_requests": [
+        "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_TotalHSC_Power_0",
+        "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_Front_IO_Temp_0",
+        "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_0_Pwr_0",
+        "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_1_Pwr_0"
+      ],
+      "request_count": 4,
+      "expected_rows": 4,
+      "interpretation": "Tray monitor with finite readings and preserved units",
+      "fallback": "Validate the complete fixed sensor set; missing identity, units or finite readings fall back to the PSU collector. Honor chassis_id.",
+      "fixture": "smc_gb300_monitor",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-27: runtime read audit matched every fixed GET and returned all expected readings",
+      "unverified_scope": [
+        "remaining management audit",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.smc.SmcGb300"
+    },
+    {
+      "id": "liteon_pf1333_psu_details",
       "status": "verified",
       "model": "Lite-On PF-1333-9RB / CM-14MP-1RB",
       "bmc_firmware": "r1.3.9",
@@ -63,14 +278,85 @@
       "expected_rows": 6,
       "interpretation": "Six physical shelf PSU modules; merge modern identity and legacy input watts by serial",
       "fallback": "If the preferred view is unavailable, use discovered chassis and stable physical identities; preserve explicit chassis_id.",
-      "fixture": "liteon_pf1333_psu",
+      "fixture": "liteon_pf1333_psu_details",
       "test": "tests/test_direct_read_contract.py",
       "live_validation": "2026-11-27: full runtime pipeline with explicit metadata, eight GETs and six unique input-watt readings",
       "unverified_scope": [
         "other capabilities not covered by this record",
         "all writes"
       ],
-      "adapter": "nodetools_runtime.oem.nvl.liteon.LiteOnPowerShelf"
+      "adapter": "nodetools_runtime.oem.nvl.liteon.LiteOnPowerShelf",
+      "options": [
+        "--details"
+      ]
+    },
+    {
+      "id": "nvidia_n5500_temp",
+      "status": "verified",
+      "model": "NVIDIA N5500_LD",
+      "bmc_firmware": "88.0002.1962",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "nvidia",
+        "role": "nvswitch",
+        "generation": "gb300",
+        "nvswitch_sensor_backend": "bmc"
+      },
+      "command": "nvswtemp",
+      "capability": "temp",
+      "direct_requests": [
+        "/redfish/v1/Chassis/MGX_BMC_0/Sensors?$expand=.",
+        "/redfish/v1/Chassis/MGX_NVSwitch_0/Sensors?$expand=.",
+        "/redfish/v1/Chassis/MGX_NVSwitch_1/Sensors?$expand=."
+      ],
+      "request_count": 3,
+      "expected_rows": 3,
+      "interpretation": "BMC and two NVSwitch temperatures in Celsius",
+      "fallback": "Reject incomplete fixed sets; fall back within the temperature capability.",
+      "fixture": "nvidia_n5500_temp",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-27: BMC 88.0002.1962 sensor collections returned all three temperature IDs",
+      "unverified_scope": [
+        "NVOS",
+        "BMC fan and PSU data unavailable; separate absence evidence",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.n5500.NvidiaN5500"
+    },
+    {
+      "id": "nvidia_n5500_hsc",
+      "status": "verified",
+      "model": "NVIDIA N5500_LD / lm5066i HSC",
+      "bmc_firmware": "88.0002.1962",
+      "transport": "nvos_ssh",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "nvidia",
+        "role": "nvswitch",
+        "generation": "gb300",
+        "nvswitch_sensor_backend": "bmc",
+        "nvswitch_psu_backend": "nvos"
+      },
+      "command": "nvswpsu",
+      "capability": "psu",
+      "direct_requests": [
+        "nvos:lm5066i-vin-iin-pin"
+      ],
+      "request_count": 1,
+      "expected_rows": 1,
+      "interpretation": "HSC input proxy: vin/iin/pin labels; millivolts/milliamps/microwatts converted; not a physical PSU",
+      "fallback": "No unsupported PSU enumeration before the verified HSC read; reject missing, ambiguous or negative telemetry",
+      "fixture": "nvidia_n5500_hsc",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-27: full runtime audit, one NVOS SSH query, 49.911 V / 3.927 A / 182.83 W, OK",
+      "unverified_scope": [
+        "independent output watts not published",
+        "multi-node NVSwitch acceptance still pending",
+        "other firmware",
+        "writes"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.n5500.NvidiaN5500"
     }
   ],
   "legacy_baseline_commit": "f6373fe63f6ea7b162b13d82f2699c0aaa9968ec",

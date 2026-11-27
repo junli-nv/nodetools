@@ -124,6 +124,9 @@ def inventory(device, system, chassis_default):
     links = (system.get("Links") or {}).get("Chassis") or []
     chassis = device.vars.get("chassis_id")
     paths = ["/redfish/v1/Chassis/" + chassis] if chassis else (links or [chassis_default])
+    known = getattr(getattr(device, "odm", None), "network_inventory_chassis", ())
+    if known and not chassis:
+        paths = ["/redfish/v1/Chassis/" + ident for ident in known]
     by_mac = defaultdict(lambda: defaultdict(set))
     for chassis_path in dict.fromkeys(local_link(path) for path in paths):
         if not chassis_path or not chassis_path.startswith("/redfish/v1/Chassis/"):

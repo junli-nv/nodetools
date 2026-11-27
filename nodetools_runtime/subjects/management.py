@@ -45,7 +45,12 @@ def manager(device):
 
 
 def bmc(device, action, value=None):
+    from .. import model, oem
     selected = getattr(device, "vars", {}).get("manager_id")
+    if not selected and action in ("info", "time") and value is None:
+        adapter = getattr(device, "odm", None) or (oem.for_device(device)
+                  if isinstance(device, model.Device) else None)
+        selected = getattr(adapter, "read_manager_id", None)
     path, data = None, {}
     if selected and action in ("info", "time") and value is None:
         base = "/redfish/v1/Managers/"
@@ -92,8 +97,17 @@ def bmc(device, action, value=None):
 
 
 def fru(device):
+    if getattr(device, "role", None) == "powershelf":
+        from .. import oem
+        adapter = getattr(device, "odm", None) or oem.for_device(device)
+        if getattr(adapter, "read_management_fixed", False):
+            for path, data in firmware.read_collection(device, "Chassis"):
+                if data.get("SerialNumber"):
+                    yield "Chassis {} serial={}".format(
+                        data.get("Model") or path.rsplit("/", 1)[-1], data["SerialNumber"])
+                    return
     have_system = False
-    for path, data in firmware.collection(device, "/redfish/v1/Systems"):
+    for path, data in firmware.read_collection(device, "Systems"):
         serial = data.get("SerialNumber")
         if serial:
             have_system = True

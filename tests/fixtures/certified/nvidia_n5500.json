@@ -1,0 +1,45 @@
+{
+  "/redfish/v1/Chassis/MGX_BMC_0/ThermalSubsystem/ThermalMetrics": {
+    "Id": "ThermalMetrics",
+    "TemperatureReadingsCelsius": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP",
+        "DataSourceUri": "/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP",
+        "DeviceName": "BMC_TEMP",
+        "Reading": 37.125
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/MGX_NVSwitch_0/ThermalSubsystem/ThermalMetrics": {
+    "Id": "ThermalMetrics",
+    "TemperatureReadingsCelsius": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/MGX_NVSwitch_0/Sensors/MGX_NVSwitch_0_TEMP_0",
+        "DataSourceUri": "/redfish/v1/Chassis/MGX_NVSwitch_0/Sensors/MGX_NVSwitch_0_TEMP_0",
+        "DeviceName": "MGX_NVSwitch_0_TEMP_0",
+        "PhysicalContext": "NetworkingDevice",
+        "Reading": 60.0
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/MGX_NVSwitch_1/ThermalSubsystem/ThermalMetrics": {
+    "Id": "ThermalMetrics",
+    "TemperatureReadingsCelsius": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/MGX_NVSwitch_1/Sensors/MGX_NVSwitch_1_TEMP_0",
+        "DataSourceUri": "/redfish/v1/Chassis/MGX_NVSwitch_1/Sensors/MGX_NVSwitch_1_TEMP_0",
+        "DeviceName": "MGX_NVSwitch_1_TEMP_0",
+        "PhysicalContext": "NetworkingDevice",
+        "Reading": 59.0
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/System_0/PowerSubsystem/PowerSupplies": {
+    "@odata.id": "/redfish/v1/Chassis/System_0/PowerSubsystem/PowerSupplies",
+    "@odata.type": "#PowerSupplyCollection.PowerSupplyCollection",
+    "Description": "The collection of PowerSupply resource instances.",
+    "Members": [],
+    "Members@odata.count": 0,
+    "Name": "Power Supply Collection"
+  }
+}

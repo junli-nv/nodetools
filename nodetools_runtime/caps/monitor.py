@@ -40,7 +40,10 @@ def _power(device):
     if sensor_id and sensor_chassis and (not selected or sensor_chassis == selected):
         path = "/redfish/v1/Chassis/{}/Sensors/{}".format(sensor_chassis, sensor_id)
         sensor = rf.get(path) or {}
-        if sensor.get("ReadingType") == "Power" and sensor.get("Id") == sensor_id:
+        if (sensor.get("ReadingType") == "Power" and sensor.get("Id") == sensor_id
+                and (not getattr(device.odm, "monitor_power_unit", None)
+                     or sensor.get("ReadingUnits") == device.odm.monitor_power_unit)
+                and sensor.get("@odata.id", path) == path):
             value = _node_power([sensor], "Reading", path, {_key(sensor.get("Name") or sensor_id)})
             if value is not None:
                 return [value]

@@ -1,0 +1,131 @@
+{
+  "/redfish/v1/Chassis/BMC_eeprom/ThermalSubsystem/Fans?$expand=.": {
+    "Members@odata.count": 0,
+    "Members": []
+  },
+  "/redfish/v1/Chassis/BMC_eeprom/Sensors?$expand=.": {
+    "Members@odata.count": 0,
+    "Members": []
+  },
+  "/redfish/v1/Chassis/CPLD_0/ThermalSubsystem/Fans?$expand=.": {
+    "Members@odata.count": 0,
+    "Members": []
+  },
+  "/redfish/v1/Chassis/CPLD_0/Sensors?$expand=.": {
+    "Members@odata.count": 0,
+    "Members": []
+  },
+  "/redfish/v1/Chassis/MGX_BMC_0/ThermalSubsystem/Fans?$expand=.": {
+    "Members@odata.count": 0,
+    "Members": []
+  },
+  "/redfish/v1/Chassis/MGX_BMC_0/Sensors?$expand=.": {
+    "Members@odata.count": 1,
+    "Members": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/MGX_BMC_0/Sensors/BMC_TEMP",
+        "Id": "BMC_TEMP",
+        "Name": "BMC TEMP",
+        "Reading": 37.125,
+        "ReadingType": "Temperature",
+        "ReadingUnits": "Cel",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/MGX_NVSwitch_0/ThermalSubsystem/Fans?$expand=.": {
+    "Members@odata.count": 0,
+    "Members": []
+  },
+  "/redfish/v1/Chassis/MGX_NVSwitch_0/Sensors?$expand=.": {
+    "Members@odata.count": 2,
+    "Members": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/MGX_NVSwitch_0/Sensors/MGX_NVSwitch_0_Power_0",
+        "Id": "MGX_NVSwitch_0_Power_0",
+        "Name": "MGX NVSwitch 0 Power 0",
+        "Reading": 304.0,
+        "ReadingType": "Power",
+        "ReadingUnits": "W",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/MGX_NVSwitch_0/Sensors/MGX_NVSwitch_0_TEMP_0",
+        "Id": "MGX_NVSwitch_0_TEMP_0",
+        "Name": "MGX NVSwitch 0 TEMP 0",
+        "Reading": 60.0,
+        "ReadingType": "Temperature",
+        "ReadingUnits": "Cel",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/MGX_NVSwitch_1/ThermalSubsystem/Fans?$expand=.": {
+    "Members@odata.count": 0,
+    "Members": []
+  },
+  "/redfish/v1/Chassis/MGX_NVSwitch_1/Sensors?$expand=.": {
+    "Members@odata.count": 2,
+    "Members": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/MGX_NVSwitch_1/Sensors/MGX_NVSwitch_1_Power_0",
+        "Id": "MGX_NVSwitch_1_Power_0",
+        "Name": "MGX NVSwitch 1 Power 0",
+        "Reading": 296.0,
+        "ReadingType": "Power",
+        "ReadingUnits": "W",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/MGX_NVSwitch_1/Sensors/MGX_NVSwitch_1_TEMP_0",
+        "Id": "MGX_NVSwitch_1_TEMP_0",
+        "Name": "MGX NVSwitch 1 TEMP 0",
+        "Reading": 59.0,
+        "ReadingType": "Temperature",
+        "ReadingUnits": "Cel",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/SYS_eeprom/ThermalSubsystem/Fans?$expand=.": {
+    "Members@odata.count": 0,
+    "Members": []
+  },
+  "/redfish/v1/Chassis/SYS_eeprom/Sensors?$expand=.": {
+    "Members@odata.count": 0,
+    "Members": []
+  },
+  "/redfish/v1/Chassis/System_0/ThermalSubsystem/Fans?$expand=.": {
+    "Members@odata.count": 0,
+    "Members": []
+  },
+  "/redfish/v1/Chassis/System_0/Sensors?$expand=.": {
+    "Members@odata.count": 0,
+    "Members": []
+  }
+}

@@ -1,0 +1,824 @@
+{
+  "/redfish/v1/Chassis/Chassis_0/Sensors?$expand=.": {
+    "Members": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_1_PWM",
+        "Id": "Chassis_0_FAN_1_PWM",
+        "Name": "Chassis 0 FAN 1 PWM",
+        "Reading": 100.0,
+        "ReadingType": "Percent",
+        "ReadingUnits": "%",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_2_PWM",
+        "Id": "Chassis_0_FAN_2_PWM",
+        "Name": "Chassis 0 FAN 2 PWM",
+        "Reading": 100.0,
+        "ReadingType": "Percent",
+        "ReadingUnits": "%",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_3_PWM",
+        "Id": "Chassis_0_FAN_3_PWM",
+        "Name": "Chassis 0 FAN 3 PWM",
+        "Reading": 100.0,
+        "ReadingType": "Percent",
+        "ReadingUnits": "%",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_4_PWM",
+        "Id": "Chassis_0_FAN_4_PWM",
+        "Name": "Chassis 0 FAN 4 PWM",
+        "Reading": 100.0,
+        "ReadingType": "Percent",
+        "ReadingUnits": "%",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_5_PWM",
+        "Id": "Chassis_0_FAN_5_PWM",
+        "Name": "Chassis 0 FAN 5 PWM",
+        "Reading": 100.0,
+        "ReadingType": "Percent",
+        "ReadingUnits": "%",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_6_PWM",
+        "Id": "Chassis_0_FAN_6_PWM",
+        "Name": "Chassis 0 FAN 6 PWM",
+        "Reading": 100.0,
+        "ReadingType": "Percent",
+        "ReadingUnits": "%",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_7_PWM",
+        "Id": "Chassis_0_FAN_7_PWM",
+        "Name": "Chassis 0 FAN 7 PWM",
+        "Reading": 100.0,
+        "ReadingType": "Percent",
+        "ReadingUnits": "%",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_8_PWM",
+        "Id": "Chassis_0_FAN_8_PWM",
+        "Name": "Chassis 0 FAN 8 PWM",
+        "Reading": 100.0,
+        "ReadingType": "Percent",
+        "ReadingUnits": "%",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_1_FRONT",
+        "Id": "Chassis_0_FAN_1_FRONT",
+        "Name": "Chassis 0 FAN 1 FRONT",
+        "Reading": 32768.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_1_REAR",
+        "Id": "Chassis_0_FAN_1_REAR",
+        "Name": "Chassis 0 FAN 1 REAR",
+        "Reading": 28912.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_2_FRONT",
+        "Id": "Chassis_0_FAN_2_FRONT",
+        "Name": "Chassis 0 FAN 2 FRONT",
+        "Reading": 32768.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_2_REAR",
+        "Id": "Chassis_0_FAN_2_REAR",
+        "Name": "Chassis 0 FAN 2 REAR",
+        "Reading": 28086.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_3_FRONT",
+        "Id": "Chassis_0_FAN_3_FRONT",
+        "Name": "Chassis 0 FAN 3 FRONT",
+        "Reading": 32768.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_3_REAR",
+        "Id": "Chassis_0_FAN_3_REAR",
+        "Name": "Chassis 0 FAN 3 REAR",
+        "Reading": 28086.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_4_FRONT",
+        "Id": "Chassis_0_FAN_4_FRONT",
+        "Name": "Chassis 0 FAN 4 FRONT",
+        "Reading": 33897.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_4_REAR",
+        "Id": "Chassis_0_FAN_4_REAR",
+        "Name": "Chassis 0 FAN 4 REAR",
+        "Reading": 28086.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_5_FRONT",
+        "Id": "Chassis_0_FAN_5_FRONT",
+        "Name": "Chassis 0 FAN 5 FRONT",
+        "Reading": 32768.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_5_REAR",
+        "Id": "Chassis_0_FAN_5_REAR",
+        "Name": "Chassis 0 FAN 5 REAR",
+        "Reading": 28086.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_6_FRONT",
+        "Id": "Chassis_0_FAN_6_FRONT",
+        "Name": "Chassis 0 FAN 6 FRONT",
+        "Reading": 33897.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_6_REAR",
+        "Id": "Chassis_0_FAN_6_REAR",
+        "Name": "Chassis 0 FAN 6 REAR",
+        "Reading": 28086.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_7_FRONT",
+        "Id": "Chassis_0_FAN_7_FRONT",
+        "Name": "Chassis 0 FAN 7 FRONT",
+        "Reading": 32768.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_7_REAR",
+        "Id": "Chassis_0_FAN_7_REAR",
+        "Name": "Chassis 0 FAN 7 REAR",
+        "Reading": 28086.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_8_FRONT",
+        "Id": "Chassis_0_FAN_8_FRONT",
+        "Name": "Chassis 0 FAN 8 FRONT",
+        "Reading": 32768.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_FAN_8_REAR",
+        "Id": "Chassis_0_FAN_8_REAR",
+        "Name": "Chassis 0 FAN 8 REAR",
+        "Reading": 28086.0,
+        "ReadingType": "Rotational",
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_TotalHSC_Power_0",
+        "Id": "Chassis_0_TotalHSC_Power_0",
+        "Name": "Chassis 0 TotalHSC Power 0",
+        "Reading": 1827.7914099999998,
+        "ReadingType": "Power",
+        "ReadingUnits": "W",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_Front_IO_Temp_0",
+        "Id": "Chassis_0_Front_IO_Temp_0",
+        "Name": "Chassis 0 Front IO Temp 0",
+        "Reading": 25.75,
+        "ReadingType": "Temperature",
+        "ReadingUnits": "Cel",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_LeakDetector_0_ColdPlate",
+        "Id": "Chassis_0_LeakDetector_0_ColdPlate",
+        "Name": "Chassis 0 LeakDetector 0 ColdPlate",
+        "Reading": 1.7273,
+        "ReadingType": "Voltage",
+        "ReadingUnits": "V",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_LeakDetector_0_Manifold",
+        "Id": "Chassis_0_LeakDetector_0_Manifold",
+        "Name": "Chassis 0 LeakDetector 0 Manifold",
+        "Reading": 1.7297,
+        "ReadingType": "Voltage",
+        "ReadingUnits": "V",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_LeakDetector_1_ColdPlate",
+        "Id": "Chassis_0_LeakDetector_1_ColdPlate",
+        "Name": "Chassis 0 LeakDetector 1 ColdPlate",
+        "Reading": 1.7289,
+        "ReadingType": "Voltage",
+        "ReadingUnits": "V",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_LeakDetector_1_Manifold",
+        "Id": "Chassis_0_LeakDetector_1_Manifold",
+        "Name": "Chassis 0 LeakDetector 1 Manifold",
+        "Reading": 1.7265,
+        "ReadingType": "Voltage",
+        "ReadingUnits": "V",
+        "Status": {
+          "Conditions": [],
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        }
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/ThermalMetrics": {
+    "Id": "ThermalMetrics",
+    "TemperatureReadingsCelsius": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/IO_Board_0/Sensors/IO_Board_0_CX8_0_Temp",
+        "DataSourceUri": "/redfish/v1/Chassis/IO_Board_0/Sensors/IO_Board_0_CX8_0_Temp",
+        "DeviceName": "IO_Board_0_CX8_0_Temp",
+        "PhysicalContext": "NetworkingDevice",
+        "Reading": 51.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/IO_Board_0/Sensors/IO_Board_0_CX8_0_Port_0_Temp",
+        "DataSourceUri": "/redfish/v1/Chassis/IO_Board_0/Sensors/IO_Board_0_CX8_0_Port_0_Temp",
+        "DeviceName": "IO_Board_0_CX8_0_Port_0_Temp",
+        "PhysicalContext": "SystemBoard",
+        "Reading": 45.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/IO_Board_0/Sensors/IO_Board_0_CX8_1_Temp",
+        "DataSourceUri": "/redfish/v1/Chassis/IO_Board_0/Sensors/IO_Board_0_CX8_1_Temp",
+        "DeviceName": "IO_Board_0_CX8_1_Temp",
+        "PhysicalContext": "NetworkingDevice",
+        "Reading": 54.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/IO_Board_0/Sensors/IO_Board_0_CX8_1_Port_0_Temp",
+        "DataSourceUri": "/redfish/v1/Chassis/IO_Board_0/Sensors/IO_Board_0_CX8_1_Port_0_Temp",
+        "DeviceName": "IO_Board_0_CX8_1_Port_0_Temp",
+        "PhysicalContext": "SystemBoard",
+        "Reading": 44.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/IO_Board_1/Sensors/IO_Board_1_CX8_0_Temp",
+        "DataSourceUri": "/redfish/v1/Chassis/IO_Board_1/Sensors/IO_Board_1_CX8_0_Temp",
+        "DeviceName": "IO_Board_1_CX8_0_Temp",
+        "PhysicalContext": "NetworkingDevice",
+        "Reading": 52.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/IO_Board_1/Sensors/IO_Board_1_CX8_0_Port_0_Temp",
+        "DataSourceUri": "/redfish/v1/Chassis/IO_Board_1/Sensors/IO_Board_1_CX8_0_Port_0_Temp",
+        "DeviceName": "IO_Board_1_CX8_0_Port_0_Temp",
+        "PhysicalContext": "SystemBoard",
+        "Reading": 45.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/IO_Board_1/Sensors/IO_Board_1_CX8_1_Temp",
+        "DataSourceUri": "/redfish/v1/Chassis/IO_Board_1/Sensors/IO_Board_1_CX8_1_Temp",
+        "DeviceName": "IO_Board_1_CX8_1_Temp",
+        "PhysicalContext": "NetworkingDevice",
+        "Reading": 52.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/IO_Board_1/Sensors/IO_Board_1_CX8_1_Port_0_Temp",
+        "DataSourceUri": "/redfish/v1/Chassis/IO_Board_1/Sensors/IO_Board_1_CX8_1_Port_0_Temp",
+        "DeviceName": "IO_Board_1_CX8_1_Port_0_Temp",
+        "PhysicalContext": "SystemBoard",
+        "Reading": 43.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Riser_Slot1_BlueField_3_Card/Sensors/BF3_Slot_1_Temp",
+        "DataSourceUri": "/redfish/v1/Chassis/Riser_Slot1_BlueField_3_Card/Sensors/BF3_Slot_1_Temp",
+        "DeviceName": "BF3_Slot_1_Temp",
+        "PhysicalContext": "NetworkingDevice",
+        "Reading": 52.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/NVME_M2_0/Sensors/NVME_M2_0_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/NVME_M2_0/Sensors/NVME_M2_0_Temp_0",
+        "DeviceName": "NVME_M2_0_Temp_0",
+        "Reading": 39.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/StorageBackplane_0/Sensors/StorageBackplane_0_SSD_0_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/StorageBackplane_0/Sensors/StorageBackplane_0_SSD_0_Temp_0",
+        "DeviceName": "StorageBackplane_0_SSD_0_Temp_0",
+        "Reading": 32.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/StorageBackplane_0/Sensors/StorageBackplane_0_SSD_1_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/StorageBackplane_0/Sensors/StorageBackplane_0_SSD_1_Temp_0",
+        "DeviceName": "StorageBackplane_0_SSD_1_Temp_0",
+        "Reading": null
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/StorageBackplane_0/Sensors/StorageBackplane_0_SSD_2_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/StorageBackplane_0/Sensors/StorageBackplane_0_SSD_2_Temp_0",
+        "DeviceName": "StorageBackplane_0_SSD_2_Temp_0",
+        "Reading": 32.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/StorageBackplane_0/Sensors/StorageBackplane_0_SSD_3_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/StorageBackplane_0/Sensors/StorageBackplane_0_SSD_3_Temp_0",
+        "DeviceName": "StorageBackplane_0_SSD_3_Temp_0",
+        "Reading": null
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/StorageBackplane_1/Sensors/StorageBackplane_1_SSD_0_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/StorageBackplane_1/Sensors/StorageBackplane_1_SSD_0_Temp_0",
+        "DeviceName": "StorageBackplane_1_SSD_0_Temp_0",
+        "Reading": 31.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/StorageBackplane_1/Sensors/StorageBackplane_1_SSD_1_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/StorageBackplane_1/Sensors/StorageBackplane_1_SSD_1_Temp_0",
+        "DeviceName": "StorageBackplane_1_SSD_1_Temp_0",
+        "Reading": null
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/StorageBackplane_1/Sensors/StorageBackplane_1_SSD_2_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/StorageBackplane_1/Sensors/StorageBackplane_1_SSD_2_Temp_0",
+        "DeviceName": "StorageBackplane_1_SSD_2_Temp_0",
+        "Reading": 31.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/StorageBackplane_1/Sensors/StorageBackplane_1_SSD_3_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/StorageBackplane_1/Sensors/StorageBackplane_1_SSD_3_Temp_0",
+        "DeviceName": "StorageBackplane_1_SSD_3_Temp_0",
+        "Reading": null
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/BMC_0/Sensors/BMC_0_DCSCM_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/BMC_0/Sensors/BMC_0_DCSCM_Temp_0",
+        "DeviceName": "BMC_0_DCSCM_Temp_0",
+        "Reading": 29.875
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_Front_IO_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_Front_IO_Temp_0",
+        "DeviceName": "Chassis_0_Front_IO_Temp_0",
+        "Reading": 25.75
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/PDB_0/ThermalSubsystem/ThermalMetrics": {
+    "Id": "ThermalMetrics",
+    "TemperatureReadingsCelsius": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_Inlet_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_Inlet_Temp_0",
+        "DeviceName": "PDB_0_Inlet_Temp_0",
+        "Reading": 35.937
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_0_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_0_Temp_0",
+        "DeviceName": "PDB_0_HSC_0_Temp_0",
+        "Reading": 32.187
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_Vreg_0_Temp_1",
+        "DataSourceUri": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_Vreg_0_Temp_1",
+        "DeviceName": "PDB_0_Vreg_0_Temp_1",
+        "Reading": 35.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_Vreg_0_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_Vreg_0_Temp_0",
+        "DeviceName": "PDB_0_Vreg_0_Temp_0",
+        "Reading": 38.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_1_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_1_Temp_0",
+        "DeviceName": "PDB_0_HSC_1_Temp_0",
+        "Reading": 31.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_Vreg_1_Temp_1",
+        "DataSourceUri": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_Vreg_1_Temp_1",
+        "DeviceName": "PDB_0_Vreg_1_Temp_1",
+        "Reading": 33.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_Vreg_1_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_Vreg_1_Temp_0",
+        "DeviceName": "PDB_0_Vreg_1_Temp_0",
+        "Reading": 38.0
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/HGX_CPU_1/ThermalSubsystem/ThermalMetrics": {
+    "Id": "ThermalMetrics",
+    "TemperatureReadingsCelsius": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_CPU_1/Sensors/ProcessorModule_1_CPU_0_TempAvg_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_CPU_1/Sensors/ProcessorModule_1_CPU_0_TempAvg_0",
+        "DeviceName": "ProcessorModule_1_CPU_0_TempAvg_0",
+        "PhysicalContext": "CPU",
+        "Reading": 42.625
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_CPU_1/Sensors/ProcessorModule_1_CPU_0_TempLimit_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_CPU_1/Sensors/ProcessorModule_1_CPU_0_TempLimit_0",
+        "DeviceName": "ProcessorModule_1_CPU_0_TempLimit_0",
+        "PhysicalContext": "CPU",
+        "Reading": 45.657000000000004
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/HGX_Chassis_0/ThermalSubsystem/ThermalMetrics": {
+    "Id": "ThermalMetrics",
+    "TemperatureReadingsCelsius": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_ProcessorModule_0/Sensors/HGX_ProcessorModule_0_Exhaust_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_ProcessorModule_0/Sensors/HGX_ProcessorModule_0_Exhaust_Temp_0",
+        "DeviceName": "HGX_ProcessorModule_0_Exhaust_Temp_0",
+        "PhysicalContext": "GPUSubsystem",
+        "Reading": 41.5
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_ProcessorModule_0/Sensors/HGX_ProcessorModule_0_Inlet_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_ProcessorModule_0/Sensors/HGX_ProcessorModule_0_Inlet_Temp_0",
+        "DeviceName": "HGX_ProcessorModule_0_Inlet_Temp_0",
+        "PhysicalContext": "GPUSubsystem",
+        "Reading": 36.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_ProcessorModule_0/Sensors/HGX_ProcessorModule_0_Inlet_Temp_1",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_ProcessorModule_0/Sensors/HGX_ProcessorModule_0_Inlet_Temp_1",
+        "DeviceName": "HGX_ProcessorModule_0_Inlet_Temp_1",
+        "PhysicalContext": "GPUSubsystem",
+        "Reading": 41.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_ProcessorModule_1/Sensors/HGX_ProcessorModule_1_Exhaust_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_ProcessorModule_1/Sensors/HGX_ProcessorModule_1_Exhaust_Temp_0",
+        "DeviceName": "HGX_ProcessorModule_1_Exhaust_Temp_0",
+        "PhysicalContext": "GPUSubsystem",
+        "Reading": 42.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_ProcessorModule_1/Sensors/HGX_ProcessorModule_1_Inlet_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_ProcessorModule_1/Sensors/HGX_ProcessorModule_1_Inlet_Temp_0",
+        "DeviceName": "HGX_ProcessorModule_1_Inlet_Temp_0",
+        "PhysicalContext": "GPUSubsystem",
+        "Reading": 41.9375
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_ProcessorModule_1/Sensors/HGX_ProcessorModule_1_Inlet_Temp_1",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_ProcessorModule_1/Sensors/HGX_ProcessorModule_1_Inlet_Temp_1",
+        "DeviceName": "HGX_ProcessorModule_1_Inlet_Temp_1",
+        "PhysicalContext": "GPUSubsystem",
+        "Reading": 41.1875
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/HGX_GPU_0/ThermalSubsystem/ThermalMetrics": {
+    "Id": "ThermalMetrics",
+    "TemperatureReadingsCelsius": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_GPU_0/Sensors/HGX_GPU_0_DRAM_0_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_GPU_0/Sensors/HGX_GPU_0_DRAM_0_Temp_0",
+        "DeviceName": "HGX_GPU_0_DRAM_0_Temp_0",
+        "PhysicalContext": "GPU",
+        "Reading": 37.63671875
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_GPU_0/Sensors/HGX_GPU_0_TEMP_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_GPU_0/Sensors/HGX_GPU_0_TEMP_0",
+        "DeviceName": "HGX_GPU_0_TEMP_0",
+        "PhysicalContext": "GPU",
+        "Reading": 37.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_GPU_0/Sensors/HGX_GPU_0_TEMP_1",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_GPU_0/Sensors/HGX_GPU_0_TEMP_1",
+        "DeviceName": "HGX_GPU_0_TEMP_1",
+        "PhysicalContext": "GPU",
+        "Reading": 49.96875
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/HGX_GPU_1/ThermalSubsystem/ThermalMetrics": {
+    "Id": "ThermalMetrics",
+    "TemperatureReadingsCelsius": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_GPU_1/Sensors/HGX_GPU_1_DRAM_0_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_GPU_1/Sensors/HGX_GPU_1_DRAM_0_Temp_0",
+        "DeviceName": "HGX_GPU_1_DRAM_0_Temp_0",
+        "PhysicalContext": "GPU",
+        "Reading": 37.63671875
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_GPU_1/Sensors/HGX_GPU_1_TEMP_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_GPU_1/Sensors/HGX_GPU_1_TEMP_0",
+        "DeviceName": "HGX_GPU_1_TEMP_0",
+        "PhysicalContext": "GPU",
+        "Reading": 37.53125
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_GPU_1/Sensors/HGX_GPU_1_TEMP_1",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_GPU_1/Sensors/HGX_GPU_1_TEMP_1",
+        "DeviceName": "HGX_GPU_1_TEMP_1",
+        "PhysicalContext": "GPU",
+        "Reading": 49.46875
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/HGX_GPU_2/ThermalSubsystem/ThermalMetrics": {
+    "Id": "ThermalMetrics",
+    "TemperatureReadingsCelsius": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_GPU_2/Sensors/HGX_GPU_2_DRAM_0_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_GPU_2/Sensors/HGX_GPU_2_DRAM_0_Temp_0",
+        "DeviceName": "HGX_GPU_2_DRAM_0_Temp_0",
+        "PhysicalContext": "GPU",
+        "Reading": 36.71875
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_GPU_2/Sensors/HGX_GPU_2_TEMP_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_GPU_2/Sensors/HGX_GPU_2_TEMP_0",
+        "DeviceName": "HGX_GPU_2_TEMP_0",
+        "PhysicalContext": "GPU",
+        "Reading": 37.34375
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_GPU_2/Sensors/HGX_GPU_2_TEMP_1",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_GPU_2/Sensors/HGX_GPU_2_TEMP_1",
+        "DeviceName": "HGX_GPU_2_TEMP_1",
+        "PhysicalContext": "GPU",
+        "Reading": 49.625
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/HGX_GPU_3/ThermalSubsystem/ThermalMetrics": {
+    "Id": "ThermalMetrics",
+    "TemperatureReadingsCelsius": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_GPU_3/Sensors/HGX_GPU_3_DRAM_0_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_GPU_3/Sensors/HGX_GPU_3_DRAM_0_Temp_0",
+        "DeviceName": "HGX_GPU_3_DRAM_0_Temp_0",
+        "PhysicalContext": "GPU",
+        "Reading": 36.71875
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_GPU_3/Sensors/HGX_GPU_3_TEMP_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_GPU_3/Sensors/HGX_GPU_3_TEMP_0",
+        "DeviceName": "HGX_GPU_3_TEMP_0",
+        "PhysicalContext": "GPU",
+        "Reading": 38.09375
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_GPU_3/Sensors/HGX_GPU_3_TEMP_1",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_GPU_3/Sensors/HGX_GPU_3_TEMP_1",
+        "DeviceName": "HGX_GPU_3_TEMP_1",
+        "PhysicalContext": "GPU",
+        "Reading": 48.9375
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/HGX_ProcessorModule_0/ThermalSubsystem/ThermalMetrics": {
+    "Id": "ThermalMetrics",
+    "TemperatureReadingsCelsius": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_BMC_0/Sensors/HGX_BMC_0_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_BMC_0/Sensors/HGX_BMC_0_Temp_0",
+        "DeviceName": "HGX_BMC_0_Temp_0",
+        "PhysicalContext": "GPUSubsystem",
+        "Reading": 35.25
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_ProcessorModule_0/Sensors/HGX_ProcessorModule_0_Exhaust_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_ProcessorModule_0/Sensors/HGX_ProcessorModule_0_Exhaust_Temp_0",
+        "DeviceName": "HGX_ProcessorModule_0_Exhaust_Temp_0",
+        "PhysicalContext": "GPUSubsystem",
+        "Reading": 41.5
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_ProcessorModule_0/Sensors/HGX_ProcessorModule_0_Inlet_Temp_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_ProcessorModule_0/Sensors/HGX_ProcessorModule_0_Inlet_Temp_0",
+        "DeviceName": "HGX_ProcessorModule_0_Inlet_Temp_0",
+        "PhysicalContext": "GPUSubsystem",
+        "Reading": 36.0
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_ProcessorModule_0/Sensors/HGX_ProcessorModule_0_Inlet_Temp_1",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_ProcessorModule_0/Sensors/HGX_ProcessorModule_0_Inlet_Temp_1",
+        "DeviceName": "HGX_ProcessorModule_0_Inlet_Temp_1",
+        "PhysicalContext": "GPUSubsystem",
+        "Reading": 40.875
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_CPU_0/Sensors/ProcessorModule_0_CPU_0_TempAvg_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_CPU_0/Sensors/ProcessorModule_0_CPU_0_TempAvg_0",
+        "DeviceName": "ProcessorModule_0_CPU_0_TempAvg_0",
+        "PhysicalContext": "CPU",
+        "Reading": 41.875
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/HGX_CPU_0/Sensors/ProcessorModule_0_CPU_0_TempLimit_0",
+        "DataSourceUri": "/redfish/v1/Chassis/HGX_CPU_0/Sensors/ProcessorModule_0_CPU_0_TempLimit_0",
+        "DeviceName": "ProcessorModule_0_CPU_0_TempLimit_0",
+        "PhysicalContext": "CPU",
+        "Reading": 47.875
+      }
+    ]
+  }
+}

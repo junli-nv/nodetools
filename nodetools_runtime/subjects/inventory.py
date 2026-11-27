@@ -72,9 +72,12 @@ def _gpu_serials(device):
     base = "/redfish/v1/Systems"
     module_serials = getattr(device.odm, "gpu_reports_module_serials", False)
     ident = None if module_serials else device.vars.get("system_id")
-    paths = [base + "/" + ident] if ident else common.member_ids(
-        common.resource(device, base, required=True)
-    )
+    fixed = getattr(device.odm, "gpu_inventory_systems", ())
+    paths = ([base + "/" + ident] if ident else [base + "/" + item for item in fixed]
+             if fixed else common.member_ids(common.resource(device, base, required=True)))
+    fixed = getattr(device.odm, "gpu_inventory_systems", ())
+    if fixed and not ident:
+        paths = [base + "/" + item for item in fixed]
     records = []
     for path in paths:
         system = common.resource(device, path, required=bool(ident))
@@ -111,4 +114,4 @@ def _tasks(device):
             task.get("TaskStatus") or "-",
         )
         for task in common.entries(device, "/redfish/v1/TaskService/Tasks")
-    ]
+    ] or ["{}: BMC reports no Redfish tasks".format(device.name)]

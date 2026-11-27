@@ -72,30 +72,56 @@ def update_service(device):
     return common.resource(device, link(root.get("UpdateService")), required=True)
 
 
-def inventory(device):
-    supermicro = False
-    for _, system in collection(device, "/redfish/v1/Systems"):
-        manufacturer = str(system.get("Manufacturer") or "").casefold()
-        supermicro |= "supermicro" in manufacturer or "super micro" in manufacturer
-        if not system.get("BiosVersion"):
-            continue
-        yield "{} BIOS  {}".format(system.get("Model") or system.get("Id") or "System",
-                                    system.get("BiosVersion") or "NA")
-    for _, manager in collection(device, "/redfish/v1/Managers"):
-        if not manager.get("FirmwareVersion"):
-            continue
-        yield "{} BMC   {}".format(manager.get("Model") or manager.get("Id") or "Manager",
-                                    manager.get("FirmwareVersion") or "NA")
-    root = common.resource(device, "/redfish/v1/", required=True)
-    if not root.get("UpdateService"):
+def read_collection(device, name):
+    """Honor explicit instances or verified read-only defaults."""
+    from .. import oem
+    adapter = getattr(device, "odm", None) or (oem.for_device(device)
+            if isinstance(device, model.Device) else None)
+    field = {"Systems": "system_id", "Managers": "manager_id",
+             "Chassis": "chassis_id"}[name]
+    defaults = {"Systems": "read_system_id", "Managers": "read_manager_id",
+                "Chassis": "read_chassis_id"}
+    ident = getattr(device, "vars", {}).get(field)
+    if not ident and getattr(adapter, "read_management_fixed", False):
+        ident = getattr(adapter, defaults[name], None)
+    if ident:
+        path = "/redfish/v1/" + name + "/" + ident
+        yield path, common.resource(device, path, required=True)
         return
-    service = common.resource(device, link(root["UpdateService"]), required=True)
-    if service.get("FirmwareInventory"):
-        for path, item in components(device, link(service["FirmwareInventory"]), supermicro=supermicro):
-            label = item.get("Name")
-            if not label or label == "Software Inventory":
-                label = item.get("Id") or path.rsplit("/", 1)[-1]
-            yield "{}  {}".format(label, item.get("Version") or "NA")
+    yield from collection(device, "/redfish/v1/" + name)
+
+
+def inventory(device):
+    from .. import oem
+    adapter = getattr(device, "odm", None) or (oem.for_device(device)
+            if isinstance(device, model.Device) else None)
+    if not getattr(adapter, "read_management_fixed", False):
+        yield from _legacy_inventory(device)
+        return
+    for _, system in read_collection(device, "Systems"):
+        if system.get("BiosVersion"):
+            yield "{} BIOS  {}".format(system.get("Model") or system.get("Id") or "System",
+                                       system["BiosVersion"])
+    for _, manager in read_collection(device, "Managers"):
+        if manager.get("FirmwareVersion"):
+            yield "{} BMC   {}".format(manager.get("Model") or manager.get("Id") or "Manager",
+                                       manager["FirmwareVersion"])
+    direct = getattr(adapter, "read_firmware_path", None)
+    if direct:
+        path = direct
+    else:
+        root = common.resource(device, "/redfish/v1/", required=True)
+        if not root.get("UpdateService"):
+            return
+        service = common.resource(device, link(root["UpdateService"]), required=True)
+        if not service.get("FirmwareInventory"):
+            return
+        path = link(service["FirmwareInventory"])
+    for member_path, item in collection(device, path, required=True, expand=True):
+        label = item.get("Name")
+        if not label or label == "Software Inventory":
+            label = item.get("Id") or member_path.rsplit("/", 1)[-1]
+        yield "{}  {}".format(label, item.get("Version") or "NA")
 
 
 def tasks(device, task_id=None):
@@ -145,3 +171,29 @@ def task_details(path, task):
             yield "  Message  " + "  ".join(str(value) for value in fields if value)
         if message.get("Resolution"):
             yield "  Resolution  " + str(message["Resolution"])
+
+
+def _legacy_inventory(device):
+    supermicro = False
+    for _, system in collection(device, "/redfish/v1/Systems"):
+        manufacturer = str(system.get("Manufacturer") or "").casefold()
+        supermicro |= "supermicro" in manufacturer or "super micro" in manufacturer
+        if not system.get("BiosVersion"):
+            continue
+        yield "{} BIOS  {}".format(system.get("Model") or system.get("Id") or "System",
+                                    system.get("BiosVersion") or "NA")
+    for _, manager in collection(device, "/redfish/v1/Managers"):
+        if not manager.get("FirmwareVersion"):
+            continue
+        yield "{} BMC   {}".format(manager.get("Model") or manager.get("Id") or "Manager",
+                                    manager.get("FirmwareVersion") or "NA")
+    root = common.resource(device, "/redfish/v1/", required=True)
+    if not root.get("UpdateService"):
+        return
+    service = common.resource(device, link(root["UpdateService"]), required=True)
+    if service.get("FirmwareInventory"):
+        for path, item in components(device, link(service["FirmwareInventory"]), supermicro=supermicro):
+            label = item.get("Name")
+            if not label or label == "Software Inventory":
+                label = item.get("Id") or path.rsplit("/", 1)[-1]
+            yield "{}  {}".format(label, item.get("Version") or "NA")

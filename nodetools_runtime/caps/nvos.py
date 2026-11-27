@@ -87,8 +87,12 @@ def _ssh(host, options, command, deadline):
 
 
 def collect(host, capability, options):
+    from .. import model, oem
     command, field, unit = _FIELDS[capability]
     deadline = time.monotonic() + (options.node_timeout or options.timeout)
+    adapter = oem.for_device(model.Device(host))
+    if capability == "psu" and getattr(adapter, "nvos_psu_is_hsc", False):
+        return _hsc(host, options, deadline)
     query = "nv show platform environment {} -o json".format(command)
     result = _ssh(host, options, query, deadline)
     if result.returncode:
@@ -119,6 +123,8 @@ def _hsc(host, options, deadline):
         if len(values) != 10:
             raise ValueError()
         mv, ma, uw = map(int, values[:3])
+        if min(mv, ma, uw) < 0:
+            raise ValueError()
     except ValueError as exc:
         raise CapUnsupported("NVOS exposes neither PSU modules nor readable tray HSC input") from exc
     alarms = values[3:]
@@ -130,5 +136,7 @@ def _hsc(host, options, deadline):
     elif set(alarms) == {"0"}:
         health = "OK"
     watts = round(uw / 1000000, 2)
-    return [common.reading("HSC-DC-IN", "Tray DC input (HSC)", watts, health, unit="W",
-                           input_watts=watts, input_volts=mv / 1000, input_amps=ma / 1000)]
+    return [common.reading("HSC-DC-IN", "HSC input (lm5066i)", watts, health, unit="W",
+                           input_watts=watts, input_volts=mv / 1000, input_amps=ma / 1000,
+                           output_watts=None, reading_kind="hsc_input",
+                           source="NVOS hwmon lm5066i: vin/iin/pin")]

@@ -2,6 +2,7 @@
 
 import json
 import shlex
+import ssl
 import sys
 import time
 from urllib.parse import unquote, urlsplit
@@ -20,6 +21,21 @@ except ImportError as exc:  # pragma: no cover - environment guard
     raise SystemExit("nodetools requires the 'requests' package") from exc
 
 
+_UNVERIFIED_CONTEXT = urllib3.util.ssl_.create_urllib3_context(cert_reqs=ssl.CERT_NONE)
+
+
+class _UnverifiedAdapter(requests.adapters.HTTPAdapter):
+    """Reuse TLS setup only for the existing certificate-unverified mode."""
+
+    def init_poolmanager(self, connections, maxsize, block=False, **kwargs):
+        kwargs["ssl_context"] = _UNVERIFIED_CONTEXT
+        return super().init_poolmanager(connections, maxsize, block=block, **kwargs)
+
+    def proxy_manager_for(self, proxy, **kwargs):
+        kwargs["ssl_context"] = _UNVERIFIED_CONTEXT
+        return super().proxy_manager_for(proxy, **kwargs)
+
+
 class Redfish:
     """A basic, cookieless Redfish session for a single BMC."""
 
@@ -34,8 +50,11 @@ class Redfish:
         self._deadline = None
         self._etags = {}
         self.transport_errors = 0
+        self.read_error = None
         self.timeout_reason = None
         self._session = requests.Session()
+        if verify is False and hasattr(self._session, "mount"):
+            self._session.mount("https://", _UnverifiedAdapter())
         self._session.verify = verify
         self._session.auth = (user, password) if user else None
         self._session.headers.update({"Accept": "application/json"})
@@ -125,7 +144,18 @@ class Redfish:
 
     def get(self, path, timeout=None):
         """Return parsed JSON, or None if the resource is missing/unreadable."""
+        if self.read_error is not None:
+            raise self.read_error
         status, body = self.get_raw(path, timeout=timeout)
+        if status == 401:
+            self.read_error = AuthError("Redfish GET {} returned HTTP 401".format(path))
+        if status is None and self._expired():
+            self.read_error = TransportError("node deadline exceeded during Redfish GET")
+            self.read_error.abort_node = True
+            return None
+        if self.read_error is not None:
+            self.read_error.abort_node = True
+            raise self.read_error
         if status is None:
             return None
         if isinstance(body, (dict, list)):
@@ -146,6 +176,9 @@ class Redfish:
             resp = self._session.get(url, timeout=self._timeout(timeout), **flags)
         except requests.RequestException as exc:
             self.transport_errors += 1
+            if isinstance(exc, (requests.ConnectionError, requests.ConnectTimeout)):
+                self.read_error = TransportError("BMC connection failed: " + type(exc).__name__)
+                self.read_error.abort_node = True
             self._debug("GET", path, type(exc).__name__)
             if isinstance(exc, requests.Timeout) or any(
                 isinstance(arg, urllib3.exceptions.ReadTimeoutError) for arg in exc.args
@@ -166,6 +199,13 @@ class Redfish:
         else:
             self._etags.pop(url, None)
         if resp.status_code in (401, 403):
+            error = (body.get("error") or body) if isinstance(body, dict) else {}
+            messages = error.get("@Message.ExtendedInfo") or [error]
+            if any(isinstance(item, dict) and
+                   str(item.get("MessageId", "")).endswith(".PasswordChangeRequired")
+                   for item in messages):
+                self.read_error = AuthError("BMC account requires a password change")
+                self.read_error.abort_node = True
             return resp.status_code, None
         return resp.status_code, body
 

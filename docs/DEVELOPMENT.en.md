@@ -945,3 +945,27 @@ matching platform's OEM directory and register verified system models in
 `firmware_cli.ADAPTERS`. The adapter validates hardware, package, version,
 component, and power and task state, then reads the submission result.
 `check` and `update` share preflight validation. Only `update` writes.
+
+### Paired fan/PSU and bulk acceptance (mandatory)
+
+Fan and PSU queries are cluster-scale operations. Review BOTH capabilities on
+every supplied representative model and firmware: fixed endpoints, complete
+physical readings, units, zero values, alarms and fallback. One successful
+single-node capability is not model acceptance.
+
+Run automated bulk acceptance using the actual selectors and requested
+concurrency, including --jobs 200 when requested. Never silently reduce
+concurrency or inflate timeouts. Account for every node and expected reading,
+requests, failures, elapsed time and process resources. Verify slow-node
+isolation, execution budgets after queueing and transport cleanup. Persist
+per-node results incrementally. Missing supported readings or failed bulk
+acceptance blocks completion. Hardware/BMC absences require real-device
+evidence and an explicit unsupported conclusion, not a successful-read label.
+
+### NVSwitch fan scope
+
+No NVSwitch fan command is provided, and routine read audits do not probe fans.
+The tested N5500_LD (BMC 88.0002.1962) has empty fan collections and NVOS rejects
+the fan query. This is not a successful fan read or a claim about every model.
+Keep compute-tray fans and the PSU-module fans actually reported by Lite-On
+power shelves. Another NVSwitch model requires independent hardware evidence.

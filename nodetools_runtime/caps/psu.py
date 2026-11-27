@@ -270,8 +270,46 @@ def _from_direct_sensors(device, sensors):
     return rows if valid and len(rows) == len(sensors) else []
 
 
+def _from_legacy_slots(device, specification):
+    """Use verified stable MemberIds, never array positions or changing watts."""
+    import math
+    chassis, prefix, count = specification
+    if device.vars.get("chassis_id") not in (None, chassis):
+        return []
+    path = "/redfish/v1/Chassis/" + chassis + "/Power"
+    data = device.redfish.get(path)
+    if not isinstance(data, dict) or data.get("@odata.id", path) != path:
+        return []
+    supplies = data.get("PowerSupplies")
+    if not isinstance(supplies, list) or len(supplies) != count:
+        return []
+    expected = {prefix + str(i): str(i) for i in range(count)}
+    found = {}
+    for supply in supplies:
+        if not isinstance(supply, dict):
+            return []
+        ident = supply.get("MemberId")
+        value = supply.get("PowerInputWatts")
+        if (ident not in expected or ident in found
+                or not isinstance(value, (int, float)) or isinstance(value, bool)
+                or not math.isfinite(value) or value < 0):
+            return []
+        if supply.get("Metrics"):
+            return []
+        slot = expected[ident]
+        detail = dict(supply, MemberId=slot, Id=slot)
+        detail.setdefault("@odata.id", path + "#/PowerSupplies/" + ident)
+        found[ident] = _supply_reading(device.redfish, detail)
+    if found.keys() != expected.keys():
+        return []
+    return [found[ident] for ident in expected]
+
+
 def collect(device):
     steps = []
+    legacy_slots = getattr(getattr(device, "odm", None), "psu_legacy_slots", None)
+    if legacy_slots and not getattr(getattr(device, "options", None), "details", False):
+        steps.append(("oem_legacy_slots", lambda: _from_legacy_slots(device, legacy_slots)))
     direct = getattr(getattr(device, "odm", None), "psu_read_sensors", ())
     if direct:
         steps.append(("oem_direct_sensors", lambda: _from_direct_sensors(device, direct)))

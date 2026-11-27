@@ -13,6 +13,7 @@ from .nvl.dell import DellNvl
 from .nvl.delta import DeltaPowerShelf, legacy_psu_readings
 from .hgx.dgx import Dgx, DgxBlackwell
 from .hgx.hpe import HpeHgx
+from .nvl.n5500 import NvidiaN5500
 from .nvl.nvidia import NvidiaNvl
 from .nvl.hpe import HpeNvl
 from .nvl.lenovo import LenovoNvl
@@ -53,6 +54,7 @@ _HPE_NVL = HpeNvl()
 _DGX_BLACKWELL = DgxBlackwell()
 
 _PLATFORM_MODULES = {
+    ("nvl", "nvidia", "nvswitch", "gb300"): NvidiaN5500(),
     ("nvl", "dell", "compute", None): DellNvl(),
     ("nvl", "lenovo", "compute", "gb300"): LenovoNvl(),
     ("nvl", "hpe", "compute", "gb200"): _HPE_NVL,

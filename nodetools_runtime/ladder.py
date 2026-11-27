@@ -12,7 +12,9 @@ def first(steps, default=None):
     for _name, func in steps:
         try:
             result = func()
-        except NodetoolsError:
+        except NodetoolsError as exc:
+            if getattr(exc, "abort_node", False):
+                raise
             result = None
         except Exception:  # pragma: no cover - defensive
             result = None

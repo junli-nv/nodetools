@@ -2,7 +2,7 @@
 
 from ..config import DEFAULT_CHASSIS
 from ..ladder import first
-from . import common
+from . import common, fixed
 
 
 def _speed_unit(data):
@@ -145,7 +145,7 @@ def _from_host_manager(device):
 
 
 def collect(device):
-    steps = []
+    steps = [("oem_fixed", lambda: fixed.collect(device, "fan"))]
     odm = getattr(device, "odm", None)
     ipmi_first = getattr(odm, "fan_read_ipmi", False)
     if ipmi_first:

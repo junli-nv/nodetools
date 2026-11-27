@@ -54,3 +54,46 @@ debug logs. Keep BCM optional; generic inventory operations must work without it
 Preserve useful operator notes such as cmsh credential lookup instructions.
 Use /bin/bash for shell work. Do not issue power, firmware or other device
 writes as part of read-only capability validation.
+
+## Mandatory paired and bulk sensor acceptance
+
+The operator requires PSU and fan reads at cluster scale. Single-node success
+is never sufficient acceptance. For every supplied representative machine and
+model/firmware combination, review BOTH fan and PSU capabilities together.
+Record the actual endpoints, complete physical reading counts, units, zero and
+alarm handling, fallback behavior and evidence for each capability.
+
+Before declaring adaptation complete, run automated multi-node acceptance with
+the requested selectors and concurrency, including --jobs 200 when requested.
+Account for every selected node and every expected reading. Report failures,
+timeouts, HTTP/request counts, elapsed time and process resource use. Verify
+that a slow or failed node does not suppress other nodes' results, that queued
+nodes receive their own execution budget, and that transports close after use.
+Persist per-node results incrementally so interruptions cannot erase coverage.
+Never hide failure by silently lowering concurrency or by inflating timeouts.
+A supported capability with missing readings or failed bulk acceptance blocks
+completion. A capability absent from hardware or BMC needs actual readback
+evidence and an explicit unsupported conclusion; it is not a successful read.
+No release/model-complete claim without the paired coverage and bulk evidence.
+
+## Authoritative topology clarification
+
+Compute-tray fan reads are mandatory on BOTH HGX and NVL. Missing compute fan
+readings are a failed/incomplete adaptation, never an unsupported exception.
+HGX compute trays contain physical PSUs. NVL compute trays and NVSwitch trays
+do not contain physical PSUs; rack PSUs are on power shelves.
+The operator explicitly permits NVL nodepsu to use HSC power as a proxy.
+Label the HSC source and distinguish reported power, input/output voltage and
+independently reported input/output watts. Do not invent a missing output.
+Investigate NVSwitch HSC/PDB telemetry too: an empty Redfish PSU collection
+does not establish the absence of HSC telemetry in BMC, NVOS or other exposed
+read-only interfaces. Preserve the distinction between BMC and NVOS access.
+These topology rules qualify the mandatory paired/bulk acceptance section.
+
+## NVSwitch fan scope
+
+Do not register NVSwitch fan commands or include fan probes in its routine
+read audit. The tested N5500_LD BMC 88.0002.1962 exposes empty fan collections
+and NVOS rejects the fan query. This is not a successful fan read.
+Keep compute-tray fans and actual power-supply module fans on power shelves.
+Reconsider another switch model only with independently verified evidence.

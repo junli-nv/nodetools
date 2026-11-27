@@ -9,6 +9,12 @@ def test_nvswitch_fan_command_is_not_registered():
         parse_args(["nvswfan"])
     assert exc.value.code == 2
 
+    from nodetools_runtime.read_audit import cases_for
+
+    assert all(case["cap"] != "fan" for case in cases_for("nvswitch"))
+    for role in ("compute", "powershelf"):
+        assert any(case["cap"] == "fan" for case in cases_for(role))
+
 
 def test_command_help_focuses_on_actions(capsys):
     texts = {}

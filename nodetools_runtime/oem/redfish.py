@@ -126,7 +126,7 @@ class ReadOnlyCompute(RedfishDiscovery):
             raise CapUnsupported("Redfish did not report BIOS attributes")
         return self._label_lines(device, [
             "{}={}".format(key, common.jq(value)) for key, value in sorted(attributes.items())
-        ])
+        ] or (["No pending BIOS settings"] if action == "pending" else []))
 
     def bootorder(self, device, action):
         boot = self._system(device).get("Boot") or {}

@@ -278,9 +278,10 @@ def collect(device, action, options):
     family = getattr(options, "netboot_family", None) or ("ipv4" if action == "prefer" else None)
     path = system_path(device)
     system = common.resource(device, path, required=True)
-    fixed = common.resource(device, path + SMC_ORDER) if device.odm.name == "smc" else {}
+    fixed = common.resource(device, path + SMC_ORDER) if device.odm.name == "smc" and getattr(device.odm, "probe_fixed_boot_order", True) else {}
     chassis = "/redfish/v1/Chassis/" + ("Chassis_0" if model.platform_for(device) == "nvl" else "1")
-    adapters = nics.inventory(device, system, chassis)
+    adapters = (nics.inventory(device, system, chassis)
+                if getattr(device.odm, "read_nic_inventory", True) else {})
     if device.odm.name == "aivres":
         result = aivres_preferences(device, path, adapters, filters, family, action)
         if result is not None:

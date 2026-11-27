@@ -2,7 +2,7 @@
 
 from ..config import DEFAULT_CHASSIS
 from ..ladder import first
-from . import common
+from . import common, fixed
 
 _TEMP_HINTS = ("temp", "inlet", "exhaust", "therm", "t_core")
 
@@ -135,7 +135,7 @@ def _from_ipmi(device):
 
 
 def collect(device):
-    steps = []
+    steps = [("oem_fixed", lambda: fixed.collect(device, "temp"))]
     fixed_chassis = device.vars.get("temp_chassis_id")
     if fixed_chassis:
         steps.append(("fixed_thermal", lambda: _from_thermal(device, (fixed_chassis,))))

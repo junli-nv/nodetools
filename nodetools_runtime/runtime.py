@@ -131,6 +131,10 @@ class Runner:
         if self.capability == "temp" and host.get("temp_chassis_id"):
             return False
         adapter = oem.for_device(model.Device(host), self.capability)
+        if (host.role == "nvswitch" and self.capability == "psu"
+                and host.vars.get("nvswitch_sensor_backend") == "bmc"
+                and getattr(adapter, "bmc_psu_collection", None)):
+            return False
         return self.capability not in getattr(adapter, "inventory_fixed_caps", ())
 
     def _result(self, host, readings=None, error=None, device=None):
@@ -178,8 +182,13 @@ class Runner:
             if host.role == "nvswitch" and self.capability in ("psu", "temp"):
                 if self.options.action:
                     raise CapUnsupported("NVOS sensor queries are read-only")
-                readings = nvos.collect(host, self.capability, self.options)
-                return self._result(host, readings=readings)
+                backend = host.vars.get("nvswitch_" + self.capability + "_backend",
+                                        host.vars.get("nvswitch_sensor_backend", "nvos")).lower()
+                if backend == "nvos":
+                    readings = nvos.collect(host, self.capability, self.options)
+                    return self._result(host, readings=readings)
+                if backend != "bmc":
+                    raise NodetoolsError("nvswitch_sensor_backend must be nvos or bmc")
             if not host.address:
                 return self._result(host, error="no BMC address (missing from inventory)")
             device = self._device(host)
@@ -205,8 +214,29 @@ class Runner:
                 device.odm = oem.for_device(device, self.capability)
             if device.vars.get("chassis_id"):
                 device.ipmi = None
+            if (host.role == "nvswitch" and self.capability == "psu"
+                    and host.vars.get("nvswitch_sensor_backend") == "bmc"
+                    and getattr(device.odm, "bmc_psu_collection", None)):
+                chassis = device.vars.get("chassis_id") or device.odm.read_chassis_id
+                path = device.odm.bmc_psu_collection.format(chassis)
+                collection = device.redfish.get(path)
+                if (isinstance(collection, dict)
+                        and collection.get("@odata.id", path) == path
+                        and collection.get("Members") == []
+                        and collection.get("Members@odata.count") == 0):
+                    return self._result(host, error=(
+                        "BMC exposes no local PSU resources at {}; query the power shelf. "
+                        "NVSwitch chip power is not PSU input power."
+                    ).format(path), device=device)
+                raise CapUnsupported("BMC PSU layout requires validation at " + path)
             collector = caps.collector_for(self.capability)
             readings = collector(device)
+            if getattr(device.redfish, "read_error", None) is not None:
+                raise device.redfish.read_error
+            from .caps.fixed import completeness_error
+            incomplete = completeness_error(device, self.capability, readings)
+            if incomplete:
+                return self._result(host, readings=readings, error=incomplete, device=device)
             if not readings:
                 return self._result(
                     host, error="no readings (BMC unreachable or backend mismatch)", device=device
@@ -250,12 +280,14 @@ class InfoRunner:
         }
 
     def _needs_profile(self, host):
-        if (host.role != "compute" or getattr(self.options, "no_cache", False)
+        if (getattr(self.options, "no_cache", False)
                 or getattr(self.options, "bios_updates", None)
                 or self.options.action not in _INFO_READ_ACTIONS.get(self.subject, ())
                 or not all(host.vars.get(key) for key in ("platform", "oem", "generation"))):
             return True
         device = model.Device(host)
+        if host.role != "compute":
+            return not getattr(oem.for_device(device), "read_management_fixed", False)
         platform = model.platform_for(device)
         if platform == "unknown" or model.generation_for(device) == "unknown":
             return True
@@ -281,6 +313,9 @@ class InfoRunner:
         try:
             device = self._device(host)
             device.odm = oem.for_device(device)
+            if (getattr(device.odm, "read_management_fixed", False)
+                    and self.options.action in _INFO_READ_ACTIONS.get(self.subject, ())):
+                device.redfish.get = lru_cache(maxsize=None)(device.redfish.get)
             supported = getattr(device.odm, "info_subjects", None)
             network_discovery = self.subject == "netboot" and self.options.action != "pxe"
             if supported is not None and self.subject not in supported and not network_discovery:
@@ -292,6 +327,8 @@ class InfoRunner:
                 lines = netboot.apply(device, plans[host.name])
             else:
                 lines = self.handler(device, self.options.action, self.options)
+            if getattr(device.redfish, "read_error", None) is not None:
+                raise device.redfish.read_error
             if isinstance(lines, netboot.Plan):
                 return dict(self._result(host, lines=netboot.describe(device, lines)), netboot_plan=lines)
             if not lines and device.transport_errors:

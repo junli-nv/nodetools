@@ -67,6 +67,8 @@ def test_generic_aliases_return_six_complete_supplies():
 def test_liteon_reads_only_canonical_view_and_merges_legacy_power():
     device, rf = shelf()
     device.odm = LiteOnPowerShelf()
+    from types import SimpleNamespace
+    device.options = SimpleNamespace(details=True)
     rows = psu.collect(device)
     assert len(rows) == 6
     assert all(r["input_watts"] is not None for r in rows)
@@ -145,3 +147,12 @@ def test_chassis_defaults_remain_available_when_discovery_fails():
     device, rf = shelf()
     rf.data = {}
     assert common.chassis_list(device, ("1", "DGX", "1")) == ["1", "DGX"]
+
+
+def test_liteon_bulk_normal_read_is_one_get_with_stable_slot_ids():
+    device, rf = shelf()
+    device.odm = LiteOnPowerShelf()
+    rows = psu.collect(device)
+    assert [r["id"] for r in rows] == [str(i) for i in range(6)]
+    assert all(r["input_watts"] is not None for r in rows)
+    assert rf.requests == ["/redfish/v1/Chassis/powershelf/Power"]
