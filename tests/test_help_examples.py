@@ -43,6 +43,8 @@ def catalog():
         name = "nodetools_runtime." + path.stem
         module = importlib.import_module(name)
         roots[name] = capture(lambda: module.main(["--help"]))
+        if " " not in roots[name].prog:
+            roots.setdefault(roots[name].prog, roots[name])
     for path in ROOT.iterdir():
         if not path.is_file() or path.is_symlink() or not path.stat().st_mode & 0o111:
             continue
@@ -150,21 +152,21 @@ def test_package_entrypoints_are_in_help_catalog():
 
 def test_bmc_help_covers_every_action_and_user_workflow():
     roots = catalog()
-    parser = roots["nodebmc"]
+    root = roots["nodeos"]
+    parser = next(a for a in root._actions
+                  if isinstance(a, argparse._SubParsersAction)).choices["bmc"]
     namespaces = [ns for _, tokens in examples(parser)
                   for ns, _ in parse_example(tokens, routes(roots))]
     choices = next(a.choices for a in parser._actions if a.dest == "action")
     assert set(choices) <= {ns.action for ns in namespaces}
-    users = [ns for ns in namespaces if ns.action == "user"]
-    assert any(not ns.apply and not ns.verify_only for ns in users)
-    assert any(ns.apply and ns.sol for ns in users)
-    assert any(ns.apply and ns.password_env and ns.jobs for ns in users)
-    assert any(ns.apply and ns.id is not None for ns in users)
-    assert any(ns.verify_only and ns.password_env for ns in users)
-    assert any("," in ns.nodes and "[" in ns.nodes for ns in users)
-    assert any(ns.action == "time" and ns.set is not None for ns in namespaces)
-    for text in ("previews by default", "export NEW_BMC_PASSWORD", "NVSwitch skips SOL"):
-        assert text in parser.format_help()
+    assert any(ns.action == "adduser" and ns.account_password for ns in namespaces)
+    assert any(ns.action == "moduser" and ns.account_password for ns in namespaces)
+    assert any(ns.action == "deluser" and ns.account and not ns.account_password for ns in namespaces)
+    assert any(ns.action == "listuser" and not ns.account for ns in namespaces)
+    assert any(ns.action == "listuser" and ns.account for ns in namespaces)
+    assert any("[" in ns.nodes for ns in namespaces)
+    assert "--channel" not in parser.format_help()
+    assert "--id" not in parser.format_help()
 
 
 @pytest.mark.parametrize("program", [

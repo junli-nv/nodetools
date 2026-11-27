@@ -651,6 +651,9 @@ def main(argv=None):
         program = os.path.basename(sys.argv[0])
         if program == "nodefw" or program in management_commands or program in NODE_PROGRAMS:
             argv = [program] + list(argv)
+    if argv and argv[0] == "nodeos":
+        from . import os_cli
+        return os_cli.main(argv[1:])
     if argv and argv[0] == "nodefw":
         from . import firmware_cli
 

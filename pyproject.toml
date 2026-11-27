@@ -13,6 +13,7 @@ authors = [{ name = "junli-nv", email = "junliz@nvidia.com" }]
 dependencies = ["requests>=2.20"]
 
 [project.scripts]
+nodeos = "nodetools_runtime.os_cli:main"
 nodetools = "nodetools_runtime.cli:main"
 nodelist = "nodetools_runtime.cli:main"
 nodeping = "nodetools_runtime.cli:main"

@@ -18,6 +18,8 @@ def fake_ipmi(existing="", fail=False):
         assert argv[:3] == ["ipmitool", "-I", "open"]
         if fail and args[:3] == ["user", "set", "password"]:
             return NS(returncode=1, stdout="", stderr="sensitive")
+        if args[:2] == ["channel", "info"]:
+            return NS(returncode=0, stdout="Channel Medium Type : 802.3 LAN", stderr="")
         if args[:2] == ["sol", "info"]:
             return NS(returncode=0, stdout="Enabled : true\n", stderr="")
         if args[:3] == ["sol", "payload", "status"]:
@@ -87,7 +89,7 @@ def test_mixed_cli_uses_same_agent_and_compute_only_sol(tmp_path, monkeypatch, c
         assert password not in command and not options.debug
         data = json.loads(kwargs["input_text"])
         assert data["password"] == password
-        assert data["sol"] == (host.role == "compute")
+        assert data["sol"] == (host.role == "compute" and apply)
         call, calls = fake_ipmi("nvis")
         result = agent.provision(data, call)
         requests.append((host.name, calls))
@@ -95,17 +97,15 @@ def test_mixed_cli_uses_same_agent_and_compute_only_sol(tmp_path, monkeypatch, c
 
     monkeypatch.setattr(tool.ssh, "run", ssh)
     monkeypatch.setattr(tool, "verify", lambda host, *args: verifications.append(host.name) or "HTTP 200")
-    argv = ["nodebmc", "cp,sw", "user", "-i", str(inventory), "--name", "nvis",
-            "--sol", "--password-env", "TEST_ACCOUNT_PASSWORD"]
-    if apply:
-        argv.append("--apply")
+    argv = ["nodeos", "cp,sw", "bmc", "adduser" if apply else "checkuser",
+            "nvis", password, "-i", str(inventory)]
     assert cli.main(argv) == 0
     output = capsys.readouterr().out
     assert password not in output and len(output.splitlines()) == 2
     assert len(requests) == 2
-    assert len(verifications) == (2 if apply else 0)
+    assert len(verifications) == 2
     if not apply:
-        assert all(calls == [["user", "list", "1"]] for _, calls in requests)
+        assert all(calls == [["channel", "info", "1"], ["user", "list", "1"]] for _, calls in requests)
 
 
 def test_ssh_credentials_and_new_password_are_not_in_argv(monkeypatch):

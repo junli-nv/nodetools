@@ -109,3 +109,11 @@ For writes, explain password/environment prerequisites and show application.
 Run tests/test_help_examples.py: enumerate the command trees and public
 auxiliary entries, require visible examples, and parse their arguments without
 executing device operations. Check new action coverage, not just Examples text.
+
+## Simple OS operations
+
+nodeos is the unified OS SSH entrypoint; bmc is one resource group.
+Keep handlers separate and reuse OS transport. BMC CRUD accepts positional
+usernames/passwords. Detect slots, channels and validation resources internally.
+Show short workflows in normal help and technical overrides in --help-full.
+Keep nodebmc for BMC-interface operations. Test debug and help with each action.

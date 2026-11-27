@@ -334,7 +334,7 @@ def build_parser():
     parser = LocalizedArgumentParser(
         prog="nodetools",
         description="Inspect and manage HGX and NVL nodes over Redfish and IPMI.",
-        epilog=("Run COMMAND --help for actions. Also available: nodefw, nodetask, nodebmc, nodefru. "
+        epilog=("Run COMMAND --help for actions. Also available: nodefw, nodetask, nodebmc, nodefru, nodeos. "
                 "Common inventory, authentication, and timeout options are in README.md."),
     )
     parser.formatter_class = argparse.RawDescriptionHelpFormatter

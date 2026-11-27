@@ -1,44 +1,31 @@
 # 通过 OS 管理 BMC 用户
 
-compute tray 和 NVSwitch 共用 `nodebmc HOSTS user`，通过 OS SSH 调用本机
-`ipmitool -I open`，不依赖原 BMC root 的 Redfish 登录权限。
+`nodeos` 是 OS 操作的统一入口；`bmc` 是当前功能组，通过 OS SSH 调用本机 IPMI。
+`nodebmc` 保留 BMC 接口的信息、时间和重启功能。
 
 ```bash
-# 预览，不修改设备
-./nodebmc 'COMPUTE,SWITCH' user --name nvis --sol
-
-# 交互输入新账号密码，再执行
-read -r -s -p 'New BMC password: ' NEW_BMC_PASSWORD
-export NEW_BMC_PASSWORD
-./nodebmc 'COMPUTE,SWITCH' user --name nvis --sol --password-env NEW_BMC_PASSWORD --apply
-unset NEW_BMC_PASSWORD
+./nodeos 'nvsw[01-09]' bmc adduser nvis 'ExamplePass123!'
+./nodeos nvsw01 bmc deluser nvis
+./nodeos nvsw01 bmc moduser nvis 'NewExample123!'
+./nodeos -x nvsw01 bmc listuser
 ```
 
-将 `--apply` 换成 `--verify-only` 可只读检查现有账号及 Redfish。
-默认复用唯一同名账号，否则优先选择空闲 ID 8，再选择其他空槽位。
-可用 `--id`、`--channel` 指定槽位及通道。槽位冲突、重名或保留 ID 会停止该节点。
-工具不修改 root，不删除其他账号，不自动改写 inventory。
-对已有同名账号执行 apply 会更新其密码和管理员权限。
+listuser 后可跟用户名筛选。checkuser 用户名 密码可只读验证已有账号。
+adduser 自动复用同名账号或选择空槽位，配置管理员权限；compute 配置 SOL，
+NVSwitch 跳过。moduser 只改密码并保留权限，目标必须存在。
+deluser 先禁用、撤权、清用户名，再回读；不存在时视为已删除。
+不修改或删除 root 与保留槽位，不自动改写 inventory。
 
-`--sol` 在 compute 上启用 SOL 通道及用户 payload 权限并回读。
-NVSwitch 跳过所有 SOL 操作，混合批次也如此；不修改 BIOS 串口设置。
-`--jobs` 指定并发，默认 4；逐机输出 JSON，任一失败返回非零。
-部分成功会列出已完成步骤，不自动重试或回滚密码变更。
+ID、通道、验证路径自动处理。已知路径直读，未知布局用目标账号有限发现。
+增改后的 Redfish 验证失败会报告已完成步骤，不自动重试。
+普通帮助展示常见写法；`nodeos HOST bmc --help-full` 提供高级覆盖参数。
+OS 凭据沿用 role_os_*、os_* 和 SSH 密钥；非 root 需要非交互 sudo。
+设备需要 python3 和 ipmitool，headnode 密码 SSH 登录需要 sshpass。
+-x 显示 SSH 目标、IPMI 步骤和验证状态，密码写入脱敏。
 
-OS 登录优先使用角色字段 `compute_os_*`、`nvswitch_os_*`，
-然后使用通用 `os_host`、`os_user`、`os_password`/`os_pass`。
-host 默认节点名，账号未配置时使用当前执行账号，支持 SSH 密钥。
-可用 `--os-user`、`--os-password-env` 覆盖；OS 和 BMC 凭据独立。
-非 root OS 用户需要非交互 sudo。设备 OS 需要 python3 和 ipmitool；
-密码 SSH 登录还需要 headnode 安装 sshpass。
-新 BMC 密码通过 SSH stdin 传递，不写入 SSH 命令文本或代码，最长 20 UTF-8 字节，
-不接受控制字符。Redfish 直读 inventory system_id 或 OEM 固定资源；
-必要时用 `--verify-path /redfish/v1/Systems/RESOURCE` 指定。
+功能组注册在 os_cli.RESOURCES，各自负责参数和处理，共用 OS SSH 传输。
+账号事务在设备端互斥，避免并发争用槽位。
+IPMI 参考：[官方实现](https://github.com/ipmitool/ipmitool/blob/master/lib/ipmi_user.c)。
 
-## 验证范围
-
-451 项自动测试通过。新增测试覆盖真实 CLI 派发、共享 SSH stdin、角色差异、
-槽位冲突、写入顺序、部分失败、SOL 回读和 Redfish 错误路径。
-两类样机均通过 OS/IPMI 只读预览；NVSwitch 现有 nvis 的 Redfish 验证通过。
-compute 样机 SOL 已启用，但 headnode 到其正确 BMC 地址的 HTTPS 连接超时。
-本次未执行实机账号写入，不能声称写入和所有机型均已认证。
+本轮自动测试覆盖 CRUD、保护、调试和帮助。按用户要求停止访问旧样机；
+未完成实机增删改验证，不据此宣称所有固件均已认证。

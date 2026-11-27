@@ -830,7 +830,7 @@ PSU 和风扇用于集群大批量读取。对用户提供的每种验收机器�
 
 ### Shared OS SSH for BMC user management
 
-`nodebmc HOSTS user` reuses the existing NVOS SSH implementation through
+`nodeos HOSTS bmc COMMAND` reuses the existing NVOS SSH implementation through
 transport/ssh.py, adding stdin payload support without changing existing
 NVOS telemetry calls. Local-IPMI account operations are shared; SOL is
 compute-only. Keep this flow independent of BMC root authentication.
