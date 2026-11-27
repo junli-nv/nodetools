@@ -823,3 +823,11 @@ PSU 和风扇用于集群大批量读取。对用户提供的每种验收机器�
 这不计为风扇读取成功，也不推断所有其他机型均无风扇。
 保留 compute tray 风扇，以及 Lite-On powershelf 实际返回的 PSU 模块内置风扇。
 其他 NVSwitch 机型只有取得独立实机证据后才考虑加入。
+
+### Shared OS SSH for BMC user management
+
+`nodebmc HOSTS user` reuses the existing NVOS SSH implementation through
+transport/ssh.py, adding stdin payload support without changing existing
+NVOS telemetry calls. Local-IPMI account operations are shared; SOL is
+compute-only. Keep this flow independent of BMC root authentication.
+Usage, tests and hardware validation limits: [BMC-USERS.md](BMC-USERS.md).

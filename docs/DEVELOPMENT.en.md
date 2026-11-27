@@ -969,3 +969,11 @@ The tested N5500_LD (BMC 88.0002.1962) has empty fan collections and NVOS reject
 the fan query. This is not a successful fan read or a claim about every model.
 Keep compute-tray fans and the PSU-module fans actually reported by Lite-On
 power shelves. Another NVSwitch model requires independent hardware evidence.
+
+### Shared OS SSH for BMC user management
+
+`nodebmc HOSTS user` reuses the existing NVOS SSH implementation through
+transport/ssh.py, adding stdin payload support without changing existing
+NVOS telemetry calls. Local-IPMI account operations are shared; SOL is
+compute-only. Keep this flow independent of BMC root authentication.
+Usage, tests and hardware validation limits: [BMC-USERS.md](BMC-USERS.md).

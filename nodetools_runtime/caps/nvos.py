@@ -1,11 +1,8 @@
 """Read NVOS telemetry over SSH."""
 
 import json
-import os
-import subprocess
 import time
 
-from ..diagnostics import debug
 from ..errors import CapUnsupported, TransportError
 from . import common
 
@@ -29,61 +26,9 @@ done
 
 
 def _ssh(host, options, command, deadline):
-    address = host.vars.get("nvswitch_os_host") or host.name
-    user = options.user or host.vars.get("nvswitch_os_user")
-    password = options.password
-    password_source = "--password"
-    if password is None:
-        password_source = "nvswitch_os_password"
-        if password_source not in host.vars:
-            password_source = "nvswitch_os_pass"
-        password = host.vars.get(password_source)
-        if password is None:
-            password_source = "unset"
-    if not user:
-        raise CapUnsupported("configure nvswitch_os_user for NVOS SSH")
-    remaining = min(options.timeout, deadline - time.monotonic())
-    if remaining <= 0:
-        raise TransportError("NVOS node deadline exceeded")
-    argv = [
-        "ssh", "-o", "StrictHostKeyChecking=accept-new",
-        "-o", "ConnectTimeout={}".format(max(1, int(remaining))),
-        "-o", "NumberOfPasswordPrompts=1", "-l", user, "--", address, command,
-    ]
-    enabled = getattr(options, "debug", False)
-    label = "nvos:" + host.name
-    query = "read lm5066i hwmon" if command == _HSC else command
-    if enabled:
-        argv.insert(1, "-v")
-        debug(True, label, f"SSH {address}: {query} "
-              f"(user={user!r}, password={password!r}, password_source={password_source})")
-    kwargs = dict(capture_output=True, text=True, timeout=remaining, stdin=subprocess.DEVNULL)
-    try:
-        if not password:
-            argv[1:1] = ["-o", "BatchMode=yes"]
-            result = subprocess.run(argv, **kwargs)
-        else:
-            secret = (password + "\n").encode()
-            if len(secret) > 4096:
-                raise TransportError("NVOS SSH password is too long")
-            reader, writer = os.pipe()
-            with os.fdopen(reader, "rb") as pipe:
-                with os.fdopen(writer, "wb") as stream:
-                    stream.write(secret)
-                result = subprocess.run(
-                    ["sshpass", "-d", str(pipe.fileno()), *argv], pass_fds=(pipe.fileno(),), **kwargs
-                )
-        if enabled:
-            for line in result.stderr.splitlines():
-                if line.startswith("debug1: Connecting to "):
-                    debug(True, label, line.removeprefix("debug1: "))
-            debug(True, label, f"SSH exit={result.returncode}")
-        return result
-    except FileNotFoundError as exc:
-        raise TransportError("NVOS SSH requires OpenSSH and sshpass for password login") from exc
-    except subprocess.TimeoutExpired as exc:
-        debug(enabled, label, "SSH timed out")
-        raise TransportError("NVOS SSH query timed out") from exc
+    from ..transport.ssh import run
+    return run(host, options, command, deadline,
+               query_label="read lm5066i hwmon" if command == _HSC else None)
 
 
 def collect(host, capability, options):

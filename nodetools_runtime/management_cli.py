@@ -10,7 +10,7 @@ from .subjects import management
 
 DESCRIPTIONS = {
     "nodetask": "Read Redfish task states and progress.",
-    "nodebmc": "Read BMC information, set the BMC clock, or restart the BMC.",
+    "nodebmc": "Read BMC information, manage users through OS IPMI, set the clock, or restart BMC.",
     "nodefru": "Read the system serial number.",
 }
 
@@ -41,9 +41,12 @@ def main(argv, prog):
         cli.add_argument("task_id", metavar="TASK_ID", nargs="?", help="show task details")
         cli.add_argument("--task", help="show task details by ID")
     if prog == "nodebmc":
-        cli.add_argument("action", nargs="?", choices=("info", "time", "reset"), default="info",
+        cli.add_argument("action", nargs="?", choices=("info", "time", "reset", "user"), default="info",
                          help="info shows firmware and clock; time reads the clock; reset restarts the BMC")
         cli.add_argument("--set", type=datetime_with_zone, help="with time, set an ISO 8601 timestamp with offset")
+    if prog == "nodebmc":
+        from . import bmc_user_cli
+        bmc_user_cli.add_arguments(cli)
     if not argv:
         cli.print_help()
         return 0
@@ -52,6 +55,9 @@ def main(argv, prog):
         cli.error("specify TASK_ID or --task, not both")
     if prog == "nodebmc" and args.set is not None and args.action != "time":
         cli.error("--set requires the time action")
+
+    if prog == "nodebmc" and args.action == "user":
+        return bmc_user_cli.execute(args, cli)
 
     def run(device, args):
         if prog == "nodetask":
