@@ -49,6 +49,8 @@ def test_archive_replays_match_certification(directory, sample, monkeypatch, cap
     monkeypatch.setattr(runtime, "Ipmi", no_network)
     archive = directory / sample["file"]
     snapshot = redfish_snapshot.load(archive)
+    matching = [record for record in CERTIFICATES
+                if (record["model"], record["bmc_firmware"]) == (sample["model"], sample["bmc_version"])]
     records = {record["capability"]: record for record in CERTIFICATES
                if (record["model"], record["bmc_firmware"]) == (sample["model"], sample["bmc_version"])}
     verified = {replay["capability"] for replay in sample["verified_replays"]}
@@ -63,12 +65,22 @@ def test_archive_replays_match_certification(directory, sample, monkeypatch, cap
         assert all(redfish_snapshot.resource_path(path) not in snapshot["resources"]
                    for path in records[cap]["direct_requests"])
     assert verified | gaps | nvos | private == set(records)
+    expected_variants = {(r["capability"], tuple(r.get("options", [])))
+                         for r in matching if r["capability"] not in gaps | nvos | private}
+    captured_variants = {(r["capability"], tuple(r.get("options", [])))
+                         for r in sample["verified_replays"]}
+    assert captured_variants == expected_variants
 
     for replay in sample["verified_replays"]:
-        record = records[replay["capability"]]
+        record = next(record for record in matching
+                      if record["capability"] == replay["capability"]
+                      and record.get("options", []) == replay.get("options", []))
         assert replay["readings"] == record["expected_rows"]
         assert replay["exact_get_paths"] == record["direct_requests"]
         assert len(replay["exact_get_paths"]) == record["request_count"]
+        if sample.get("role") == "nvswitch" and record["capability"] == "temp":
+            verify_switch_redfish(snapshot, record)
+            continue
         args = ["redfish", "replay", str(archive), record["command"],
                 "--expect-rows", str(replay["readings"]), *replay.get("options", [])]
         if "system_model" in replay:
@@ -87,3 +99,32 @@ def test_archive_replays_match_certification(directory, sample, monkeypatch, cap
             if status is None or not 200 <= status < 300:
                 unavailable[path] = status
         assert unavailable and unavailable == gap["unavailable_gets"]
+
+
+def test_every_certified_model_firmware_has_an_archive_or_explicit_gap():
+    certified = {(r["model"], r["bmc_firmware"]) for r in CERTIFICATES}
+    published = {(s["model"], s["bmc_version"])
+                 for m in MANIFESTS.values() for s in m["samples"]}
+    gaps = {(s["model"], s["bmc_version"])
+            for m in MANIFESTS.values() for s in m.get("missing_archives", [])}
+    assert not (published & gaps)
+    assert certified <= published | gaps, "Certified hardware is missing its Redfish archive"
+
+
+def verify_switch_redfish(snapshot, record):
+    from nodetools_runtime.arguments import parse_args
+    from nodetools_runtime.inventory import Host
+    transport = redfish_snapshot.Replay(snapshot)
+    host = Host("snapshot", "snapshot", snapshot["device"])
+    options = cli.Options(parse_args([record["command"], host.name]))
+    def factory(selected):
+        return runtime.build_device(
+            selected, options, apply_deadline=False,
+            load_profile=runner._needs_profile(selected),
+            redfish_factory=lambda *a, **k: transport,
+            ipmi_factory=lambda *a, **k: None)
+    runner = runtime.Runner(record["capability"], options, device_factory=factory)
+    result = runner._one(host)
+    assert result["error"] is None
+    assert len(result["readings"]) == record["expected_rows"]
+    assert transport.requests == [(path, 200) for path in record["direct_requests"]]

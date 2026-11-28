@@ -107,11 +107,15 @@ def build_device(host, options, apply_deadline=True, load_profile=True, *,
     # Expose run options to collectors that need a parameter (e.g. the inlet
     # target/tolerance in ``caps.inlet``); most collectors ignore this.
     device.options = options
-    if load_profile:
-        if getattr(options, "no_cache", False):
-            device.identity = scan.read_identity(device.redfish, device.vars)
-        else:
-            device.profile = scan.load(device)
+    try:
+        if load_profile:
+            if getattr(options, "no_cache", False):
+                device.identity = scan.read_identity(device.redfish, device.vars)
+            else:
+                device.profile = scan.load(device)
+    except BaseException:
+        device.close()
+        raise
     return device
 
 

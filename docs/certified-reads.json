@@ -5,7 +5,7 @@
     {
       "id": "smc_gb300_psu",
       "status": "verified",
-      "model": "Supermicro GB NVL / GB300 1CPU:2GPU Board PC",
+      "model": "GB NVL",
       "bmc_firmware": "70.02.02.01",
       "configuration": {
         "platform": "nvl",
@@ -36,7 +36,7 @@
     {
       "id": "liteon_pf1333_psu",
       "status": "verified",
-      "model": "Lite-On PF-1333-7RB / PF-1333-9RB / CM-14MP-1RB",
+      "model": "PF-1333-9RB",
       "bmc_firmware": "r1.3.9",
       "configuration": {
         "platform": "nvl",
@@ -65,7 +65,7 @@
     {
       "id": "smc_gb300_fan",
       "status": "verified",
-      "model": "Supermicro GB NVL / GB300 1CPU:2GPU Board PC",
+      "model": "GB NVL",
       "bmc_firmware": "70.02.02.01",
       "configuration": {
         "platform": "nvl",
@@ -95,7 +95,7 @@
     {
       "id": "smc_gb300_temp",
       "status": "verified",
-      "model": "Supermicro GB NVL / GB300 1CPU:2GPU Board PC",
+      "model": "GB NVL",
       "bmc_firmware": "70.02.02.01",
       "configuration": {
         "platform": "nvl",
@@ -133,7 +133,7 @@
     {
       "id": "liteon_pf1333_fan",
       "status": "verified",
-      "model": "Lite-On PF-1333-9RB / CM-14MP-1RB",
+      "model": "PF-1333-9RB",
       "bmc_firmware": "r1.3.9",
       "configuration": {
         "platform": "nvl",
@@ -162,7 +162,7 @@
     {
       "id": "liteon_pf1333_temp",
       "status": "verified",
-      "model": "Lite-On PF-1333-9RB / CM-14MP-1RB",
+      "model": "PF-1333-9RB",
       "bmc_firmware": "r1.3.9",
       "configuration": {
         "platform": "nvl",
@@ -191,7 +191,7 @@
     {
       "id": "smc_gb300_inlet",
       "status": "verified",
-      "model": "Supermicro GB NVL / GB300 1CPU:2GPU Board PC",
+      "model": "GB NVL",
       "bmc_firmware": "70.02.02.01",
       "configuration": {
         "platform": "nvl",
@@ -221,7 +221,7 @@
     {
       "id": "smc_gb300_monitor",
       "status": "verified",
-      "model": "Supermicro GB NVL / GB300 1CPU:2GPU Board PC",
+      "model": "GB NVL",
       "bmc_firmware": "70.02.02.01",
       "configuration": {
         "platform": "nvl",
@@ -254,7 +254,7 @@
     {
       "id": "liteon_pf1333_psu_details",
       "status": "verified",
-      "model": "Lite-On PF-1333-9RB / CM-14MP-1RB",
+      "model": "PF-1333-9RB",
       "bmc_firmware": "r1.3.9",
       "configuration": {
         "platform": "nvl",
@@ -293,7 +293,7 @@
     {
       "id": "nvidia_n5500_temp",
       "status": "verified",
-      "model": "NVIDIA N5500_LD",
+      "model": "N5500_LD",
       "bmc_firmware": "88.0002.1962",
       "configuration": {
         "platform": "nvl",
@@ -327,7 +327,7 @@
     {
       "id": "nvidia_n5500_hsc",
       "status": "verified",
-      "model": "NVIDIA N5500_LD / lm5066i HSC",
+      "model": "N5500_LD",
       "bmc_firmware": "88.0002.1962",
       "transport": "nvos_ssh",
       "configuration": {
@@ -1924,6 +1924,132 @@
       "live_validation": "2026-11-28: configured default readback on the GB300 NVL rack",
       "unverified_scope": "Other firmware, and chassis inventories with a different advertised topology. Chassis GET order varies in parallel live reads.",
       "adapter": "nodetools_runtime.oem.nvl.wistron.WistronGb300",
+      "options": [
+        "--details"
+      ]
+    },
+    {
+      "id": "liteon_pf1333_7rb_psu",
+      "status": "verified",
+      "model": "PF-1333-7RB",
+      "bmc_firmware": "r1.3.9",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "liteon",
+        "role": "powershelf",
+        "generation": "gb300"
+      },
+      "command": "pspsu",
+      "capability": "psu",
+      "direct_requests": [
+        "/redfish/v1/Chassis/powershelf/Power"
+      ],
+      "request_count": 1,
+      "expected_rows": 6,
+      "interpretation": "Six stable powerdevice0..5 IDs, validated against modern identities by serial; array order is not slot order",
+      "fallback": "If the preferred view is unavailable, use discovered chassis and stable physical identities; preserve explicit chassis_id.",
+      "fixture": "liteon_pf1333_psu",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: separate PF-1333-7RB normal/default and detailed readback; same exact endpoint/count contract.",
+      "unverified_scope": [
+        "other capabilities not covered by this record",
+        "all writes"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.liteon.LiteOnPowerShelf"
+    },
+    {
+      "id": "liteon_pf1333_7rb_fan",
+      "status": "verified",
+      "model": "PF-1333-7RB",
+      "bmc_firmware": "r1.3.9",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "liteon",
+        "role": "powershelf",
+        "generation": "gb300"
+      },
+      "command": "psfan",
+      "capability": "fan",
+      "direct_requests": [
+        "/redfish/v1/Chassis/powershelf/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 6,
+      "interpretation": "Firmware-specific complete fan readings; preserve units and absent-slot nulls",
+      "fallback": "Reject incomplete or invalid fixed sets; use the capability ladder and honor explicit chassis selection.",
+      "fixture": "liteon_pf1333_fan",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: separate PF-1333-7RB normal/default and detailed readback; same exact endpoint/count contract.",
+      "unverified_scope": [
+        "other capabilities not covered by this record",
+        "all writes"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.liteon.LiteOnPowerShelf"
+    },
+    {
+      "id": "liteon_pf1333_7rb_temp",
+      "status": "verified",
+      "model": "PF-1333-7RB",
+      "bmc_firmware": "r1.3.9",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "liteon",
+        "role": "powershelf",
+        "generation": "gb300"
+      },
+      "command": "pstemp",
+      "capability": "temp",
+      "direct_requests": [
+        "/redfish/v1/Chassis/powershelf/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 21,
+      "interpretation": "Firmware-specific complete temp readings; preserve units and absent-slot nulls",
+      "fallback": "Reject incomplete or invalid fixed sets; use the capability ladder and honor explicit chassis selection.",
+      "fixture": "liteon_pf1333_temp",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: separate PF-1333-7RB normal/default and detailed readback; same exact endpoint/count contract.",
+      "unverified_scope": [
+        "other capabilities not covered by this record",
+        "all writes"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.liteon.LiteOnPowerShelf"
+    },
+    {
+      "id": "liteon_pf1333_7rb_psu_details",
+      "status": "verified",
+      "model": "PF-1333-7RB",
+      "bmc_firmware": "r1.3.9",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "liteon",
+        "role": "powershelf",
+        "generation": "gb300"
+      },
+      "command": "pspsu",
+      "capability": "psu",
+      "direct_requests": [
+        "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies?$expand=.",
+        "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/0",
+        "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/1",
+        "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/2",
+        "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/3",
+        "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/4",
+        "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/5",
+        "/redfish/v1/Chassis/powershelf/Power"
+      ],
+      "request_count": 8,
+      "expected_rows": 6,
+      "interpretation": "Six physical shelf PSU modules; merge modern identity and legacy input watts by serial",
+      "fallback": "If the preferred view is unavailable, use discovered chassis and stable physical identities; preserve explicit chassis_id.",
+      "fixture": "liteon_pf1333_psu_details",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: separate PF-1333-7RB normal/default and detailed readback; same exact endpoint/count contract.",
+      "unverified_scope": [
+        "other capabilities not covered by this record",
+        "all writes"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.liteon.LiteOnPowerShelf",
       "options": [
         "--details"
       ]

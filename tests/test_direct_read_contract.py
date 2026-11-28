@@ -155,7 +155,8 @@ def test_certified_read_uses_exact_runtime_request_contract(record, monkeypatch)
             "fan": 1, "temp": 1, "inlet": 1, "psu": 8 if vendor == "smc" else 1,
             "monitor": 9 if vendor == "smc" else 3, "macs": 1 if vendor == "smc" else 30,
         }[record["capability"]]
-    assert record["request_count"] == counts[record["id"]]
+    key = record["fixture"] if record["id"].startswith("liteon_pf1333_7rb_") else record["id"]
+    assert record["request_count"] == counts[key]
     assert record["status"] == "verified"
     assert record["model"] and record["bmc_firmware"] and record["unverified_scope"]
     if record["capability"] == "psu":
@@ -179,7 +180,8 @@ def test_certified_read_uses_exact_runtime_request_contract(record, monkeypatch)
             "nvidia_n5500_1961_temp": {"°C": 8},
             "wistron_gb300_temp": {"Cel": 57}, "delta_gb300_temp": {"Cel": 33},
         }
-        assert units == expected[record["id"]]
+        key = record["fixture"] if record["id"].startswith("liteon_pf1333_7rb_") else record["id"]
+        assert units == expected[key]
 
 
 @pytest.mark.parametrize("fault", [
@@ -438,3 +440,15 @@ def test_fixed_event_log_reads_next_page_and_resolves_members():
     })
     assert entries(SimpleNamespace(redfish=transport), path, require_members=True) == [first, second]
     assert transport.requests == [path, next_page, detail]
+
+
+def test_mixed_nvl_inventory_example_selects_direct_shelf_reads():
+    from nodetools_runtime.inventory import Inventory
+    inv = Inventory.from_file(str(ROOT / "inventory.nvl.example.ini"))
+    hosts = [host for host in inv.hosts.values() if host.role == "powershelf"]
+    assert {host.vars["oem"] for host in hosts} == {"liteon", "delta"}
+    assert {"liteon-7rb", "liteon-9rb"} <= {host.name for host in hosts}
+    for host in hosts:
+        for command, cap in (("psfan", "fan"), ("pspsu", "psu")):
+            options = cli.Options(parse_args([command, host.name]))
+            assert not runtime.Runner(cap, options)._needs_profile(host)

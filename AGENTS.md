@@ -53,7 +53,9 @@ fresh hardware evidence and an explicit explanation in the change description.
 
 Run python3 -m pytest -q and git diff --check before declaring completion.
 The CI job direct-read-contract runs the full suite, including
-tests/test_direct_read_contract.py and tests/test_psu_aliases.py.
+tests/test_direct_read_contract.py, tests/test_psu_aliases.py and
+tests/test_published_redfish_archives.py. The archive check covers every certified
+model/firmware, including previously validated hardware when it is revalidated.
 Report actual normal request counts, real-device readback and unverified scope.
 Do not call a GitHub check merge-blocking unless branch protection requires it.
 

@@ -540,12 +540,14 @@ GitHub Actions 的 `direct-read-contract` 作业运行完整测试。
 工作流本身不改变分支保护；仓库设置将该作业要求为必需状态检查后，才会阻止失败更改合并。
 
 本次验证：
-- Supermicro `GB NVL`、GB300（BMC `70.02.02.01`）：`nodepsu` 固定读取
-  `PDB_0_HSC_0_Pwr_0`、`PDB_0_HSC_1_Pwr_0`，2 次 GET、2 路 HSC 直流输入。
-  这些不是机柜电源架的 AC PSU。其他能力和写操作仍需逐项认证。
-- Lite-On `PF-1333-9RB / CM-14MP-1RB`（BMC `r1.3.9`）：配置明确时，
-  `pspsu` 使用 `powershelf` 视图，8 次 GET、6 路 PSU；按序列号合并现代接口的身份信息
-  和旧 `Power` 的功耗，避免把不同视图或动态读数输出为重复 PSU。
+- Supermicro `GB NVL`、GB300（BMC `70.02.02.01`）：风扇 1 GET / 24 路、
+  HSC 2 GET / 2 路、温度 9 GET / 50 路、进风 1 GET / 1 路、监控 4 GET / 4 路。
+  HSC 是托盘直流输入，不是机柜 AC PSU；写操作未因此获得认证。
+- Lite-On `PF-1333-7RB` 和 `PF-1333-9RB`，PMC `CM-14MP-1RB` / `r1.3.9`：
+  两种型号分别保留证据，复用同一布局。风扇 1 GET / 6 路、PSU 默认 1 GET / 6 路、
+  PSU `--details` 8 GET / 6 路、温度 1 GET / 21 路。
+  配置必须包含 `platform=nvl`、`oem=liteon`、`generation=gb300`；
+  示例同时列出两种 Lite-On 和 Delta。仅身份已核对的现场设备补齐这些字段。
 
 SMC 新增的可选扩展点为 `psu_read_sensors`：已有 `psu_sensor_chassis` 读取整组传感器，
 不能表达“仅 GET 两个已知功耗传感器”。新扩展点保留原采集阶梯，只有声明它的适配器会使用，
@@ -939,3 +941,22 @@ transport/ssh.py, adding stdin payload support without changing existing
 NVOS telemetry calls. Local-IPMI account operations are shared; SOL is
 compute-only. Keep this flow independent of BMC root authentication.
 Usage, tests and hardware validation limits: [BMC-USERS.md](BMC-USERS.md).
+
+### 2026-11-28 SMC GB300 归档与批量复核
+
+新增四份脱敏主归档：SMC GB NVL `70.02.02.01`、Lite-On PF-1333-7RB /
+PF-1333-9RB `r1.3.9`、NVIDIA N5500_LD `88.0002.1962`。清单与 SHA-256
+位于 `redfish-archives/nvl/gb300/`。宽扫是部分覆盖，清单保留停止原因、未采数量和传输错误；
+全部已认证 Redfish 正常路径响应齐全，按生产 Runner 验证读数和精确请求。
+NVSwitch HSC 来自 NVOS，不把它当作 Redfish 回放成功。
+
+同一组 528 台 powershelf、实际 `--jobs 200` 成对复核：风扇和 PSU 均为
+505 台完整、23 台失败；各轮 528 台结果全部增量交付、未关闭连接数为 0。
+风扇 552 请求 / 4.34 秒 / CPU 7.99 秒；PSU 561 请求 / 4.70 秒 / CPU 8.16 秒；
+各轮最大 RSS 33864 KiB。失败集合一致：16 连接超时、1 认证失败、5 空读数、1 缺一路。
+失败未解决，不能宣布全量适配完成。现场逐台证据和 inventory 备份保留在受限目录，
+不提交现场主机名、凭据或原始日志。
+
+认证清单新增或修改后，自动测试要求相应型号/固件已有归档或明确列出的补采缺口，
+防止只增加认证结论而遗漏归档。生产设备构造的身份读取异常现在也关闭已创建的连接；
+异常语义不变，认证失败和中断均有回归测试。

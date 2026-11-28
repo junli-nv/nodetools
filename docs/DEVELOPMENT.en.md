@@ -633,10 +633,13 @@ be enabled in repository settings for GitHub to block merges on failure.
 Validated in this review:
 - Supermicro GB NVL / GB300, BMC `70.02.02.01`: `nodepsu` directly reads
   `PDB_0_HSC_0_Pwr_0` and `PDB_0_HSC_1_Pwr_0`; two GETs, two tray DC HSC inputs.
-  These are not rack AC PSU modules. Other capabilities and writes remain unverified.
-- Lite-On PF-1333-9RB / CM-14MP-1RB, BMC `r1.3.9`: with explicit configuration,
-  `pspsu` uses the `powershelf` view; eight GETs, six physical PSU rows.
-  Merge modern identity and legacy `Power` watts by serial rather than reading value.
+  These are not rack AC PSU modules. Separately verified fan/temp/inlet/monitor reads use 1/9/1/4 GETs and return 24/50/1/4 rows. Writes remain unverified.
+- Lite-On PF-1333-7RB and PF-1333-9RB, PMC CM-14MP-1RB / `r1.3.9`:
+  retain separate hardware evidence while reusing the verified layout.
+  With `platform=nvl`, `oem=liteon`, `generation=gb300`, fan and default PSU
+  reads each use one GET for six rows; PSU `--details` uses eight GETs.
+  Temperature uses one GET for 21 rows. Merge detailed identity and legacy
+  `Power` watts by serial rather than reading value.
 
 The optional shared extension `psu_read_sensors` expresses a fixed list of sensor
 GETs. Existing `psu_sensor_chassis` bulk collection reads cannot express the
@@ -1099,3 +1102,27 @@ transport/ssh.py, adding stdin payload support without changing existing
 NVOS telemetry calls. Local-IPMI account operations are shared; SOL is
 compute-only. Keep this flow independent of BMC root authentication.
 Usage, tests and hardware validation limits: [BMC-USERS.md](BMC-USERS.md).
+
+### 2026-11-28 SMC GB300 archive and bulk checkpoint
+
+Four redacted master archives now cover SMC GB NVL 70.02.02.01,
+Lite-On PF-1333-7RB and PF-1333-9RB r1.3.9, and NVIDIA N5500_LD 88.0002.1962.
+See redfish-archives/nvl/gb300/MANIFEST.json and SHA256SUMS.
+The broad captures are partial; limits, pending resources and transport errors remain
+explicit. Every certified normal Redfish URI is captured and replayed through the
+production Runner with exact request and row assertions. NVSwitch HSC is NVOS
+evidence, not a successful Redfish replay.
+
+Both fan and PSU runs selected 528 power shelves at actual --jobs 200.
+Each delivered all 528 node results incrementally: 505 complete, 23 failed,
+zero unclosed transports. Fan: 552 requests, 4.34s elapsed, 7.99s CPU.
+PSU: 561 requests, 4.70s elapsed, 8.16s CPU. Peak RSS was 33864 KiB per run.
+The shared failure set contains 16 connection timeouts, one authentication
+failure, five empty readings and one missing module. These remain unresolved;
+this is not full cluster acceptance. Site identity checks, inventory backup
+and individual results stay in a restricted directory.
+
+Archive tests now require every certified model/firmware to have an archive
+or an explicit capture gap. Identity-read exceptions during device construction
+also close the transport and preserve the original error; authentication and
+interrupt cleanup have regression tests.
