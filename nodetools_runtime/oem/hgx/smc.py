@@ -83,14 +83,11 @@ class Smc(Oem):
 
     # -- boot-family overrides ------------------------------------------
     def macs(self, device, action):
+        path = "/redfish/v1/Systems/1/EthernetInterfaces"
         lines = []
-        for base in (
-            "/redfish/v1/Systems/1/EthernetInterfaces",
-            "/redfish/v1/Managers/1/EthernetInterfaces",
-        ):
-            for data in self._iface_members(device, base):
-                row = ",".join(_jq_r(data.get(field, "")) for field in _MAC_FIELDS)
-                lines.append(self._label(device, row))
+        for data in self._iface_members(device, path):
+            row = ",".join(_jq_r(data.get(field, "")) for field in _MAC_FIELDS)
+            lines.append(self._label(device, row))
         return lines
 
     def bios(self, device, action):
@@ -246,3 +243,26 @@ class Smc(Oem):
                 ))
             time.sleep(0.5)
         raise TransportError("virtual media task is still pending: " + path)
+
+
+class SmcB300(Smc):
+    """Verified SYS-822GS-NB3RT read layout."""
+
+    inventory_fixed_caps = (*Smc.inventory_fixed_caps, "temp", "inlet", "monitor")
+    temp_read_chassis = "1"
+    read_system_id = "1"
+    read_manager_id = "1"
+    read_chassis_id = "1"
+    read_firmware_path = "/redfish/v1/UpdateService/FirmwareInventory"
+    read_management_fixed = True
+
+    def macs(self, device, action):
+        from ...subjects import boot_nics
+
+        system = device.vars.get("system_id") or self.read_system_id
+        base = f"/redfish/v1/Systems/{system}/EthernetInterfaces"
+        lines = []
+        for _, data in boot_nics.members(device, base, required=True):
+            for mac in sorted(boot_nics.addresses(data)):
+                lines.append(self._label(device, f"{data.get('Id') or '-'}, {boot_nics.format_mac(mac)}"))
+        return lines

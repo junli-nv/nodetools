@@ -100,7 +100,7 @@ class Compal(Oem):
 
     # -- NIC / MAC inventory (nodemacs.cpl) -----------------------------
     def macs(self, device, action):
-        return self._macs_iface_pairs(device, "Self", "BMC")
+        return self._system_macs(device, "Self")
 
     # -- virtual media (nodevm.cpl) -------------------------------------
     vm_extra_actions = ("enable", "stop")

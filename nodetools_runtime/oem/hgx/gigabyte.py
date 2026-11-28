@@ -36,7 +36,7 @@ class Gigabyte(Oem):
     )
 
     def macs(self, device, action):
-        return self._macs_iface_pairs(device, "1", "1")
+        return self._system_macs(device, "1")
 
     def bios(self, device, action):
         rows = self._bios_rows(device, self._BIOS_EXCLUDES, sort=True)

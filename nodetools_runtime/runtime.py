@@ -64,7 +64,8 @@ def _redfish_setting(host, options, field, fallback):
     return seconds
 
 
-def build_device(host, options, apply_deadline=True, load_profile=True):
+def build_device(host, options, apply_deadline=True, load_profile=True, *,
+                 redfish_factory=None, ipmi_factory=None):
     """Construct a Device for a host and attach its cached scan map (if any).
 
     The scan map is a per-machine-type template looked up from the device's
@@ -73,6 +74,8 @@ def build_device(host, options, apply_deadline=True, load_profile=True):
     (``options.node_timeout``) so a slow BMC cannot stall the whole run.
     ``load_profile=False`` skips the lookup (used by ``scan`` itself).
     """
+    redfish_factory = redfish_factory or Redfish
+    ipmi_factory = ipmi_factory or Ipmi
     user, password = _resolve_creds(host, options)
     read_timeout = options.timeout
     if not getattr(options, "timeout_explicit", False):
@@ -80,10 +83,11 @@ def build_device(host, options, apply_deadline=True, load_profile=True):
     connect_timeout = _redfish_setting(
         host, options, "redfish_connect_timeout", DEFAULT_REDFISH_CONNECT_TIMEOUT
     )
-    redfish = Redfish(host.address, user, password, timeout=read_timeout, connect_timeout=connect_timeout)
+    redfish = redfish_factory(host.address, user, password,
+                              timeout=read_timeout, connect_timeout=connect_timeout)
     if getattr(options, "debug", False):
         redfish.debug_label = host.name
-    ipmi = Ipmi(
+    ipmi = ipmi_factory(
         host.address,
         user,
         password,
@@ -130,7 +134,7 @@ class Runner:
             return True
         if self.capability == "temp" and host.get("temp_chassis_id"):
             return False
-        adapter = oem.for_device(model.Device(host), self.capability)
+        adapter = oem.for_device(model.Device(host), self.capability, configured_read=True)
         if (host.role == "nvswitch" and self.capability == "psu"
                 and host.vars.get("nvswitch_sensor_backend") == "bmc"
                 and getattr(adapter, "bmc_psu_collection", None)):
@@ -148,7 +152,7 @@ class Runner:
         }
         if self.capability == "monitor":
             identity = model.hardware_identity(device)
-            result["model"] = str(identity.get("model") or "").strip() or None
+            result["model"] = str(identity.get("model") or host.get("system_model") or "").strip() or None
         return result
 
     def _control(self, device, module):
@@ -211,7 +215,9 @@ class Runner:
             if self.capability == "monitor":
                 device.redfish.get = lru_cache(maxsize=None)(device.redfish.get)
             if self.capability in ("fan", "psu", "temp", "inlet", "monitor"):
-                device.odm = oem.for_device(device, self.capability)
+                device.odm = oem.for_device(device, self.capability, configured_read=True)
+                if self.capability == "monitor" and oem.hgx_read_adapter(device) is device.odm:
+                    device.redfish.get = lru_cache(maxsize=None)(device.redfish.get)
             if device.vars.get("chassis_id"):
                 device.ipmi = None
             if (host.role == "nvswitch" and self.capability == "psu"
@@ -292,6 +298,8 @@ class InfoRunner:
         if platform == "unknown" or model.generation_for(device) == "unknown":
             return True
         if platform == "hgx":
+            if oem.hgx_read_adapter(device) is not None:
+                return False
             vendor = model.odm_for(device)
             if vendor in ("aivres", "kaytus"):
                 return True
@@ -312,9 +320,10 @@ class InfoRunner:
         device = None
         try:
             device = self._device(host)
-            device.odm = oem.for_device(device)
-            if (getattr(device.odm, "read_management_fixed", False)
-                    and self.options.action in _INFO_READ_ACTIONS.get(self.subject, ())):
+            read = (self.options.action in _INFO_READ_ACTIONS.get(self.subject, ())
+                    and not getattr(self.options, "bios_updates", None))
+            device.odm = oem.for_device(device, configured_read=read)
+            if getattr(device.odm, "read_management_fixed", False) and read:
                 device.redfish.get = lru_cache(maxsize=None)(device.redfish.get)
             supported = getattr(device.odm, "info_subjects", None)
             network_discovery = self.subject == "netboot" and self.options.action != "pxe"

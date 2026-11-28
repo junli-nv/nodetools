@@ -104,7 +104,7 @@ Run list first to see available types and positions. An unknown value is shown
 as -. Use a UEFI path from the list when the slot or PCI address is unavailable.
 Prefer moves all matching entries ahead in their current order. Remove
 --dry-run to write the persistent priority, then reboot separately.""",
-    "macs": "List Ethernet interface MAC addresses exposed by the BMC.",
+    "macs": "Read compute tray MAC addresses from the BMC.",
     "bios": """Read or change BIOS settings.
   status   Read active settings (default).
   pending  Read staged settings, where supported.
@@ -363,6 +363,9 @@ def build_parser():
     replay.add_argument("snapshot_tool", metavar="COMMAND", help="a Redfish read command such as nodefan")
     replay.add_argument("action", nargs="?", choices=("status", "check", "pending"))
     replay.add_argument("--details", action="store_true", help="show detailed PSU fields")
+    replay.add_argument("--expect-rows", type=int, help="verify the exact number of sensor readings")
+    replay.add_argument("--expect-path", action="append", metavar="URI",
+                        help="verify an exact successful GET path in order (repeatable)")
 
     inv = sub.add_parser("inventory", help="inventory management")
     inv_sub = inv.add_subparsers(dest="inventory_command")
@@ -391,7 +394,9 @@ def build_parser():
     add_examples(redfish, "nodetools redfish dump HGX390 -o hgx390.json",
                  "nodetools redfish replay hgx390.json nodepsu --details")
     add_examples(dump, "nodetools redfish dump HGX390 -o hgx390.json")
-    add_examples(replay, "nodetools redfish replay hgx390.json nodepsu --details")
+    add_examples(replay, "nodetools redfish replay hgx390.json nodepsu --details",
+                 "nodetools redfish replay hgx390.json.gz nodepsu --expect-rows 8 "
+                 "--expect-path /redfish/v1/Chassis/1/Power")
     add_examples(inv, "nodetools inventory show", "nodetools inventory import hosts.list")
     add_examples(init, "nodetools inventory init --from hosts.list -o inventory.ini")
     add_examples(show, "nodetools inventory show", "nodetools inventory show -i lab.ini")

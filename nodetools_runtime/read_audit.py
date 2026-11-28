@@ -57,7 +57,7 @@ def _invoke(host, case, options):
         return runtime.InfoRunner(case["cap"], options)._one(host)
     device = runtime.build_device(host, options, load_profile=False)
     try:
-        device.odm = oem.for_device(device)
+        device.odm = oem.for_device(device, configured_read=True)
         cap = case["cap"]
         if cap.startswith("bmc_"):
             lines = management.bmc(device, cap.split("_")[1])

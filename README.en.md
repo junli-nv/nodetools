@@ -308,7 +308,7 @@ class when an endpoint is absent):
   `Systems/<id>`'s `Boot/BootOrder`, printing `Id`/`DisplayName`/
   `UefiDevicePath` per entry.
 * **netboot** — `nodenetboot` lists PXE entries by default and with `status`. `prefer` sets persistent priority by adapter attributes. On KAYTUS KR9288, `status` shows both active and pending PXE order.
-* **macs** — `nodemacs`: prints `OS <boot> <mac> <bus>` plus the BMC NIC MACs.
+* **macs** — `nodemacs HGX390` reads compute tray MAC addresses from the BMC before OS deployment.
 * **bios** — `nodebios [status|base|pending]`: `status` reads current BIOS
   settings (vendor noise keys filtered out). `pending` reads staged settings.
   `base` writes the BIOS preset on supported models.

@@ -7,10 +7,31 @@ from .aivres import Aivres, _IDL, _SEL, _SYSTEM
 
 class KaytusKr9288(Aivres):
     network_bbs_write = True
+    inventory_fixed_caps = (*Aivres.inventory_fixed_caps, "temp", "inlet", "monitor")
+    temp_read_chassis = "1"
+    read_system_id = "1"
+    read_manager_id = "1"
+    read_chassis_id = "1"
+    read_firmware_path = "/redfish/v1/UpdateService/FirmwareInventory"
+    read_management_fixed = True
 
     system_id = "1"
     bmc_id = "1"
     psu_read_chassis = ("1",)
+
+    def bios(self, device, action):
+        if action != "pending":
+            return super().bios(device, action)
+        path = _SYSTEM + "/Bios/Settings"
+        data = common.resource(device, path, required=True)
+        if not isinstance(data.get("Attributes"), dict):
+            raise CapUnsupported("pending BIOS response has no Attributes object")
+        if not data["Attributes"]:
+            return [self._label(device, "No pending BIOS settings")]
+        return super().bios(device, action)
+
+    def macs(self, device, action):
+        return [self._label(device, line) for line in self._compute_mac_rows(device, validated=True)]
 
     def power(self, device, action):
         resets = {

@@ -136,7 +136,10 @@ def _from_ipmi(device):
 
 def collect(device):
     steps = [("oem_fixed", lambda: fixed.collect(device, "temp"))]
-    fixed_chassis = device.vars.get("temp_chassis_id")
+    known_chassis = getattr(getattr(device, "odm", None), "temp_read_chassis", None)
+    fixed_chassis = device.vars.get("temp_chassis_id") or (
+        (device.vars.get("chassis_id") or known_chassis) if known_chassis else None
+    )
     if fixed_chassis:
         steps.append(("fixed_thermal", lambda: _from_thermal(device, (fixed_chassis,))))
     ipmi_first = getattr(getattr(device, "odm", None), "temp_read_ipmi", False)

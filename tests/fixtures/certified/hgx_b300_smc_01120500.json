@@ -1,0 +1,1103 @@
+{
+  "/redfish/v1/Chassis/1/ThermalSubsystem/Fans?$expand=.": {
+    "@odata.type": "#FanCollection.FanCollection",
+    "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem/Fans",
+    "Name": "Fan Collection",
+    "Members@odata.count": 6,
+    "Members": [
+      {
+        "@odata.type": "#Fan.v1_6_0.Fan",
+        "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem/Fans/MBFan1-4RPM",
+        "Id": "MBFan1-4RPM",
+        "Name": "MBFan1-4RPM",
+        "PhysicalContext": "Fan",
+        "SpeedPercent": {
+          "SpeedRPM": 16380
+        },
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        }
+      },
+      {
+        "@odata.type": "#Fan.v1_6_0.Fan",
+        "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem/Fans/Fan1-5RPM",
+        "Id": "Fan1-5RPM",
+        "Name": "Fan1-5RPM",
+        "PhysicalContext": "Fan",
+        "SpeedPercent": {
+          "SpeedRPM": 11500
+        },
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        }
+      },
+      {
+        "@odata.type": "#Fan.v1_6_0.Fan",
+        "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem/Fans/Fan6-10RPM",
+        "Id": "Fan6-10RPM",
+        "Name": "Fan6-10RPM",
+        "PhysicalContext": "Fan",
+        "SpeedPercent": {
+          "SpeedRPM": 11600
+        },
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        }
+      },
+      {
+        "@odata.type": "#Fan.v1_6_0.Fan",
+        "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem/Fans/FanA-BRPM",
+        "Id": "FanA-BRPM",
+        "Name": "FanA-BRPM",
+        "PhysicalContext": "Fan",
+        "SpeedPercent": {
+          "SpeedRPM": 11600
+        },
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        }
+      },
+      {
+        "@odata.type": "#Fan.v1_6_0.Fan",
+        "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem/Fans/PS1-2FanRPM",
+        "Id": "PS1-2FanRPM",
+        "Name": "PS1-2FanRPM",
+        "PhysicalContext": "Fan",
+        "SpeedPercent": {
+          "SpeedRPM": 13700
+        },
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        }
+      },
+      {
+        "@odata.type": "#Fan.v1_6_0.Fan",
+        "@odata.id": "/redfish/v1/Chassis/1/ThermalSubsystem/Fans/PS3-6FanRPM",
+        "Id": "PS3-6FanRPM",
+        "Name": "PS3-6FanRPM",
+        "PhysicalContext": "Fan",
+        "SpeedPercent": {
+          "SpeedRPM": 13300
+        },
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        }
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies?$expand=.": {
+    "@odata.type": "#PowerSupplyCollection.PowerSupplyCollection",
+    "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies",
+    "Name": "Power Supply Collection",
+    "Members@odata.count": 6,
+    "Members": [
+      {
+        "@odata.type": "#PowerSupply.v1_6_0.PowerSupply",
+        "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/1",
+        "Id": "1",
+        "Name": "Power Supply Bay 1",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "FirmwareVersion": "REV1.1",
+        "PartNumber": "PWS-6K61G-2R",
+        "SerialNumber": "serial-645eb314ad778ecb9f5de179",
+        "Model": "PWS-6K61G-2R",
+        "Manufacturer": "SUPERMICRO",
+        "PowerCapacityWatts": 6600,
+        "Metrics": {
+          "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/1/Metrics"
+        }
+      },
+      {
+        "@odata.type": "#PowerSupply.v1_6_0.PowerSupply",
+        "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/2",
+        "Id": "2",
+        "Name": "Power Supply Bay 2",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "FirmwareVersion": "REV1.1",
+        "PartNumber": "PWS-6K61G-2R",
+        "SerialNumber": "serial-fbd85c479ffaa7aefc888663",
+        "Model": "PWS-6K61G-2R",
+        "Manufacturer": "SUPERMICRO",
+        "PowerCapacityWatts": 6600,
+        "Metrics": {
+          "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/2/Metrics"
+        }
+      },
+      {
+        "@odata.type": "#PowerSupply.v1_6_0.PowerSupply",
+        "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/3",
+        "Id": "3",
+        "Name": "Power Supply Bay 3",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "FirmwareVersion": "REV1.1",
+        "PartNumber": "PWS-6K61G-2R",
+        "SerialNumber": "serial-ca7c70d7cbafe5c01b04ef44",
+        "Model": "PWS-6K61G-2R",
+        "Manufacturer": "SUPERMICRO",
+        "PowerCapacityWatts": 6600,
+        "Metrics": {
+          "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/3/Metrics"
+        }
+      },
+      {
+        "@odata.type": "#PowerSupply.v1_6_0.PowerSupply",
+        "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/4",
+        "Id": "4",
+        "Name": "Power Supply Bay 4",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "FirmwareVersion": "REV1.1",
+        "PartNumber": "PWS-6K61G-2R",
+        "SerialNumber": "serial-7d6f693b25bf835380b2bb15",
+        "Model": "PWS-6K61G-2R",
+        "Manufacturer": "SUPERMICRO",
+        "PowerCapacityWatts": 6600,
+        "Metrics": {
+          "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/4/Metrics"
+        }
+      },
+      {
+        "@odata.type": "#PowerSupply.v1_6_0.PowerSupply",
+        "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/5",
+        "Id": "5",
+        "Name": "Power Supply Bay 5",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "FirmwareVersion": "REV1.1",
+        "PartNumber": "PWS-6K61G-2R",
+        "SerialNumber": "serial-db793f81a566cca5c0016a0c",
+        "Model": "PWS-6K61G-2R",
+        "Manufacturer": "SUPERMICRO",
+        "PowerCapacityWatts": 6600,
+        "Metrics": {
+          "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/5/Metrics"
+        }
+      },
+      {
+        "@odata.type": "#PowerSupply.v1_6_0.PowerSupply",
+        "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/6",
+        "Id": "6",
+        "Name": "Power Supply Bay 6",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "FirmwareVersion": "REV1.1",
+        "PartNumber": "PWS-6K61G-2R",
+        "SerialNumber": "serial-ef229509ad3e1b5eb6e842c4",
+        "Model": "PWS-6K61G-2R",
+        "Manufacturer": "SUPERMICRO",
+        "PowerCapacityWatts": 6600,
+        "Metrics": {
+          "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/6/Metrics"
+        }
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/1/Power": {
+    "@odata.type": "#Power.v1_7_3.Power",
+    "@odata.id": "/redfish/v1/Chassis/1/Power",
+    "Id": "Power",
+    "Name": "Power",
+    "PowerControl": [
+      {
+        "@odata.type": "#Power.v1_7_3.PowerControl",
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerControl/0",
+        "MemberId": "0",
+        "Name": "System Power Control",
+        "PowerConsumedWatts": 6424,
+        "PowerCapacityWatts": 39600,
+        "PowerMetrics": {
+          "AverageConsumedWatts": 6419
+        },
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "Oem": {}
+      }
+    ],
+    "PowerSupplies": [
+      {
+        "@odata.type": "#Power.v1_7_3.PowerSupply",
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/0",
+        "MemberId": "0",
+        "Name": "Power Supply Bay 1",
+        "SerialNumber": "serial-645eb314ad778ecb9f5de179",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "Oem": {},
+        "LineInputVoltageType": "ACMidLine",
+        "LineInputVoltage": 238,
+        "PowerCapacityWatts": 6600,
+        "PowerInputWatts": 1036,
+        "PowerOutputWatts": 752,
+        "LastPowerOutputWatts": 752,
+        "Model": "PWS-6K61G-2R",
+        "FirmwareVersion": "REV1.1",
+        "PartNumber": "PWS-6K61G-2R"
+      },
+      {
+        "@odata.type": "#Power.v1_7_3.PowerSupply",
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/1",
+        "MemberId": "1",
+        "Name": "Power Supply Bay 2",
+        "SerialNumber": "serial-fbd85c479ffaa7aefc888663",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "Oem": {},
+        "LineInputVoltageType": "ACMidLine",
+        "LineInputVoltage": 238,
+        "PowerCapacityWatts": 6600,
+        "PowerInputWatts": 1042,
+        "PowerOutputWatts": 771,
+        "LastPowerOutputWatts": 771,
+        "Model": "PWS-6K61G-2R",
+        "FirmwareVersion": "REV1.1",
+        "PartNumber": "PWS-6K61G-2R"
+      },
+      {
+        "@odata.type": "#Power.v1_7_3.PowerSupply",
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/2",
+        "MemberId": "2",
+        "Name": "Power Supply Bay 3",
+        "SerialNumber": "serial-ca7c70d7cbafe5c01b04ef44",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "Oem": {},
+        "LineInputVoltageType": "ACMidLine",
+        "LineInputVoltage": 238,
+        "PowerCapacityWatts": 6600,
+        "PowerInputWatts": 1134,
+        "PowerOutputWatts": 853,
+        "LastPowerOutputWatts": 853,
+        "Model": "PWS-6K61G-2R",
+        "FirmwareVersion": "REV1.1",
+        "PartNumber": "PWS-6K61G-2R"
+      },
+      {
+        "@odata.type": "#Power.v1_7_3.PowerSupply",
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/3",
+        "MemberId": "3",
+        "Name": "Power Supply Bay 4",
+        "SerialNumber": "serial-7d6f693b25bf835380b2bb15",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "Oem": {},
+        "LineInputVoltageType": "ACMidLine",
+        "LineInputVoltage": 238,
+        "PowerCapacityWatts": 6600,
+        "PowerInputWatts": 1062,
+        "PowerOutputWatts": 789,
+        "LastPowerOutputWatts": 789,
+        "Model": "PWS-6K61G-2R",
+        "FirmwareVersion": "REV1.1",
+        "PartNumber": "PWS-6K61G-2R"
+      },
+      {
+        "@odata.type": "#Power.v1_7_3.PowerSupply",
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/4",
+        "MemberId": "4",
+        "Name": "Power Supply Bay 5",
+        "SerialNumber": "serial-db793f81a566cca5c0016a0c",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "Oem": {},
+        "LineInputVoltageType": "ACMidLine",
+        "LineInputVoltage": 238,
+        "PowerCapacityWatts": 6600,
+        "PowerInputWatts": 1058,
+        "PowerOutputWatts": 781,
+        "LastPowerOutputWatts": 781,
+        "Model": "PWS-6K61G-2R",
+        "FirmwareVersion": "REV1.1",
+        "PartNumber": "PWS-6K61G-2R"
+      },
+      {
+        "@odata.type": "#Power.v1_7_3.PowerSupply",
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/5",
+        "MemberId": "5",
+        "Name": "Power Supply Bay 6",
+        "SerialNumber": "serial-ef229509ad3e1b5eb6e842c4",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "Oem": {},
+        "LineInputVoltageType": "ACMidLine",
+        "LineInputVoltage": 238,
+        "PowerCapacityWatts": 6600,
+        "PowerInputWatts": 1092,
+        "PowerOutputWatts": 812,
+        "LastPowerOutputWatts": 812,
+        "Model": "PWS-6K61G-2R",
+        "FirmwareVersion": "REV1.1",
+        "PartNumber": "PWS-6K61G-2R"
+      }
+    ],
+    "Oem": {}
+  },
+  "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/1/Metrics": {
+    "@odata.type": "#PowerSupplyMetrics.v1_2_0.PowerSupplyMetrics",
+    "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/1/Metrics",
+    "Id": "Metrics",
+    "Name": "Metrics for Power Supply",
+    "InputCurrentAmps": {
+      "Reading": 4.453
+    },
+    "InputPowerWatts": {
+      "Reading": 1036
+    },
+    "InputVoltage": {
+      "Reading": 238
+    },
+    "OutputPowerWatts": {
+      "Reading": 752
+    },
+    "Oem": {},
+    "Status": {
+      "State": "Enabled",
+      "Health": "OK"
+    }
+  },
+  "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/2/Metrics": {
+    "@odata.type": "#PowerSupplyMetrics.v1_2_0.PowerSupplyMetrics",
+    "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/2/Metrics",
+    "Id": "Metrics",
+    "Name": "Metrics for Power Supply",
+    "InputCurrentAmps": {
+      "Reading": 4.484
+    },
+    "InputPowerWatts": {
+      "Reading": 1042
+    },
+    "InputVoltage": {
+      "Reading": 238
+    },
+    "OutputPowerWatts": {
+      "Reading": 771
+    },
+    "Oem": {},
+    "Status": {
+      "State": "Enabled",
+      "Health": "OK"
+    }
+  },
+  "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/3/Metrics": {
+    "@odata.type": "#PowerSupplyMetrics.v1_2_0.PowerSupplyMetrics",
+    "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/3/Metrics",
+    "Id": "Metrics",
+    "Name": "Metrics for Power Supply",
+    "InputCurrentAmps": {
+      "Reading": 4.882
+    },
+    "InputPowerWatts": {
+      "Reading": 1134
+    },
+    "InputVoltage": {
+      "Reading": 238
+    },
+    "OutputPowerWatts": {
+      "Reading": 853
+    },
+    "Oem": {},
+    "Status": {
+      "State": "Enabled",
+      "Health": "OK"
+    }
+  },
+  "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/4/Metrics": {
+    "@odata.type": "#PowerSupplyMetrics.v1_2_0.PowerSupplyMetrics",
+    "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/4/Metrics",
+    "Id": "Metrics",
+    "Name": "Metrics for Power Supply",
+    "InputCurrentAmps": {
+      "Reading": 4.57
+    },
+    "InputPowerWatts": {
+      "Reading": 1062
+    },
+    "InputVoltage": {
+      "Reading": 238
+    },
+    "OutputPowerWatts": {
+      "Reading": 789
+    },
+    "Oem": {},
+    "Status": {
+      "State": "Enabled",
+      "Health": "OK"
+    }
+  },
+  "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/5/Metrics": {
+    "@odata.type": "#PowerSupplyMetrics.v1_2_0.PowerSupplyMetrics",
+    "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/5/Metrics",
+    "Id": "Metrics",
+    "Name": "Metrics for Power Supply",
+    "InputCurrentAmps": {
+      "Reading": 4.562
+    },
+    "InputPowerWatts": {
+      "Reading": 1058
+    },
+    "InputVoltage": {
+      "Reading": 238
+    },
+    "OutputPowerWatts": {
+      "Reading": 781
+    },
+    "Oem": {},
+    "Status": {
+      "State": "Enabled",
+      "Health": "OK"
+    }
+  },
+  "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/6/Metrics": {
+    "@odata.type": "#PowerSupplyMetrics.v1_2_0.PowerSupplyMetrics",
+    "@odata.id": "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/6/Metrics",
+    "Id": "Metrics",
+    "Name": "Metrics for Power Supply",
+    "InputCurrentAmps": {
+      "Reading": 4.71
+    },
+    "InputPowerWatts": {
+      "Reading": 1092
+    },
+    "InputVoltage": {
+      "Reading": 238
+    },
+    "OutputPowerWatts": {
+      "Reading": 812
+    },
+    "Oem": {},
+    "Status": {
+      "State": "Enabled",
+      "Health": "OK"
+    }
+  },
+  "/redfish/v1/Chassis/1/Thermal": {
+    "@odata.type": "#Thermal.v1_7_3.Thermal",
+    "@odata.id": "/redfish/v1/Chassis/1/Thermal",
+    "Id": "Thermal",
+    "Name": "Thermal",
+    "Temperatures": [
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/0",
+        "MemberId": "0",
+        "Name": "CPU1 Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 46,
+        "PhysicalContext": "CPU"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/1",
+        "MemberId": "1",
+        "Name": "CPU2 Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 46,
+        "PhysicalContext": "CPU"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/2",
+        "MemberId": "2",
+        "Name": "System Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 21,
+        "PhysicalContext": "SystemBoard"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/3",
+        "MemberId": "3",
+        "Name": "Peripheral Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 26,
+        "PhysicalContext": "SystemBoard"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/4",
+        "MemberId": "4",
+        "Name": "Inlet Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 23,
+        "PhysicalContext": "Intake"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/5",
+        "MemberId": "5",
+        "Name": "CPU1_VRMIN Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 38,
+        "PhysicalContext": "VoltageRegulator"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/6",
+        "MemberId": "6",
+        "Name": "CPU1_VRMON Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 36,
+        "PhysicalContext": "VoltageRegulator"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/7",
+        "MemberId": "7",
+        "Name": "CPU1_VRMHV0 Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 31,
+        "PhysicalContext": "VoltageRegulator"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/8",
+        "MemberId": "8",
+        "Name": "CPU2_VRMIN Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 39,
+        "PhysicalContext": "VoltageRegulator"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/9",
+        "MemberId": "9",
+        "Name": "CPU2_VRMON Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 36,
+        "PhysicalContext": "VoltageRegulator"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/10",
+        "MemberId": "10",
+        "Name": "CPU2_VRMHV0 Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 32,
+        "PhysicalContext": "VoltageRegulator"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/11",
+        "MemberId": "11",
+        "Name": "P1_DIMMA~D Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 27,
+        "PhysicalContext": "Memory",
+        "Oem": {}
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/12",
+        "MemberId": "12",
+        "Name": "P1_DIMME~H Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 27,
+        "PhysicalContext": "Memory",
+        "Oem": {}
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/13",
+        "MemberId": "13",
+        "Name": "P2_DIMMA~D Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 27,
+        "PhysicalContext": "Memory",
+        "Oem": {}
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/14",
+        "MemberId": "14",
+        "Name": "P2_DIMME~H Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 26,
+        "PhysicalContext": "Memory",
+        "Oem": {}
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/15",
+        "MemberId": "15",
+        "Name": "PLX1 Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 28,
+        "PhysicalContext": "ASIC"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/16",
+        "MemberId": "16",
+        "Name": "PLX2 Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 29,
+        "PhysicalContext": "ASIC"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/17",
+        "MemberId": "17",
+        "Name": "AOC_PORTA Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 27,
+        "PhysicalContext": "Transceiver",
+        "Oem": {}
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/18",
+        "MemberId": "18",
+        "Name": "AOC_NIC1 Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 38,
+        "PhysicalContext": "NetworkingDevice"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/19",
+        "MemberId": "19",
+        "Name": "AOC_NIC2 Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 35,
+        "PhysicalContext": "NetworkingDevice"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/20",
+        "MemberId": "20",
+        "Name": "AOM_NIC Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 24,
+        "PhysicalContext": "NetworkingDevice"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/21",
+        "MemberId": "21",
+        "Name": "NVMe_SSDA Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 26,
+        "PhysicalContext": "StorageDevice"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/22",
+        "MemberId": "22",
+        "Name": "NVMe_SSDB Temp",
+        "Status": {
+          "State": "Absent"
+        },
+        "ReadingCelsius": null,
+        "PhysicalContext": "StorageDevice"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/23",
+        "MemberId": "23",
+        "Name": "AOM_SAS Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 31,
+        "PhysicalContext": "StorageDevice"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/24",
+        "MemberId": "24",
+        "Name": "HGX GPU Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 29,
+        "PhysicalContext": "GPU"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/25",
+        "MemberId": "25",
+        "Name": "HGX HSC Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 32,
+        "PhysicalContext": "ASIC"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/26",
+        "MemberId": "26",
+        "Name": "HGX Inlet Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 24,
+        "PhysicalContext": "Intake"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/27",
+        "MemberId": "27",
+        "Name": "HGX FPGA Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 35,
+        "PhysicalContext": "FPGA"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/28",
+        "MemberId": "28",
+        "Name": "HGX HBM Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 30,
+        "PhysicalContext": "Memory"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/29",
+        "MemberId": "29",
+        "Name": "HGX Board Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 42,
+        "PhysicalContext": "Board"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/30",
+        "MemberId": "30",
+        "Name": "HGX NVLink Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 59,
+        "PhysicalContext": "ASIC"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/31",
+        "MemberId": "31",
+        "Name": "HGX NVMGMT Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 51,
+        "PhysicalContext": "Manager"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/32",
+        "MemberId": "32",
+        "Name": "HGX HMC Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 30,
+        "PhysicalContext": "Manager"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/33",
+        "MemberId": "33",
+        "Name": "HGX CX8 Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 49,
+        "PhysicalContext": "NetworkingDevice"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/34",
+        "MemberId": "34",
+        "Name": "HGX CX8 PORT",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 37,
+        "PhysicalContext": "Transceiver"
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Temperature",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/35",
+        "MemberId": "35",
+        "Name": "M2SSD Temp",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingCelsius": 25,
+        "PhysicalContext": "StorageDevice"
+      }
+    ],
+    "Fans": [
+      {
+        "@odata.type": "#Thermal.v1_7_3.Fan",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/0",
+        "MemberId": "0",
+        "Name": "MB Fan 1-4 RPM",
+        "PhysicalContext": "Fan",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingUnits": "RPM",
+        "Reading": 16380,
+        "Oem": {}
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Fan",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/1",
+        "MemberId": "1",
+        "Name": "Fan 1-5 RPM",
+        "PhysicalContext": "Fan",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingUnits": "RPM",
+        "Reading": 11500,
+        "Oem": {}
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Fan",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/2",
+        "MemberId": "2",
+        "Name": "Fan 6-10 RPM",
+        "PhysicalContext": "Fan",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingUnits": "RPM",
+        "Reading": 11600,
+        "Oem": {}
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Fan",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/3",
+        "MemberId": "3",
+        "Name": "Fan A-B RPM",
+        "PhysicalContext": "Fan",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingUnits": "RPM",
+        "Reading": 11600,
+        "Oem": {}
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Fan",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/4",
+        "MemberId": "4",
+        "Name": "PS 1-2 Fan RPM",
+        "PhysicalContext": "Fan",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingUnits": "RPM",
+        "Reading": 13700,
+        "Oem": {}
+      },
+      {
+        "@odata.type": "#Thermal.v1_7_3.Fan",
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/5",
+        "MemberId": "5",
+        "Name": "PS 3-6 Fan RPM",
+        "PhysicalContext": "Fan",
+        "Status": {
+          "State": "Enabled",
+          "Health": "OK"
+        },
+        "ReadingUnits": "RPM",
+        "Reading": 13300,
+        "Oem": {}
+      }
+    ]
+  },
+  "/redfish/v1/Systems/1/EthernetInterfaces?$expand=.": {
+    "@odata.type": "#EthernetInterfaceCollection.EthernetInterfaceCollection",
+    "@odata.id": "/redfish/v1/Systems/1/EthernetInterfaces",
+    "Name": "Ethernet Network Interface Collection",
+    "Members@odata.count": 7,
+    "Members": [
+      {
+        "@odata.type": "#EthernetInterface.v1_12_4.EthernetInterface",
+        "@odata.id": "/redfish/v1/Systems/1/EthernetInterfaces/1",
+        "Id": "1",
+        "Name": "AOC LAN 1",
+        "LinkStatus": "LinkUp",
+        "MACAddress": "02:b0:31:57:c7:ae"
+      },
+      {
+        "@odata.type": "#EthernetInterface.v1_12_4.EthernetInterface",
+        "@odata.id": "/redfish/v1/Systems/1/EthernetInterfaces/2",
+        "Id": "2",
+        "Name": "AOC LAN 2",
+        "LinkStatus": "LinkUp",
+        "MACAddress": "02:1b:39:f6:54:69"
+      },
+      {
+        "@odata.type": "#EthernetInterface.v1_12_4.EthernetInterface",
+        "@odata.id": "/redfish/v1/Systems/1/EthernetInterfaces/3",
+        "Id": "3",
+        "Name": "AOC LAN 3",
+        "LinkStatus": "LinkUp",
+        "MACAddress": "02:0d:d9:4b:96:98"
+      },
+      {
+        "@odata.type": "#EthernetInterface.v1_12_4.EthernetInterface",
+        "@odata.id": "/redfish/v1/Systems/1/EthernetInterfaces/4",
+        "Id": "4",
+        "Name": "AOC LAN 4",
+        "LinkStatus": "LinkUp",
+        "MACAddress": "02:93:1c:94:38:8b"
+      },
+      {
+        "@odata.type": "#EthernetInterface.v1_12_4.EthernetInterface",
+        "@odata.id": "/redfish/v1/Systems/1/EthernetInterfaces/5",
+        "Id": "5",
+        "Name": "AOC LAN 5",
+        "LinkStatus": "LinkDown",
+        "MACAddress": "02:b8:1c:e4:c8:bb"
+      },
+      {
+        "@odata.type": "#EthernetInterface.v1_12_4.EthernetInterface",
+        "@odata.id": "/redfish/v1/Systems/1/EthernetInterfaces/6",
+        "Id": "6",
+        "Name": "AOC LAN 6",
+        "LinkStatus": "LinkDown",
+        "MACAddress": "02:94:34:d0:25:57"
+      },
+      {
+        "@odata.type": "#EthernetInterface.v1_12_4.EthernetInterface",
+        "@odata.id": "/redfish/v1/Systems/1/EthernetInterfaces/ToManager",
+        "Id": "ToManager",
+        "Name": "Host Ethernet Interface",
+        "PermanentMACAddress": "00:00:00:00:00:00",
+        "MACAddress": "00:00:00:00:00:00",
+        "Oem": {},
+        "LinkStatus": "LinkUp"
+      }
+    ]
+  }
+}

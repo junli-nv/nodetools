@@ -93,7 +93,7 @@ class Netweb(Oem):
 
     # -- NIC / MAC inventory (nodemacs.nw) ------------------------------
     def macs(self, device, action):
-        return self._macs_iface_pairs(device, "System_0", "BMC_0")
+        return self._system_macs(device, "System_0")
 
     # -- virtual media (nodevm.nw) --------------------------------------
     vm_extra_actions = ("enable", "stop")

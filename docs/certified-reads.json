@@ -357,6 +357,1018 @@
         "writes"
       ],
       "adapter": "nodetools_runtime.oem.nvl.n5500.NvidiaN5500"
+    },
+    {
+      "id": "hgx_b300_kaytus_203ef_fan",
+      "status": "verified",
+      "model": "KR9288-X3-A0-F0-01",
+      "bmc_firmware": "2.03.ef",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "kaytus",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "KR9288-X3-A0-F0-01"
+      },
+      "command": "nodefan",
+      "capability": "fan",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 40,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_kaytus_203ef",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.kaytus.KaytusKr9288",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_kaytus_203ef_psu",
+      "status": "verified",
+      "model": "KR9288-X3-A0-F0-01",
+      "bmc_firmware": "2.03.ef",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "kaytus",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "KR9288-X3-A0-F0-01"
+      },
+      "command": "nodepsu",
+      "capability": "psu",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Power"
+      ],
+      "request_count": 1,
+      "expected_rows": 8,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_kaytus_203ef",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.kaytus.KaytusKr9288",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_kaytus_203ef_temp",
+      "status": "verified",
+      "model": "KR9288-X3-A0-F0-01",
+      "bmc_firmware": "2.03.ef",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "kaytus",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "KR9288-X3-A0-F0-01"
+      },
+      "command": "nodetemp",
+      "capability": "temp",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 71,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_kaytus_203ef",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.kaytus.KaytusKr9288",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_kaytus_203ef_inlet",
+      "status": "verified",
+      "model": "KR9288-X3-A0-F0-01",
+      "bmc_firmware": "2.03.ef",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "kaytus",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "KR9288-X3-A0-F0-01"
+      },
+      "command": "nodeinlet",
+      "capability": "inlet",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 1,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_kaytus_203ef",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.kaytus.KaytusKr9288",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_kaytus_203ef_monitor",
+      "status": "verified",
+      "model": "KR9288-X3-A0-F0-01",
+      "bmc_firmware": "2.03.ef",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "kaytus",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "KR9288-X3-A0-F0-01"
+      },
+      "command": "nodemon",
+      "capability": "monitor",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Power",
+        "/redfish/v1/Chassis/1/ThresholdSensors",
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 3,
+      "expected_rows": 10,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_kaytus_203ef",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.kaytus.KaytusKr9288",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_kaytus_203ef_macs",
+      "status": "verified",
+      "model": "KR9288-X3-A0-F0-01",
+      "bmc_firmware": "2.03.ef",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "kaytus",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "KR9288-X3-A0-F0-01"
+      },
+      "command": "nodemacs",
+      "capability": "macs",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/NetworkAdapters",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard0",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard0/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/2",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/3",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/4",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkDeviceFunctions",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkDeviceFunctions/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard11",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard11/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15/NetworkPorts/2",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard18",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard18/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard22",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard22/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard27",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard27/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard32",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard32/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35/NetworkPorts/2",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard38",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard38/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard42",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard42/NetworkPorts/1"
+      ],
+      "request_count": 30,
+      "expected_rows": 12,
+      "interpretation": "BMC-published compute Ethernet MACs",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_kaytus_203ef",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.kaytus.KaytusKr9288",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology",
+        "host interfaces not exposed by Redfish"
+      ]
+    },
+    {
+      "id": "hgx_b300_kaytus_203ee_fan",
+      "status": "verified",
+      "model": "KR9288-X3-A0-F0-01",
+      "bmc_firmware": "2.03.ee",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "kaytus",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "KR9288-X3-A0-F0-01"
+      },
+      "command": "nodefan",
+      "capability": "fan",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 40,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_kaytus_203ee",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.kaytus.KaytusKr9288",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_kaytus_203ee_psu",
+      "status": "verified",
+      "model": "KR9288-X3-A0-F0-01",
+      "bmc_firmware": "2.03.ee",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "kaytus",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "KR9288-X3-A0-F0-01"
+      },
+      "command": "nodepsu",
+      "capability": "psu",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Power"
+      ],
+      "request_count": 1,
+      "expected_rows": 8,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_kaytus_203ee",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.kaytus.KaytusKr9288",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_kaytus_203ee_temp",
+      "status": "verified",
+      "model": "KR9288-X3-A0-F0-01",
+      "bmc_firmware": "2.03.ee",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "kaytus",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "KR9288-X3-A0-F0-01"
+      },
+      "command": "nodetemp",
+      "capability": "temp",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 71,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_kaytus_203ee",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.kaytus.KaytusKr9288",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_kaytus_203ee_inlet",
+      "status": "verified",
+      "model": "KR9288-X3-A0-F0-01",
+      "bmc_firmware": "2.03.ee",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "kaytus",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "KR9288-X3-A0-F0-01"
+      },
+      "command": "nodeinlet",
+      "capability": "inlet",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 1,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_kaytus_203ee",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.kaytus.KaytusKr9288",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_kaytus_203ee_monitor",
+      "status": "verified",
+      "model": "KR9288-X3-A0-F0-01",
+      "bmc_firmware": "2.03.ee",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "kaytus",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "KR9288-X3-A0-F0-01"
+      },
+      "command": "nodemon",
+      "capability": "monitor",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Power",
+        "/redfish/v1/Chassis/1/ThresholdSensors",
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 3,
+      "expected_rows": 10,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_kaytus_203ee",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.kaytus.KaytusKr9288",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_kaytus_203ee_macs",
+      "status": "verified",
+      "model": "KR9288-X3-A0-F0-01",
+      "bmc_firmware": "2.03.ee",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "kaytus",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "KR9288-X3-A0-F0-01"
+      },
+      "command": "nodemacs",
+      "capability": "macs",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/NetworkAdapters",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard0",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard0/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/2",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/3",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/4",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkDeviceFunctions",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkDeviceFunctions/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard11",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard11/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15/NetworkPorts/2",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard18",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard18/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard22",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard22/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard27",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard27/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard32",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard32/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35/NetworkPorts/2",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard38",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard38/NetworkPorts/1",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard42",
+        "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard42/NetworkPorts/1"
+      ],
+      "request_count": 30,
+      "expected_rows": 12,
+      "interpretation": "BMC-published compute Ethernet MACs",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_kaytus_203ee",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.kaytus.KaytusKr9288",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology",
+        "host interfaces not exposed by Redfish"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01120203_fan",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.12.02.03",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodefan",
+      "capability": "fan",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/ThermalSubsystem/Fans?$expand=."
+      ],
+      "request_count": 1,
+      "expected_rows": 6,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01120203",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01120203_psu",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.12.02.03",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodepsu",
+      "capability": "psu",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies?$expand=.",
+        "/redfish/v1/Chassis/1/Power",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/1/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/2/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/3/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/4/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/5/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/6/Metrics"
+      ],
+      "request_count": 8,
+      "expected_rows": 6,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01120203",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01120203_temp",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.12.02.03",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodetemp",
+      "capability": "temp",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 36,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01120203",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01120203_inlet",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.12.02.03",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodeinlet",
+      "capability": "inlet",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 1,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01120203",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01120203_monitor",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.12.02.03",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodemon",
+      "capability": "monitor",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Power",
+        "/redfish/v1/Chassis/1/Thermal",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies?$expand=.",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/1/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/2/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/3/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/4/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/5/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/6/Metrics"
+      ],
+      "request_count": 9,
+      "expected_rows": 8,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01120203",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01120203_macs",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.12.02.03",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodemacs",
+      "capability": "macs",
+      "direct_requests": [
+        "/redfish/v1/Systems/1/EthernetInterfaces?$expand=."
+      ],
+      "request_count": 1,
+      "expected_rows": 6,
+      "interpretation": "BMC-published compute Ethernet MACs",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01120203",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology",
+        "host interfaces not exposed by Redfish"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01070400_fan",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.07.04.00",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodefan",
+      "capability": "fan",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/ThermalSubsystem/Fans?$expand=."
+      ],
+      "request_count": 1,
+      "expected_rows": 6,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01070400",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01070400_psu",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.07.04.00",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodepsu",
+      "capability": "psu",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies?$expand=.",
+        "/redfish/v1/Chassis/1/Power",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/1/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/2/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/3/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/4/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/5/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/6/Metrics"
+      ],
+      "request_count": 8,
+      "expected_rows": 6,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01070400",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01070400_temp",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.07.04.00",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodetemp",
+      "capability": "temp",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 35,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01070400",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01070400_inlet",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.07.04.00",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodeinlet",
+      "capability": "inlet",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 1,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01070400",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01070400_monitor",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.07.04.00",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodemon",
+      "capability": "monitor",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Power",
+        "/redfish/v1/Chassis/1/Thermal",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies?$expand=.",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/1/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/2/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/3/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/4/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/5/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/6/Metrics"
+      ],
+      "request_count": 9,
+      "expected_rows": 8,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01070400",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01070400_macs",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.07.04.00",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodemacs",
+      "capability": "macs",
+      "direct_requests": [
+        "/redfish/v1/Systems/1/EthernetInterfaces?$expand=."
+      ],
+      "request_count": 1,
+      "expected_rows": 6,
+      "interpretation": "BMC-published compute Ethernet MACs",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01070400",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology",
+        "host interfaces not exposed by Redfish"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01120500_fan",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.12.05.00",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodefan",
+      "capability": "fan",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/ThermalSubsystem/Fans?$expand=."
+      ],
+      "request_count": 1,
+      "expected_rows": 6,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01120500",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01120500_psu",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.12.05.00",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodepsu",
+      "capability": "psu",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies?$expand=.",
+        "/redfish/v1/Chassis/1/Power",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/1/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/2/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/3/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/4/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/5/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/6/Metrics"
+      ],
+      "request_count": 8,
+      "expected_rows": 6,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01120500",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01120500_temp",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.12.05.00",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodetemp",
+      "capability": "temp",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 36,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01120500",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01120500_inlet",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.12.05.00",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodeinlet",
+      "capability": "inlet",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Thermal"
+      ],
+      "request_count": 1,
+      "expected_rows": 1,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01120500",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01120500_monitor",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.12.05.00",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodemon",
+      "capability": "monitor",
+      "direct_requests": [
+        "/redfish/v1/Chassis/1/Power",
+        "/redfish/v1/Chassis/1/Thermal",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies?$expand=.",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/1/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/2/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/3/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/4/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/5/Metrics",
+        "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/6/Metrics"
+      ],
+      "request_count": 9,
+      "expected_rows": 8,
+      "interpretation": "HGX sensor readings",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01120500",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology"
+      ]
+    },
+    {
+      "id": "hgx_b300_smc_01120500_macs",
+      "status": "verified",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_firmware": "01.12.05.00",
+      "configuration": {
+        "platform": "hgx",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "b300",
+        "system_model": "SYS-822GS-NB3RT"
+      },
+      "command": "nodemacs",
+      "capability": "macs",
+      "direct_requests": [
+        "/redfish/v1/Systems/1/EthernetInterfaces?$expand=."
+      ],
+      "request_count": 1,
+      "expected_rows": 6,
+      "interpretation": "BMC-published compute Ethernet MACs",
+      "fallback": "Use capability-scoped fallback when available.",
+      "fixture": "hgx_b300_smc_01120500",
+      "test": "tests/test_direct_read_contract.py",
+      "adapter": "nodetools_runtime.oem.hgx.smc.SmcB300",
+      "live_validation": "2026-11-28: exact GETs and counts measured on representative hardware",
+      "unverified_scope": [
+        "writes",
+        "unlisted firmware and topology",
+        "host interfaces not exposed by Redfish"
+      ]
     }
   ],
   "legacy_baseline_commit": "f6373fe63f6ea7b162b13d82f2699c0aaa9968ec",

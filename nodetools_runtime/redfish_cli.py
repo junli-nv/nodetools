@@ -12,7 +12,7 @@ from .errors import NodetoolsError
 from .inventory import Host, Inventory, RESOURCE_ID_KEYS
 from .report import render
 
-_METADATA = ("role", "platform", "oem", "generation", *RESOURCE_ID_KEYS)
+_METADATA = ("role", "platform", "oem", "generation", "system_model", *RESOURCE_ID_KEYS)
 _INFO_READS = {"power", "inventory", "bootorder", "netboot", "macs", "bios", "vm"}
 
 
@@ -93,7 +93,27 @@ def replay(args):
     options.jobs = 1
     options.action = "pending" if args.action == "pending" else None
 
+    expected_rows = getattr(args, "expect_rows", None)
+    expected_paths = getattr(args, "expect_path", None)
+    strict = expected_rows is not None or expected_paths is not None
+    if strict:
+        if expected_rows is None or expected_rows < 1 or not expected_paths:
+            raise NodetoolsError("strict replay requires positive --expect-rows and at least one --expect-path")
+        if runner_kind is not runtime.Runner:
+            raise NodetoolsError("strict replay is only available for Redfish sensor commands")
+        if not all(metadata.get(field) for field in ("platform", "oem", "generation")):
+            raise NodetoolsError("strict replay needs snapshot platform, oem and generation")
+        expected_paths = [redfish_snapshot.resource_path(path) for path in expected_paths]
+        if None in expected_paths:
+            raise NodetoolsError("--expect-path must be a local Redfish resource")
+
     def factory(selected):
+        if strict:
+            return runtime.build_device(
+                selected, options, apply_deadline=False, load_profile=runner._needs_profile(selected),
+                redfish_factory=lambda *args, **kwargs: transport,
+                ipmi_factory=lambda *args, **kwargs: None,
+            )
         device = model.Device(selected, redfish_factory=lambda _: transport)
         device.options = options
         device.identity = scan.read_identity(transport, device.vars)
@@ -101,9 +121,33 @@ def replay(args):
 
     runner = runner_kind(subject, options, device_factory=factory)
     result, = runner.stream([host])
-    for line in render([result], summary=False, errors_only=False):
+    for line in render([result], summary=False, errors_only=False,
+                       details=getattr(args, "details", False)):
         print(line)
     for label, paths in (("not captured", transport.missing), ("capture failed", transport.failed)):
         for path in sorted(paths):
             print(f"snapshot {label}: {path}", file=sys.stderr)
+    if strict:
+        return _verify_replay(result, transport.requests, expected_rows, expected_paths)
     return 1 if result.get("error") else 0
+
+
+def _verify_replay(result, requests, expected_rows, expected_paths):
+    found_rows = len(result.get("readings", ()))
+    found_paths = [path for path, _ in requests]
+    errors = []
+    if result.get("error"):
+        errors.append(result["error"])
+    if found_rows != expected_rows:
+        errors.append(f"expected {expected_rows} readings, got {found_rows}")
+    if found_paths != expected_paths:
+        errors.append(f"expected GETs {expected_paths}, got {found_paths}")
+    for path, status in requests:
+        if status is None or not 200 <= status < 300:
+            errors.append(f"GET {path}: {status if status is not None else 'no captured response'}")
+    if errors:
+        for error in errors:
+            print(f"snapshot verification failed: {error}", file=sys.stderr)
+        return 1
+    print(f"snapshot verified: {found_rows} readings, {len(requests)} GETs", file=sys.stderr)
+    return 0

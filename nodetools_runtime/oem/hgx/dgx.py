@@ -29,7 +29,7 @@ class Dgx(Oem):
     _BIOS_EXCLUDES = ("BootOrder", "MAPIDS", "RFServiceIp", "UefiPriorities")
 
     def macs(self, device, action):
-        return self._macs_iface_pairs(device, "DGX", "BMC", "PermanentMACAddress")
+        return self._system_macs(device, "DGX")
 
     def bios(self, device, action):
         rows = self._bios_rows(device, self._BIOS_EXCLUDES, sort=True)

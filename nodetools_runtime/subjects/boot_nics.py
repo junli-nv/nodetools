@@ -3,6 +3,7 @@
 import re
 from collections import defaultdict
 
+from ..errors import CapUnsupported
 from . import common
 
 PCI_PRODUCTS = {"101b": "cx6", "101d": "cx6", "101f": "cx6",
@@ -23,7 +24,12 @@ def local_link(value):
 
 def mac(value):
     text = re.sub(r"[:-]", "", str(value or "")).lower()
-    return text if re.fullmatch("[0-9a-f]{12}", text) and text != "000000000000" else None
+    return text if re.fullmatch("[0-9a-f]{12}", text) and text not in ("000000000000", "ffffffffffff") else None
+
+
+def format_mac(value):
+    address = mac(value)
+    return ":".join(address[i:i+2] for i in range(0, 12, 2)) if address else None
 
 
 def product(*labels, pci=None):
@@ -61,11 +67,17 @@ def members(device, path, required=False):
         return
     page = path + "?$expand=."
     seen = set()
+    member_paths = set()
+    expected = None
     while page and page not in seen:
         seen.add(page)
         data = common.resource(device, page)
         if "Members" not in data and page == path + "?$expand=.":
             data = common.resource(device, path, required=required)
+        if required and not isinstance(data.get("Members"), list):
+            raise CapUnsupported(f"incomplete EthernetInterfaces collection at {page}")
+        if expected is None and isinstance(data.get("Members@odata.count"), int):
+            expected = data["Members@odata.count"]
         for item in data.get("Members") or ():
             if not isinstance(item, dict):
                 continue
@@ -76,10 +88,16 @@ def members(device, path, required=False):
                 continue
             resource = item if len(item) > 1 else common.resource(device, item_path, required=required)
             if resource:
+                member_paths.add(item_path)
                 yield item_path, resource
         page = data.get("Members@odata.nextLink")
+        if page and required and (not isinstance(page, str)
+                                  or not page.startswith(path + "?") or page in seen):
+            raise CapUnsupported(f"invalid EthernetInterfaces next page for {path}")
         if not isinstance(page, str) or not page.startswith(path + "?"):
             break
+    if required and expected is not None and len(member_paths) != expected:
+        raise CapUnsupported(f"incomplete EthernetInterfaces collection at {path}")
 
 
 def slot(item):

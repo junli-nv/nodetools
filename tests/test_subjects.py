@@ -448,7 +448,7 @@ def test_lenovo_nvl_macs_reports_vendor_model_and_link_from_linked_hardware():
     )
 
 
-def test_macs_base_os_and_bmc():
+def test_macs_base_uses_boot_options_for_compute_only():
     expand = "/redfish/v1/Systems/system/BootOptions?$expand=."
     bmc = "/redfish/v1/Managers/BMC_0/EthernetInterfaces"
     data = {
@@ -465,7 +465,6 @@ def test_macs_base_os_and_bmc():
     lines = macs.collect(_device(redfish=FakeRedfish(data)), None, None)
     assert lines == [
         "cp-01:OS Boot0001 A0:88:C2:12:34:56 PciRoot(0x16)/Pci(1|0)",
-        'cp-01:BMC "eth0"\t"AA:BB:CC:DD:EE:FF"',
     ]
 
 
@@ -689,7 +688,7 @@ def test_compal_bios_status_filters_and_sorts():
     assert bios.collect(device, "status", None) == ["cp-01: NumaEnable=Enabled"]
 
 
-def test_compal_macs_pairs_self_and_bmc():
+def test_compal_macs_reads_system_only():
     from nodetools_runtime.oem.hgx.compal import Compal
 
     sys_eth = "/redfish/v1/Systems/Self/EthernetInterfaces"
@@ -704,7 +703,6 @@ def test_compal_macs_pairs_self_and_bmc():
     device = _device(redfish=FakeRedfish(data), odm=Compal())
     assert macs.collect(device, None, None) == [
         "cp-01: eth0\tAA:BB:CC:DD:EE:FF\tPciRoot",
-        "cp-01: b0\t11:22:33:44:55:66",
     ]
 
 

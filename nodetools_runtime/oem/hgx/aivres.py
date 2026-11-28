@@ -274,11 +274,15 @@ class Aivres(Oem):
         return [self._label(device, row) for row in rows]
 
     # -- NIC / MAC inventory (nodemacs.avr) -----------------------------
-    def macs(self, device, action):
+    def _compute_mac_rows(self, device, validated=False):
+        from ...subjects import boot_nics
+
         lines = []
-        adapters = common.resource(device, _CHASSIS + "/NetworkAdapters")
+        chassis = device.vars.get("chassis_id")
+        base = "/redfish/v1/Chassis/" + chassis if chassis else _CHASSIS
+        adapters = common.resource(device, base + "/NetworkAdapters", required=validated)
         for path in common.member_ids(adapters):
-            adapter = common.resource(device, path)
+            adapter = common.resource(device, path, required=validated)
             if not adapter:
                 continue
             pub = (adapter.get("Oem") or {}).get("Public") or {}
@@ -296,14 +300,18 @@ class Aivres(Oem):
                 links = common.member_ids(common.resource(device, collection))
             port_count = 0
             for oid in links:
-                port = common.resource(device, oid)
+                port = common.resource(device, oid, required=validated)
                 if not port.get("AssociatedNetworkAddresses"):
                     continue
                 port_count += 1
                 ppub = (port.get("Oem") or {}).get("Public") or {}
-                addresses = ",".join(
-                    _jq_r(mac) for mac in port.get("AssociatedNetworkAddresses") or []
-                )
+                values = port.get("AssociatedNetworkAddresses") or []
+                if validated:
+                    values = [boot_nics.format_mac(value) for value in values if boot_nics.mac(value)]
+                    if not values:
+                        port_count -= 1
+                        continue
+                addresses = ",".join(_jq_r(value) for value in values)
                 lines.append(
                     ",".join(
                         (
@@ -321,25 +329,18 @@ class Aivres(Oem):
                 collection = resource.get("@odata.id") or path + "/NetworkDeviceFunctions"
                 functions = common.resource(device, collection)
                 for oid in common.member_ids(functions):
-                    entry = common.resource(device, oid)
+                    entry = common.resource(device, oid, required=validated)
                     eth = entry.get("Ethernet") or {}
                     mac = eth.get("PermanentMACAddress") or eth.get("MACAddress")
-                    if mac:
-                        lines.append("{},{},{},,,{}".format(entry.get("Id", ""), pub.get("VenderID", ""), mac, card))
-        for iface in self._members(device, _MANAGER + "/EthernetInterfaces"):
-            lines.append(
-                ",".join(
-                    _jq_r(iface.get(field, ""))
-                    for field in (
-                        "Id",
-                        "Name",
-                        "PermanentMACAddress",
-                        "LinkStatus",
-                        "SpeedMbps",
-                    )
-                )
-            )
-        return [self._label(device, line) for line in lines]
+                    if validated and not boot_nics.mac(mac):
+                        mac = eth.get("MACAddress")
+                    if mac and (not validated or boot_nics.mac(mac)):
+                        address = boot_nics.format_mac(mac) if validated else mac
+                        lines.append("{},{},{},,,{}".format(entry.get("Id", ""), pub.get("VenderID", ""), address, card))
+        return lines
+
+    def macs(self, device, action):
+        return [self._label(device, line) for line in self._compute_mac_rows(device)]
 
     # -- virtual media (nodevm.avr) -------------------------------------
     vm_protocols = ("nfs",)

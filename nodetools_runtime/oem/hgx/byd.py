@@ -20,7 +20,7 @@ class Byd(Oem):
     _BIOS_EXCLUDES = ("SETUP006", "SETUP", "MAPIDS", "FBO")
 
     def macs(self, device, action):
-        return self._macs_iface_pairs(device, "Self", "Self")
+        return self._system_macs(device, "Self")
 
     def bios(self, device, action):
         rows = self._bios_rows(device, self._BIOS_EXCLUDES, sort=True)

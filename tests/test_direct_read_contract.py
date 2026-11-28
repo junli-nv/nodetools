@@ -1,5 +1,6 @@
 import copy
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -47,7 +48,10 @@ class Ipmi:
 
 def prepare(record, monkeypatch):
     nvos_stdout = None
-    if record["fixture"] == "smc_gb300_psu":
+    if record["fixture"].startswith("hgx_b300_"):
+        fixture = ROOT / "tests/fixtures/certified" / (record["fixture"] + ".json")
+        data = json.loads(fixture.read_text())
+    elif record["fixture"] == "smc_gb300_psu":
         data = {}
         for i in range(2):
             ident = "PDB_0_HSC_{}_Pwr_0".format(i)
@@ -111,7 +115,8 @@ def prepare(record, monkeypatch):
     options.timeout = 3
     options.timeout_explicit = True
     options.node_timeout = 10
-    return runtime.Runner(record["capability"], options), host, transport
+    runner = runtime.InfoRunner if record["capability"] == "macs" else runtime.Runner
+    return runner(record["capability"], options), host, transport
 
 
 @pytest.mark.parametrize("record", RECORDS, ids=lambda r: r["id"])
@@ -119,20 +124,33 @@ def test_certified_read_uses_exact_runtime_request_contract(record, monkeypatch)
     runner, host, transport = prepare(record, monkeypatch)
     result = runner._one(host)
     assert result["error"] is None
-    assert len(result["readings"]) == record["expected_rows"]
+    rows = result["lines"] if record["capability"] == "macs" else result["readings"]
+    assert len(rows) == record["expected_rows"]
     assert transport.requests == record["direct_requests"]
     assert len(transport.requests) == record["request_count"]
-    assert record["request_count"] == {
+    counts = {
         "smc_gb300_psu": 2, "liteon_pf1333_psu": 1, "liteon_pf1333_psu_details": 8,
         "smc_gb300_fan": 1, "smc_gb300_temp": 9,
         "smc_gb300_inlet": 1, "smc_gb300_monitor": 4, "nvidia_n5500_temp": 3, "nvidia_n5500_hsc": 1,
         "liteon_pf1333_fan": 1, "liteon_pf1333_temp": 1,
-    }[record["id"]]
+    }
+    if record["fixture"].startswith("hgx_b300_"):
+        vendor = record["configuration"]["oem"]
+        counts[record["id"]] = {
+            "fan": 1, "temp": 1, "inlet": 1, "psu": 8 if vendor == "smc" else 1,
+            "monitor": 9 if vendor == "smc" else 3, "macs": 1 if vendor == "smc" else 30,
+        }[record["capability"]]
+    assert record["request_count"] == counts[record["id"]]
     assert record["status"] == "verified"
     assert record["model"] and record["bmc_firmware"] and record["unverified_scope"]
     if record["capability"] == "psu":
         assert all(r.get("input_watts") is not None for r in result["readings"])
-    elif record["capability"] in ("fan", "temp"):
+    elif record["capability"] == "macs":
+        assert all("/Managers/" not in path for path in transport.requests)
+        assert all(re.search(r"(?:[0-9a-f]{2}:){5}[0-9a-f]{2}", row) for row in rows)
+    elif record["fixture"].startswith("hgx_b300_") and record["capability"] == "fan":
+        assert all(row.get("unit") == "RPM" for row in rows)
+    elif not record["fixture"].startswith("hgx_b300_") and record["capability"] in ("fan", "temp"):
         units = {}
         for row in result["readings"]:
             units[row["unit"]] = units.get(row["unit"], 0) + 1
@@ -222,9 +240,9 @@ def test_new_fixed_capabilities_require_executable_certification():
     legacy = {(adapter, cap) for adapter, caps in manifest["legacy_unreviewed"].items()
               for cap in caps}
     certified = {(r["adapter"], r["capability"]) for r in manifest["records"]
-                 if r["status"] == "verified"}
+                 if r["status"] == "verified" and r["capability"] != "macs"}
     declared = set()
-    for registry in (oem._MODULES, oem._PLATFORM_MODULES, oem._ROLE_MODULES):
+    for registry in (oem._MODULES, oem._PLATFORM_MODULES, oem._ROLE_MODULES, oem._HGX_READ_MODELS):
         for adapter in registry.values():
             name = type(adapter).__module__ + "." + type(adapter).__name__
             declared.update((name, cap) for cap in (*getattr(adapter, "inventory_fixed_caps", ()),
@@ -233,7 +251,7 @@ def test_new_fixed_capabilities_require_executable_certification():
     assert declared == legacy | certified
     for record in manifest["records"]:
         host = Host("fixture-01", "192.0.2.1", record["configuration"])
-        adapter = oem.for_device(model.Device(host))
+        adapter = oem.for_device(model.Device(host), configured_read=True)
         assert type(adapter).__module__ + "." + type(adapter).__name__ == record["adapter"]
         assert (ROOT / record["test"]).is_file()
 
@@ -247,3 +265,58 @@ def test_declared_null_temperature_slots_are_explicitly_unavailable(monkeypatch)
     assert len(unavailable) == 4
     assert all("SSD" in r["id"] and r["health"] == "Unknown" for r in unavailable)
     assert transport.requests == record["direct_requests"]
+
+
+def test_compute_macs_incomplete_collection_fails(monkeypatch):
+    record = next(r for r in RECORDS if r["capability"] == "macs"
+                  and r["configuration"]["oem"] == "smc")
+    runner, host, transport = prepare(record, monkeypatch)
+    first = record["direct_requests"][0]
+    second = first + "&$skip=2"
+    transport.data[first]["Members@odata.nextLink"] = second
+    result = runner._one(host)
+    assert not result["lines"]
+    assert "incomplete EthernetInterfaces collection" in result["error"]
+    assert transport.requests == [first, second]
+
+
+def test_compute_macs_falls_back_to_unexpanded_ethernet_collection(monkeypatch):
+    record = next(r for r in RECORDS if r["capability"] == "macs"
+                  and r["configuration"]["oem"] == "smc")
+    runner, host, transport = prepare(record, monkeypatch)
+    expanded = record["direct_requests"][0]
+    base = expanded.split("?")[0]
+    member = base + "/1"
+    del transport.data[expanded]
+    transport.data[base] = {"Members": [{"@odata.id": member}], "Members@odata.count": 1}
+    transport.data[member] = {"Id": "1", "MACAddress": "02:00:00:00:00:11"}
+    result = runner._one(host)
+    assert result["error"] is None
+    assert result["lines"] == ["fixture-01: 1, 02:00:00:00:00:11"]
+    assert transport.requests == [expanded, base, member]
+
+
+def test_kaytus_compute_macs_fails_when_advertised_port_is_unreadable(monkeypatch):
+    record = next(r for r in RECORDS if r["capability"] == "macs"
+                  and r["configuration"]["oem"] == "kaytus")
+    runner, host, transport = prepare(record, monkeypatch)
+    port = next(path for path in record["direct_requests"] if "/NetworkPorts/" in path)
+    del transport.data[port]
+    result = runner._one(host)
+    assert not result["lines"]
+    assert f"no data at {port}" in result["error"]
+    assert transport.requests[-1] == port
+
+
+def test_kaytus_empty_pending_bios_is_successful(monkeypatch):
+    record = next(r for r in RECORDS if r["capability"] == "macs"
+                  and r["configuration"]["oem"] == "kaytus")
+    _, host, transport = prepare(record, monkeypatch)
+    path = "/redfish/v1/Systems/1/Bios/Settings"
+    transport.data[path] = {"Attributes": {}}
+    options = cli.Options(parse_args(["nodebios", host.name, "pending"]))
+    options.timeout, options.node_timeout, options.action = 3, 10, "pending"
+    result = runtime.InfoRunner("bios", options)._one(host)
+    assert result["error"] is None
+    assert result["lines"] == ["fixture-01: No pending BIOS settings"]
+    assert transport.requests == [path]

@@ -369,23 +369,7 @@ class Oem:
             bus_b = parts[5] if len(parts) > 5 else ""
             mac_a = parts[6] if len(parts) > 6 else ""
             lines.append("OS {} {} {}".format(boot, _format_mac(mac_a), bus_b))
-        for ident, mac in self._bmc_macs(device):
-            lines.append("BMC {}\t{}".format(ident, mac))
         return ["{}:{}".format(device.name, line) for line in lines]
-
-    def _bmc_macs(self, device):
-        out = []
-        for data in self._iface_members(
-            device,
-            "/redfish/v1/Managers/{}/EthernetInterfaces".format(self.bmc_id),
-        ):
-            out.append(
-                (
-                    json.dumps(data.get("Id", "")),
-                    json.dumps(data.get("MACAddress", "")),
-                )
-            )
-        return out
 
     # -- BIOS settings (nodebios) ---------------------------------------
     def bios(self, device, action):
@@ -585,16 +569,11 @@ class Oem:
             rows.append(sep.join(_jq_r(data.get(field, "")) for field in fields))
         return rows
 
-    def _macs_iface_pairs(self, device, system, manager, manager_field="MACAddress"):
+    def _system_macs(self, device, system):
         lines = self._iface_rows(
             device,
             "/redfish/v1/Systems/{}/EthernetInterfaces".format(system),
             ("Id", "MACAddress", "UefiDevicePath"),
-        )
-        lines += self._iface_rows(
-            device,
-            "/redfish/v1/Managers/{}/EthernetInterfaces".format(manager),
-            ("Id", manager_field),
         )
         return [self._label(device, line) for line in lines]
 

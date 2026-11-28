@@ -1,5 +1,6 @@
 """Capture read-only Redfish resources for offline adapter development."""
 
+import gzip
 import hashlib
 import ipaddress
 import json
@@ -77,13 +78,24 @@ class Redactor:
     def _mac(self, match):
         original = match.group()
         normalized = re.sub(r"[:-]", "", original.lower())
+        if normalized in ("000000000000", "ffffffffffff"):
+            return original
         masked = "02" + hashlib.blake2s(
             normalized.encode(), key=self.salt, digest_size=5
         ).hexdigest()
         return ":".join(masked[i:i + 2] for i in range(0, 12, 2)) if len(original) > 12 else masked
 
     def clean(self, value, field=""):
-        if _PROTECTED.search(re.sub(r"[^a-z0-9]", "", field.lower())):
+        normalized = re.sub(r"[^a-z0-9]", "", field.lower())
+        if normalized.endswith("serialnumber") and value is None:
+            return None
+        if normalized.endswith("serialnumber") and isinstance(value, str):
+            serial = value.strip()
+            if serial.casefold() in ("", "0", "unknown", "n/a", "na", "none", "null", "not available"):
+                return value
+            digest = hashlib.blake2s(serial.encode(), key=self.salt, digest_size=12).hexdigest()
+            return "serial-" + digest
+        if _PROTECTED.search(normalized):
             return "<redacted>"
         if isinstance(value, dict):
             return {key: self.clean(item, key) for key, item in value.items()}
@@ -91,6 +103,10 @@ class Redactor:
             return [self.clean(item, field) for item in value]
         if not isinstance(value, str):
             return value
+        if normalized in ("macaddress", "permanentmacaddress", "associatednetworkaddresses", "associatedmacaddresses"):
+            raw = re.fullmatch(r"[0-9a-fA-F]{12}", value)
+            if raw:
+                return self._mac(raw)
         if field in ("@odata.id", "target") or field.endswith("@odata.nextLink"):
             local = resource_path(value, self.origin)
             if local:
@@ -214,8 +230,10 @@ def save(path, snapshot):
 
 def load(path):
     try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
+        opener = gzip.open if Path(path).suffix == ".gz" else open
+        with opener(path, "rt", encoding="utf-8") as stream:
+            data = json.load(stream)
+    except (OSError, EOFError, ValueError) as exc:
         raise NodetoolsError(f"cannot read snapshot: {exc}") from exc
     if (not isinstance(data, dict) or data.get("schema") != SCHEMA
             or not isinstance(data.get("resources"), dict)
@@ -233,13 +251,15 @@ def load(path):
 class Replay:
     def __init__(self, snapshot):
         self.records = snapshot["resources"]
+        self.requests = []
         self.missing = set()
         self.failed = set()
         self.transport_errors = 0
 
-    def get_raw(self, path, timeout=None):
+    def get_raw(self, path, timeout=None, *, follow_redirects=True):
         normalized = resource_path(path)
         record = self.records.get(normalized)
+        self.requests.append((normalized or path, record["status"] if record else None))
         if record is None:
             self.missing.add(normalized or "<uncaptured path>")
             return None, None

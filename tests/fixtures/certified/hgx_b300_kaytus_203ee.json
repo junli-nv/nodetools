@@ -1,0 +1,3880 @@
+{
+  "/redfish/v1/Chassis/1/Thermal": {
+    "@odata.id": "/redfish/v1/Chassis/1/Thermal",
+    "@odata.type": "#Thermal.v1_5_3.Thermal",
+    "Fans": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/0",
+        "MemberId": "0",
+        "Model": "8086",
+        "Name": "FAN0_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 6390,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/1",
+        "MemberId": "1",
+        "Model": "8086",
+        "Name": "FAN0_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 6360,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/2",
+        "MemberId": "2",
+        "Model": "8086",
+        "Name": "FAN1_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 6390,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/3",
+        "MemberId": "3",
+        "Model": "8086",
+        "Name": "FAN1_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 6390,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/4",
+        "MemberId": "4",
+        "Model": "8086",
+        "Name": "FAN2_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 6390,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/5",
+        "MemberId": "5",
+        "Model": "8086",
+        "Name": "FAN2_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 6390,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/6",
+        "MemberId": "6",
+        "Model": "8086",
+        "Name": "FAN3_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 6390,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/7",
+        "MemberId": "7",
+        "Model": "8086",
+        "Name": "FAN3_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 6390,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/8",
+        "MemberId": "8",
+        "Model": "8086",
+        "Name": "FAN4_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 6390,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/9",
+        "MemberId": "9",
+        "Model": "8086",
+        "Name": "FAN4_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 6360,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/10",
+        "MemberId": "10",
+        "Model": "8086",
+        "Name": "FAN5_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18540,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/11",
+        "MemberId": "11",
+        "Model": "8086",
+        "Name": "FAN5_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 17190,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/12",
+        "MemberId": "12",
+        "Model": "8086",
+        "Name": "FAN6_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18120,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/13",
+        "MemberId": "13",
+        "Model": "8086",
+        "Name": "FAN6_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 17400,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/14",
+        "MemberId": "14",
+        "Model": "8086",
+        "Name": "FAN7_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18030,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/15",
+        "MemberId": "15",
+        "Model": "8086",
+        "Name": "FAN7_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 17430,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/16",
+        "MemberId": "16",
+        "Model": "8086",
+        "Name": "FAN8_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18240,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/17",
+        "MemberId": "17",
+        "Model": "8086",
+        "Name": "FAN8_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 17280,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/18",
+        "MemberId": "18",
+        "Model": "8086",
+        "Name": "FAN9_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 17610,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/19",
+        "MemberId": "19",
+        "Model": "8086",
+        "Name": "FAN9_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 17460,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/20",
+        "MemberId": "20",
+        "Model": "8086",
+        "Name": "FAN10_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18270,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/21",
+        "MemberId": "21",
+        "Model": "8086",
+        "Name": "FAN10_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 16950,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/22",
+        "MemberId": "22",
+        "Model": "8086",
+        "Name": "FAN11_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18420,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/23",
+        "MemberId": "23",
+        "Model": "8086",
+        "Name": "FAN11_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 17520,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/24",
+        "MemberId": "24",
+        "Model": "8086",
+        "Name": "FAN12_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18210,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/25",
+        "MemberId": "25",
+        "Model": "8086",
+        "Name": "FAN12_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 17460,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/26",
+        "MemberId": "26",
+        "Model": "8086",
+        "Name": "FAN13_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18240,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/27",
+        "MemberId": "27",
+        "Model": "8086",
+        "Name": "FAN13_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 17730,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/28",
+        "MemberId": "28",
+        "Model": "8086",
+        "Name": "FAN14_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18030,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/29",
+        "MemberId": "29",
+        "Model": "8086",
+        "Name": "FAN14_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 17670,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/30",
+        "MemberId": "30",
+        "Model": "8086",
+        "Name": "FAN15_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18600,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/31",
+        "MemberId": "31",
+        "Model": "8086",
+        "Name": "FAN15_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18000,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/32",
+        "MemberId": "32",
+        "Model": "8086",
+        "Name": "FAN16_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18540,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/33",
+        "MemberId": "33",
+        "Model": "8086",
+        "Name": "FAN16_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 17550,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/34",
+        "MemberId": "34",
+        "Model": "8086",
+        "Name": "FAN17_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18510,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/35",
+        "MemberId": "35",
+        "Model": "8086",
+        "Name": "FAN17_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 17970,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/36",
+        "MemberId": "36",
+        "Model": "8086",
+        "Name": "FAN18_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18510,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/37",
+        "MemberId": "37",
+        "Model": "8086",
+        "Name": "FAN18_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 17610,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/38",
+        "MemberId": "38",
+        "Model": "8086",
+        "Name": "FAN19_F_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18540,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Fans/39",
+        "MemberId": "39",
+        "Model": "8086",
+        "Name": "FAN19_R_Speed",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#PublicThermal.v1_0_0.Fan"
+          }
+        },
+        "PhysicalContext": "Fan",
+        "Reading": 18180,
+        "ReadingUnits": "RPM",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      }
+    ],
+    "Id": "Thermal",
+    "Name": "Thermal",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicThermal.v1_0_0.PublicThermal"
+      }
+    },
+    "Status": {},
+    "Temperatures": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/0",
+        "MemberId": "0",
+        "Name": "Inlet_Temp",
+        "ReadingCelsius": 23,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/1",
+        "MemberId": "1",
+        "Name": "Outlet_Temp",
+        "ReadingCelsius": 33,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/2",
+        "MemberId": "2",
+        "Name": "CPU0_Temp",
+        "ReadingCelsius": 56,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/3",
+        "MemberId": "3",
+        "Name": "CPU1_Temp",
+        "ReadingCelsius": 56,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/4",
+        "MemberId": "4",
+        "Name": "CPU0_Margin_Temp",
+        "ReadingCelsius": 50,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/5",
+        "MemberId": "5",
+        "Name": "CPU1_Margin_Temp",
+        "ReadingCelsius": 50,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/6",
+        "MemberId": "6",
+        "Name": "CPU0_DIMM_Temp",
+        "ReadingCelsius": 30,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/7",
+        "MemberId": "7",
+        "Name": "CPU1_DIMM_Temp",
+        "ReadingCelsius": 30,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/8",
+        "MemberId": "8",
+        "Name": "CPU0_VR_Temp",
+        "ReadingCelsius": 44,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/9",
+        "MemberId": "9",
+        "Name": "CPU1_VR_Temp",
+        "ReadingCelsius": 44,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/10",
+        "MemberId": "10",
+        "Name": "PSU0_Inlet_Temp",
+        "ReadingCelsius": 40,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/11",
+        "MemberId": "11",
+        "Name": "PSU1_Inlet_Temp",
+        "ReadingCelsius": 37,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/12",
+        "MemberId": "12",
+        "Name": "PSU2_Inlet_Temp",
+        "ReadingCelsius": 25,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/13",
+        "MemberId": "13",
+        "Name": "PSU3_Inlet_Temp",
+        "ReadingCelsius": 27,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/14",
+        "MemberId": "14",
+        "Name": "PSU4_Inlet_Temp",
+        "ReadingCelsius": 26,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/15",
+        "MemberId": "15",
+        "Name": "PSU5_Inlet_Temp",
+        "ReadingCelsius": 26,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/16",
+        "MemberId": "16",
+        "Name": "PSU6_Inlet_Temp",
+        "ReadingCelsius": 24,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/17",
+        "MemberId": "17",
+        "Name": "PSU7_Inlet_Temp",
+        "ReadingCelsius": 25,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/18",
+        "MemberId": "18",
+        "Name": "GPU0_Temp",
+        "ReadingCelsius": 32,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/19",
+        "MemberId": "19",
+        "Name": "GPU1_Temp",
+        "ReadingCelsius": 29,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/20",
+        "MemberId": "20",
+        "Name": "GPU2_Temp",
+        "ReadingCelsius": 29,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/21",
+        "MemberId": "21",
+        "Name": "GPU3_Temp",
+        "ReadingCelsius": 32,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/22",
+        "MemberId": "22",
+        "Name": "GPU4_Temp",
+        "ReadingCelsius": 30,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/23",
+        "MemberId": "23",
+        "Name": "GPU5_Temp",
+        "ReadingCelsius": 30,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/24",
+        "MemberId": "24",
+        "Name": "GPU6_Temp",
+        "ReadingCelsius": 29,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/25",
+        "MemberId": "25",
+        "Name": "GPU7_Temp",
+        "ReadingCelsius": 32,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/26",
+        "MemberId": "26",
+        "Name": "GPU0_Mem_Temp",
+        "ReadingCelsius": 28,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/27",
+        "MemberId": "27",
+        "Name": "GPU1_Mem_Temp",
+        "ReadingCelsius": 27,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/28",
+        "MemberId": "28",
+        "Name": "GPU2_Mem_Temp",
+        "ReadingCelsius": 27,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/29",
+        "MemberId": "29",
+        "Name": "GPU3_Mem_Temp",
+        "ReadingCelsius": 28,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/30",
+        "MemberId": "30",
+        "Name": "GPU4_Mem_Temp",
+        "ReadingCelsius": 26,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/31",
+        "MemberId": "31",
+        "Name": "GPU5_Mem_Temp",
+        "ReadingCelsius": 0,
+        "Status": {
+          "Health": null,
+          "State": "Absent"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/32",
+        "MemberId": "32",
+        "Name": "GPU6_Mem_Temp",
+        "ReadingCelsius": 26,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/33",
+        "MemberId": "33",
+        "Name": "GPU7_Mem_Temp",
+        "ReadingCelsius": 29,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/34",
+        "MemberId": "34",
+        "Name": "GPU0_Tlimit_Temp",
+        "ReadingCelsius": 61,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/35",
+        "MemberId": "35",
+        "Name": "GPU1_Tlimit_Temp",
+        "ReadingCelsius": 58,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/36",
+        "MemberId": "36",
+        "Name": "GPU2_Tlimit_Temp",
+        "ReadingCelsius": 60,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/37",
+        "MemberId": "37",
+        "Name": "GPU3_Tlimit_Temp",
+        "ReadingCelsius": 59,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/38",
+        "MemberId": "38",
+        "Name": "GPU4_Tlimit_Temp",
+        "ReadingCelsius": 61,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/39",
+        "MemberId": "39",
+        "Name": "GPU5_Tlimit_Temp",
+        "ReadingCelsius": 59,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/40",
+        "MemberId": "40",
+        "Name": "GPU6_Tlimit_Temp",
+        "ReadingCelsius": 0,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/41",
+        "MemberId": "41",
+        "Name": "GPU7_Tlimit_Temp",
+        "ReadingCelsius": 61,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/42",
+        "MemberId": "42",
+        "Name": "M.2_Temp",
+        "ReadingCelsius": 30,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/43",
+        "MemberId": "43",
+        "Name": "RAID_Temp",
+        "ReadingCelsius": 0,
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/44",
+        "MemberId": "44",
+        "Name": "SSD_MAX_Temp",
+        "ReadingCelsius": 0,
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/45",
+        "MemberId": "45",
+        "Name": "HDD_MAX_Temp",
+        "ReadingCelsius": 0,
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/46",
+        "MemberId": "46",
+        "Name": "OCP_NIC_Temp",
+        "ReadingCelsius": 0,
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/47",
+        "MemberId": "47",
+        "Name": "OCP_NIC_SFP_Temp",
+        "ReadingCelsius": 0,
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/48",
+        "MemberId": "48",
+        "Name": "PCIe_NIC_Temp",
+        "ReadingCelsius": 57,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/49",
+        "MemberId": "49",
+        "Name": "PCIe_SFP_Temp",
+        "ReadingCelsius": 33,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/50",
+        "MemberId": "50",
+        "Name": "PCIe_HBA_Temp",
+        "ReadingCelsius": 0,
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/51",
+        "MemberId": "51",
+        "Name": "PCIe_HCA_Temp",
+        "ReadingCelsius": 0,
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/52",
+        "MemberId": "52",
+        "Name": "CPU_Tjmax",
+        "ReadingCelsius": 106,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/53",
+        "MemberId": "53",
+        "Name": "CPU_TControl",
+        "ReadingCelsius": 98,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/54",
+        "MemberId": "54",
+        "Name": "BP_Front_Temp",
+        "ReadingCelsius": 23,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/55",
+        "MemberId": "55",
+        "Name": "NVME_F_MAX_T",
+        "ReadingCelsius": 23,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/56",
+        "MemberId": "56",
+        "Name": "Fan_Board_Temp",
+        "ReadingCelsius": 31,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/57",
+        "MemberId": "57",
+        "Name": "MBP_Temp",
+        "ReadingCelsius": 31,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/58",
+        "MemberId": "58",
+        "Name": "HGX_NVSW0_Temp",
+        "ReadingCelsius": 62,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/59",
+        "MemberId": "59",
+        "Name": "HGX_NVSW1_Temp",
+        "ReadingCelsius": 62,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/60",
+        "MemberId": "60",
+        "Name": "HGX_FPGA_Temp",
+        "ReadingCelsius": 32,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/61",
+        "MemberId": "61",
+        "Name": "HGX_HMC_Temp",
+        "ReadingCelsius": 27,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/62",
+        "MemberId": "62",
+        "Name": "HGX_CX7_Temp",
+        "ReadingCelsius": 45,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/63",
+        "MemberId": "63",
+        "Name": "HGX_Max_HSC_Temp",
+        "ReadingCelsius": 33,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/64",
+        "MemberId": "64",
+        "Name": "HGX_Max_PCB_Temp",
+        "ReadingCelsius": 43,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/65",
+        "MemberId": "65",
+        "Name": "HGX_Inlet_Temp",
+        "ReadingCelsius": 25,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/66",
+        "MemberId": "66",
+        "Name": "HGX_Max_CX8_Temp",
+        "ReadingCelsius": 48,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/67",
+        "MemberId": "67",
+        "Name": "CX8_OSFP_Temp",
+        "ReadingCelsius": 42,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/68",
+        "MemberId": "68",
+        "Name": "SNIC_Temp",
+        "ReadingCelsius": 0,
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/69",
+        "MemberId": "69",
+        "Name": "SNIC_SFP_Temp",
+        "ReadingCelsius": 0,
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Thermal#/Temperatures/70",
+        "MemberId": "70",
+        "Name": "PCIE_SW_Temp",
+        "ReadingCelsius": 28,
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/1/Power": {
+    "@odata.id": "/redfish/v1/Chassis/1/Power",
+    "@odata.type": "#Power.v1_5_4.Power",
+    "Id": "Power",
+    "Name": "Power",
+    "Oem": {
+      "@odata.id": "/redfish/v1/Chassis/1/Power#/Oem",
+      "@odata.type": "#OemPower.Oem",
+      "Public": {
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/Oem/OpenBmc",
+        "@odata.type": "#OemPower.OpenBmc",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      }
+    },
+    "PowerControl": [],
+    "PowerSupplies": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/0",
+        "@odata.type": "#Power.v1_7_1.PowerSupply",
+        "FirmwareVersion": "00.01.02",
+        "LastPowerOutputWatts": 439.0,
+        "LineInputVoltage": 239.25,
+        "Manufacturer": "Great Wall",
+        "MemberId": "0",
+        "Model": "CRPS3200TW",
+        "Name": "PSU_0",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#OemPowerSupply.Public",
+            "LineInputVoltage": 239.25,
+            "PowerInputWatts": 472.0
+          }
+        },
+        "PartNumber": "V0310CM000000000",
+        "PowerCapacityWatts": 3200.0,
+        "PowerInputWatts": 472.0,
+        "SerialNumber": "serial-e714006948214bc0e1cb74f9",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/1",
+        "@odata.type": "#Power.v1_7_1.PowerSupply",
+        "FirmwareVersion": "00.01.02",
+        "LastPowerOutputWatts": 454.0,
+        "LineInputVoltage": 240.75,
+        "Manufacturer": "Great Wall",
+        "MemberId": "1",
+        "Model": "CRPS3200TW",
+        "Name": "PSU_1",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#OemPowerSupply.Public",
+            "LineInputVoltage": 240.75,
+            "PowerInputWatts": 488.0
+          }
+        },
+        "PartNumber": "V0310CM000000000",
+        "PowerCapacityWatts": 3200.0,
+        "PowerInputWatts": 488.0,
+        "SerialNumber": "serial-b015798253b542ee199ba0f8",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/2",
+        "@odata.type": "#Power.v1_7_1.PowerSupply",
+        "FirmwareVersion": "00.01.01",
+        "LastPowerOutputWatts": 879.0,
+        "LineInputVoltage": 237.12,
+        "Manufacturer": "Great Wall",
+        "MemberId": "2",
+        "Model": "CR68-3300TO5R2",
+        "Name": "PSU_2",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#OemPowerSupply.Public",
+            "LineInputVoltage": 237.12,
+            "PowerInputWatts": 914.0
+          }
+        },
+        "PartNumber": "V0310F9000000000",
+        "PowerCapacityWatts": 3300.0,
+        "PowerInputWatts": 914.0,
+        "SerialNumber": "serial-e602a933a4e3e0c7108a06ec",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/3",
+        "@odata.type": "#Power.v1_7_1.PowerSupply",
+        "FirmwareVersion": "00.01.01",
+        "LastPowerOutputWatts": 892.0,
+        "LineInputVoltage": 238.8,
+        "Manufacturer": "Great Wall",
+        "MemberId": "3",
+        "Model": "CR68-3300TO5R2",
+        "Name": "PSU_3",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#OemPowerSupply.Public",
+            "LineInputVoltage": 238.8,
+            "PowerInputWatts": 934.0
+          }
+        },
+        "PartNumber": "V0310F9000000000",
+        "PowerCapacityWatts": 3300.0,
+        "PowerInputWatts": 934.0,
+        "SerialNumber": "serial-913254c671afa069fb75fa36",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/4",
+        "@odata.type": "#Power.v1_7_1.PowerSupply",
+        "FirmwareVersion": "00.01.01",
+        "LastPowerOutputWatts": 906.0,
+        "LineInputVoltage": 238.38,
+        "Manufacturer": "Great Wall",
+        "MemberId": "4",
+        "Model": "CR68-3300TO5R2",
+        "Name": "PSU_4",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#OemPowerSupply.Public",
+            "LineInputVoltage": 238.38,
+            "PowerInputWatts": 951.0
+          }
+        },
+        "PartNumber": "V0310F9000000000",
+        "PowerCapacityWatts": 3300.0,
+        "PowerInputWatts": 951.0,
+        "SerialNumber": "serial-0bacdbd89257b7a28006c34d",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/5",
+        "@odata.type": "#Power.v1_7_1.PowerSupply",
+        "FirmwareVersion": "00.01.01",
+        "LastPowerOutputWatts": 933.0,
+        "LineInputVoltage": 237.75,
+        "Manufacturer": "Great Wall",
+        "MemberId": "5",
+        "Model": "CR68-3300TO5R2",
+        "Name": "PSU_5",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#OemPowerSupply.Public",
+            "LineInputVoltage": 237.75,
+            "PowerInputWatts": 973.0
+          }
+        },
+        "PartNumber": "V0310F9000000000",
+        "PowerCapacityWatts": 3300.0,
+        "PowerInputWatts": 973.0,
+        "SerialNumber": "serial-1656dfb2f16870dfedef861c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/6",
+        "@odata.type": "#Power.v1_7_1.PowerSupply",
+        "FirmwareVersion": "00.01.01",
+        "LastPowerOutputWatts": 822.0,
+        "LineInputVoltage": 239.5,
+        "Manufacturer": "Great Wall",
+        "MemberId": "6",
+        "Model": "CR68-3300TO5R2",
+        "Name": "PSU_6",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#OemPowerSupply.Public",
+            "LineInputVoltage": 239.5,
+            "PowerInputWatts": 860.0
+          }
+        },
+        "PartNumber": "V0310F9000000000",
+        "PowerCapacityWatts": 3300.0,
+        "PowerInputWatts": 860.0,
+        "SerialNumber": "serial-35cac43a8378eb6d70d50827",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/Power#/PowerSupplies/7",
+        "@odata.type": "#Power.v1_7_1.PowerSupply",
+        "FirmwareVersion": "00.01.01",
+        "LastPowerOutputWatts": 863.0,
+        "LineInputVoltage": 239.5,
+        "Manufacturer": "Great Wall",
+        "MemberId": "7",
+        "Model": "CR68-3300TO5R2",
+        "Name": "PSU_7",
+        "Oem": {
+          "Public": {
+            "@odata.type": "#OemPowerSupply.Public",
+            "LineInputVoltage": 239.5,
+            "PowerInputWatts": 901.0
+          }
+        },
+        "PartNumber": "V0310F9000000000",
+        "PowerCapacityWatts": 3300.0,
+        "PowerInputWatts": 901.0,
+        "SerialNumber": "serial-a7ba806862f1a1c5fce50571",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/1/ThresholdSensors": {
+    "@odata.id": "/redfish/v1/Chassis/1/ThresholdSensors",
+    "@odata.type": "#PublicSensor.v1_0_0.ThresholdSensors",
+    "Id": "ThresholdSensors",
+    "Name": "ThresholdSensors",
+    "Sensors": [
+      {
+        "Name": "Inlet_Temp",
+        "Reading": 23.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "Outlet_Temp",
+        "Reading": 33.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "CPU0_Temp",
+        "Reading": 56.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "CPU1_Temp",
+        "Reading": 56.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "CPU0_Margin_Temp",
+        "Reading": 50.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "CPU1_Margin_Temp",
+        "Reading": 50.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "CPU0_DIMM_Temp",
+        "Reading": 30.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "CPU1_DIMM_Temp",
+        "Reading": 30.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "CPU0_VR_Temp",
+        "Reading": 44.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "CPU1_VR_Temp",
+        "Reading": 44.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PSU0_Inlet_Temp",
+        "Reading": 40.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PSU1_Inlet_Temp",
+        "Reading": 37.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PSU2_Inlet_Temp",
+        "Reading": 25.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PSU3_Inlet_Temp",
+        "Reading": 27.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PSU4_Inlet_Temp",
+        "Reading": 26.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PSU5_Inlet_Temp",
+        "Reading": 26.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PSU6_Inlet_Temp",
+        "Reading": 24.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PSU7_Inlet_Temp",
+        "Reading": 25.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU0_Temp",
+        "Reading": 32.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU1_Temp",
+        "Reading": 29.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU2_Temp",
+        "Reading": 29.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU3_Temp",
+        "Reading": 32.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU4_Temp",
+        "Reading": 30.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU5_Temp",
+        "Reading": 30.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU6_Temp",
+        "Reading": 29.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU7_Temp",
+        "Reading": 32.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU0_Mem_Temp",
+        "Reading": 28.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU1_Mem_Temp",
+        "Reading": 27.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU2_Mem_Temp",
+        "Reading": 27.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU3_Mem_Temp",
+        "Reading": 28.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU4_Mem_Temp",
+        "Reading": 26.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU5_Mem_Temp",
+        "Reading": 0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": null,
+          "State": "UnavailableOffline"
+        }
+      },
+      {
+        "Name": "GPU6_Mem_Temp",
+        "Reading": 26.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU7_Mem_Temp",
+        "Reading": 29.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU0_Tlimit_Temp",
+        "Reading": 61.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU1_Tlimit_Temp",
+        "Reading": 58.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU2_Tlimit_Temp",
+        "Reading": 60.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU3_Tlimit_Temp",
+        "Reading": 59.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU4_Tlimit_Temp",
+        "Reading": 61.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU5_Tlimit_Temp",
+        "Reading": 59.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU6_Tlimit_Temp",
+        "Reading": 0.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU7_Tlimit_Temp",
+        "Reading": 61.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "M.2_Temp",
+        "Reading": 30.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "RAID_Temp",
+        "Reading": 0.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "Name": "SSD_MAX_Temp",
+        "Reading": 0.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "Name": "HDD_MAX_Temp",
+        "Reading": 0.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "Name": "OCP_NIC_Temp",
+        "Reading": 0.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "Name": "OCP_NIC_SFP_Temp",
+        "Reading": 0.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "Name": "PCIe_NIC_Temp",
+        "Reading": 57.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PCIe_SFP_Temp",
+        "Reading": 33.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PCIe_HBA_Temp",
+        "Reading": 0.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "Name": "PCIe_HCA_Temp",
+        "Reading": 0.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "Name": "CPU_Tjmax",
+        "Reading": 106.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "CPU_TControl",
+        "Reading": 98.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "BP_Front_Temp",
+        "Reading": 23.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "NVME_F_MAX_T",
+        "Reading": 23.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "Fan_Board_Temp",
+        "Reading": 31.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "MBP_Temp",
+        "Reading": 31.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "HGX_NVSW0_Temp",
+        "Reading": 62.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "HGX_NVSW1_Temp",
+        "Reading": 62.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "HGX_FPGA_Temp",
+        "Reading": 32.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "HGX_HMC_Temp",
+        "Reading": 27.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "HGX_CX7_Temp",
+        "Reading": 45.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "HGX_Max_HSC_Temp",
+        "Reading": 33.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "HGX_Max_PCB_Temp",
+        "Reading": 43.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "HGX_Inlet_Temp",
+        "Reading": 25.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "HGX_Max_CX8_Temp",
+        "Reading": 48.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "CX8_OSFP_Temp",
+        "Reading": 42.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "SYS_12V",
+        "Reading": 12.124,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "SYS_5V",
+        "Reading": 5.056,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "SYS_3V3",
+        "Reading": 3.424,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "RTC_Battery",
+        "Reading": 3.083,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "12V_PSU0_VIN",
+        "Reading": 239.25,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "12V_PSU1_VIN",
+        "Reading": 240.75,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU2_VIN",
+        "Reading": 238.75,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU3_VIN",
+        "Reading": 239.938,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU4_VIN",
+        "Reading": 239.5,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU5_VIN",
+        "Reading": 237.75,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU6_VIN",
+        "Reading": 239.75,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU7_VIN",
+        "Reading": 239.5,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "12V_PSU0_VOUT",
+        "Reading": 12.25,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "12V_PSU1_VOUT",
+        "Reading": 12.234,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU2_VOUT",
+        "Reading": 55.02,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU3_VOUT",
+        "Reading": 55.047,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU4_VOUT",
+        "Reading": 55.01,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU5_VOUT",
+        "Reading": 55.015,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU6_VOUT",
+        "Reading": 55.015,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU7_VOUT",
+        "Reading": 55.019,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PVCCIN_CPU0",
+        "Reading": 1.796,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PVCCIN_CPU1",
+        "Reading": 1.796,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PVNN_MAIN_CPU0",
+        "Reading": 1.003,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "PVNN_MAIN_CPU1",
+        "Reading": 1.004,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "SYS_1V8",
+        "Reading": 1.786,
+        "ReadingUnits": "volts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "12V_PSU0_IOUT",
+        "Reading": 35.981,
+        "ReadingUnits": "amps",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "12V_PSU1_IOUT",
+        "Reading": 37.103,
+        "ReadingUnits": "amps",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU2_IOUT",
+        "Reading": 15.957,
+        "ReadingUnits": "amps",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU3_IOUT",
+        "Reading": 15.718,
+        "ReadingUnits": "amps",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU4_IOUT",
+        "Reading": 16.554,
+        "ReadingUnits": "amps",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU5_IOUT",
+        "Reading": 17.133,
+        "ReadingUnits": "amps",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU6_IOUT",
+        "Reading": 14.984,
+        "ReadingUnits": "amps",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU7_IOUT",
+        "Reading": 16.01,
+        "ReadingUnits": "amps",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "12V_PSU0_PIN",
+        "Reading": 472.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "12V_PSU1_PIN",
+        "Reading": 486.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU2_PIN",
+        "Reading": 915.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU3_PIN",
+        "Reading": 930.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU4_PIN",
+        "Reading": 950.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU5_PIN",
+        "Reading": 969.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU6_PIN",
+        "Reading": 859.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU7_PIN",
+        "Reading": 918.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "12V_PSU0_POUT",
+        "Reading": 439.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "12V_PSU1_POUT",
+        "Reading": 452.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU2_POUT",
+        "Reading": 881.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU3_POUT",
+        "Reading": 891.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU4_POUT",
+        "Reading": 907.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU5_POUT",
+        "Reading": 933.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU6_POUT",
+        "Reading": 823.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "54V_PSU7_POUT",
+        "Reading": 863.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "CPU0_Power",
+        "Reading": 268.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "CPU1_Power",
+        "Reading": 281.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "Total_Power",
+        "Reading": 6502.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "CPU_Total_Power",
+        "Reading": 549.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "MEM_Total_Power",
+        "Reading": 75.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "Fan_Total_Power",
+        "Reading": 2880.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "GPU_Total_Power",
+        "Reading": 1270.0,
+        "ReadingUnits": "watts",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "TSOM_AirPres",
+        "Reading": 0.0,
+        "ReadingUnits": "kpa",
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "Name": "TSOM_Acceler",
+        "Reading": 0.0,
+        "ReadingUnits": "unspecified",
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "Name": "TSOM_Humidit",
+        "Reading": 0.0,
+        "ReadingUnits": "percent",
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "Name": "CPU_CUPS",
+        "Reading": 100.0,
+        "ReadingUnits": "percent",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "MEM_CUPS",
+        "Reading": 0.0,
+        "ReadingUnits": "percent",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN0_F_Speed",
+        "Reading": 6390.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN0_R_Speed",
+        "Reading": 6368.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN1_F_Speed",
+        "Reading": 6390.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN1_R_Speed",
+        "Reading": 6390.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN2_F_Speed",
+        "Reading": 6405.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN2_R_Speed",
+        "Reading": 6390.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN3_F_Speed",
+        "Reading": 6390.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN3_R_Speed",
+        "Reading": 6383.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN4_F_Speed",
+        "Reading": 6420.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN4_R_Speed",
+        "Reading": 6383.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN5_F_Speed",
+        "Reading": 18563.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN5_R_Speed",
+        "Reading": 17175.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN6_F_Speed",
+        "Reading": 18143.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN6_R_Speed",
+        "Reading": 17415.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN7_F_Speed",
+        "Reading": 18000.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN7_R_Speed",
+        "Reading": 17430.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN8_F_Speed",
+        "Reading": 18233.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN8_R_Speed",
+        "Reading": 17280.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN9_F_Speed",
+        "Reading": 17610.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN9_R_Speed",
+        "Reading": 17460.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN10_F_Speed",
+        "Reading": 18270.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN10_R_Speed",
+        "Reading": 16950.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN11_F_Speed",
+        "Reading": 18420.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN11_R_Speed",
+        "Reading": 17520.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN12_F_Speed",
+        "Reading": 18210.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN12_R_Speed",
+        "Reading": 17453.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN13_F_Speed",
+        "Reading": 18240.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN13_R_Speed",
+        "Reading": 17730.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN14_F_Speed",
+        "Reading": 18030.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN14_R_Speed",
+        "Reading": 17693.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN15_F_Speed",
+        "Reading": 18593.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN15_R_Speed",
+        "Reading": 18000.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN16_F_Speed",
+        "Reading": 18570.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN16_R_Speed",
+        "Reading": 17550.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN17_F_Speed",
+        "Reading": 18503.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN17_R_Speed",
+        "Reading": 17948.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN18_F_Speed",
+        "Reading": 18510.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN18_R_Speed",
+        "Reading": 17610.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN19_F_Speed",
+        "Reading": 18533.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "FAN19_R_Speed",
+        "Reading": 18150.0,
+        "ReadingUnits": "rpm",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "SNIC_Temp",
+        "Reading": 0.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "Name": "SNIC_SFP_Temp",
+        "Reading": 0.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": null,
+          "State": "Disabled"
+        }
+      },
+      {
+        "Name": "PCIE_SW_Temp",
+        "Reading": 28.0,
+        "ReadingUnits": "deg_c",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "Name": "IO_CUPS",
+        "Reading": 0.0,
+        "ReadingUnits": "percent",
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters",
+    "@odata.type": "#NetworkAdapterCollection.NetworkAdapterCollection",
+    "Members": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard0"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard11"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard18"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard22"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard27"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard32"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard38"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard42"
+      }
+    ],
+    "Members@odata.count": 11,
+    "Name": "NetworkAdapter Collection"
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard0": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard0",
+    "@odata.type": "#NetworkAdapter.v1_4_0.NetworkAdapter",
+    "Id": "outboardPCIeCard0",
+    "Manufacturer": "NVIDIA",
+    "Model": "ConnectX8",
+    "Name": "outboardPCIeCard0",
+    "NetworkDeviceFunctions": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard0/NetworkDeviceFunctions"
+    },
+    "NetworkPorts": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard0/NetworkPorts"
+    },
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkAdatper.v1_0_0.PublicNetworkAdatper",
+        "CardModel": "ConnectX8",
+        "DeviceLocator": "CPU0_PE0",
+        "NetworkPorts": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard0/NetworkPorts/1"
+          }
+        ],
+        "NetworkTechnology": "Ethernet"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard0/NetworkPorts/1": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard0/NetworkPorts/1",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "02:80:b9:cb:dc:00"
+    ],
+    "Id": "1",
+    "LinkStatus": null,
+    "Name": "1",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/19/00/00"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7",
+    "@odata.type": "#NetworkAdapter.v1_4_0.NetworkAdapter",
+    "Id": "outboardPCIeCard7",
+    "Manufacturer": "NVIDIA",
+    "Model": "MCX713106AS-VEAT",
+    "Name": "outboardPCIeCard7",
+    "NetworkDeviceFunctions": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkDeviceFunctions"
+    },
+    "NetworkPorts": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts"
+    },
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkAdatper.v1_0_0.PublicNetworkAdatper",
+        "CardModel": "MCX713106AS-VEAT",
+        "DeviceLocator": "CPU0_PE1_H_NVLINK",
+        "NetworkPorts": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/1"
+          },
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/2"
+          },
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/3"
+          },
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/4"
+          }
+        ],
+        "NetworkTechnology": "Ethernet",
+        "VenderID": 5555
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/1": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/1",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "00-00-00-00-00-00"
+    ],
+    "Id": "1",
+    "LinkStatus": "Down",
+    "Name": "1",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/2d/00/00",
+        "LinkSpeed": "NotLinked"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/2": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/2",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "00-00-00-00-00-00"
+    ],
+    "Id": "2",
+    "LinkStatus": "Down",
+    "Name": "2",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/2d/00/00",
+        "LinkSpeed": "NotLinked"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/3": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/3",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "00-00-00-00-00-00"
+    ],
+    "Id": "3",
+    "LinkStatus": null,
+    "Name": "3",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/2d/00/00"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/4": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkPorts/4",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "00-00-00-00-00-00"
+    ],
+    "Id": "4",
+    "LinkStatus": null,
+    "Name": "4",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/2d/00/00"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkDeviceFunctions": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkDeviceFunctions",
+    "@odata.type": "#NetworkDeviceFunctionCollection.NetworkDeviceFunctionCollection",
+    "Members": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkDeviceFunctions/1"
+      }
+    ],
+    "Members@odata.count": 1,
+    "Name": "NetworkAdapter DeviceFunction Collection"
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkDeviceFunctions/1": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard7/NetworkDeviceFunctions/1",
+    "@odata.type": "#NetworkDeviceFunction.v1_9_0.NetworkDeviceFunction",
+    "Ethernet": {
+      "MACAddress": "00-00-00-00-00-00"
+    },
+    "Id": "1",
+    "Name": "Network Device Function View"
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard11": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard11",
+    "@odata.type": "#NetworkAdapter.v1_4_0.NetworkAdapter",
+    "Id": "outboardPCIeCard11",
+    "Manufacturer": "NVIDIA",
+    "Model": "ConnectX8",
+    "Name": "outboardPCIeCard11",
+    "NetworkDeviceFunctions": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard11/NetworkDeviceFunctions"
+    },
+    "NetworkPorts": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard11/NetworkPorts"
+    },
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkAdatper.v1_0_0.PublicNetworkAdatper",
+        "CardModel": "ConnectX8",
+        "DeviceLocator": "CPU0_PE2",
+        "NetworkPorts": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard11/NetworkPorts/1"
+          }
+        ],
+        "NetworkTechnology": "Ethernet"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard11/NetworkPorts/1": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard11/NetworkPorts/1",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "02:42:79:80:f5:00"
+    ],
+    "Id": "1",
+    "LinkStatus": null,
+    "Name": "1",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/3f/00/00"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15",
+    "@odata.type": "#NetworkAdapter.v1_4_0.NetworkAdapter",
+    "Id": "outboardPCIeCard15",
+    "Manufacturer": "NVIDIA",
+    "Model": "MCX623106AN-CDAT",
+    "Name": "outboardPCIeCard15",
+    "NetworkDeviceFunctions": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15/NetworkDeviceFunctions"
+    },
+    "NetworkPorts": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15/NetworkPorts"
+    },
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkAdatper.v1_0_0.PublicNetworkAdatper",
+        "CardModel": "MCX623106AN-CDAT",
+        "DeviceLocator": "CPU0_PE3_F_Slot12",
+        "NetworkPorts": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15/NetworkPorts/1"
+          },
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15/NetworkPorts/2"
+          }
+        ],
+        "NetworkTechnology": "Ethernet",
+        "VenderID": 5555
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15/NetworkPorts/1": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15/NetworkPorts/1",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "02:69:bf:63:30:7d"
+    ],
+    "Id": "1",
+    "LinkStatus": "Up",
+    "Name": "1",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/4c/00/00",
+        "LinkSpeed": "100 Gbps"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15/NetworkPorts/2": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard15/NetworkPorts/2",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "02:76:5d:54:7b:bd"
+    ],
+    "Id": "2",
+    "LinkStatus": "Up",
+    "Name": "2",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/4c/00/00",
+        "LinkSpeed": "100 Gbps"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard18": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard18",
+    "@odata.type": "#NetworkAdapter.v1_4_0.NetworkAdapter",
+    "Id": "outboardPCIeCard18",
+    "Manufacturer": "NVIDIA",
+    "Model": "ConnectX8",
+    "Name": "outboardPCIeCard18",
+    "NetworkDeviceFunctions": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard18/NetworkDeviceFunctions"
+    },
+    "NetworkPorts": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard18/NetworkPorts"
+    },
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkAdatper.v1_0_0.PublicNetworkAdatper",
+        "CardModel": "ConnectX8",
+        "DeviceLocator": "CPU0_PE4",
+        "NetworkPorts": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard18/NetworkPorts/1"
+          }
+        ],
+        "NetworkTechnology": "Ethernet"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard18/NetworkPorts/1": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard18/NetworkPorts/1",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "02:32:13:27:7d:23"
+    ],
+    "Id": "1",
+    "LinkStatus": null,
+    "Name": "1",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/62/00/00"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard22": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard22",
+    "@odata.type": "#NetworkAdapter.v1_4_0.NetworkAdapter",
+    "Id": "outboardPCIeCard22",
+    "Manufacturer": "NVIDIA",
+    "Model": "ConnectX8",
+    "Name": "outboardPCIeCard22",
+    "NetworkDeviceFunctions": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard22/NetworkDeviceFunctions"
+    },
+    "NetworkPorts": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard22/NetworkPorts"
+    },
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkAdatper.v1_0_0.PublicNetworkAdatper",
+        "CardModel": "ConnectX8",
+        "DeviceLocator": "CPU0_PE5",
+        "NetworkPorts": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard22/NetworkPorts/1"
+          }
+        ],
+        "NetworkTechnology": "Ethernet"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard22/NetworkPorts/1": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard22/NetworkPorts/1",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "02:bd:59:82:30:f9"
+    ],
+    "Id": "1",
+    "LinkStatus": null,
+    "Name": "1",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/72/00/00"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard27": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard27",
+    "@odata.type": "#NetworkAdapter.v1_4_0.NetworkAdapter",
+    "Id": "outboardPCIeCard27",
+    "Manufacturer": "NVIDIA",
+    "Model": "ConnectX8",
+    "Name": "outboardPCIeCard27",
+    "NetworkDeviceFunctions": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard27/NetworkDeviceFunctions"
+    },
+    "NetworkPorts": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard27/NetworkPorts"
+    },
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkAdatper.v1_0_0.PublicNetworkAdatper",
+        "CardModel": "ConnectX8",
+        "DeviceLocator": "CPU1_PE0",
+        "NetworkPorts": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard27/NetworkPorts/1"
+          }
+        ],
+        "NetworkTechnology": "Ethernet"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard27/NetworkPorts/1": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard27/NetworkPorts/1",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "02:49:61:ef:a4:20"
+    ],
+    "Id": "1",
+    "LinkStatus": null,
+    "Name": "1",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/9a/00/00"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard32": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard32",
+    "@odata.type": "#NetworkAdapter.v1_4_0.NetworkAdapter",
+    "Id": "outboardPCIeCard32",
+    "Manufacturer": "NVIDIA",
+    "Model": "ConnectX8",
+    "Name": "outboardPCIeCard32",
+    "NetworkDeviceFunctions": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard32/NetworkDeviceFunctions"
+    },
+    "NetworkPorts": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard32/NetworkPorts"
+    },
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkAdatper.v1_0_0.PublicNetworkAdatper",
+        "CardModel": "ConnectX8",
+        "DeviceLocator": "CPU1_PE2",
+        "NetworkPorts": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard32/NetworkPorts/1"
+          }
+        ],
+        "NetworkTechnology": "Ethernet"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard32/NetworkPorts/1": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard32/NetworkPorts/1",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "02:f3:cf:ab:82:b2"
+    ],
+    "Id": "1",
+    "LinkStatus": null,
+    "Name": "1",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/bd/00/00"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35",
+    "@odata.type": "#NetworkAdapter.v1_4_0.NetworkAdapter",
+    "Id": "outboardPCIeCard35",
+    "Manufacturer": "NVIDIA",
+    "Model": "MCX623106AN-CDAT",
+    "Name": "outboardPCIeCard35",
+    "NetworkDeviceFunctions": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35/NetworkDeviceFunctions"
+    },
+    "NetworkPorts": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35/NetworkPorts"
+    },
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkAdatper.v1_0_0.PublicNetworkAdatper",
+        "CardModel": "MCX623106AN-CDAT",
+        "DeviceLocator": "CPU1_PE3_F_Slot1",
+        "NetworkPorts": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35/NetworkPorts/1"
+          },
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35/NetworkPorts/2"
+          }
+        ],
+        "NetworkTechnology": "Ethernet",
+        "VenderID": 5555
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35/NetworkPorts/1": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35/NetworkPorts/1",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "02:48:55:ab:59:4a"
+    ],
+    "Id": "1",
+    "LinkStatus": "Up",
+    "Name": "1",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/c9/00/00",
+        "LinkSpeed": "100 Gbps"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35/NetworkPorts/2": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard35/NetworkPorts/2",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "02:32:43:c6:3e:80"
+    ],
+    "Id": "2",
+    "LinkStatus": "Up",
+    "Name": "2",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/c9/00/00",
+        "LinkSpeed": "100 Gbps"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard38": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard38",
+    "@odata.type": "#NetworkAdapter.v1_4_0.NetworkAdapter",
+    "Id": "outboardPCIeCard38",
+    "Manufacturer": "NVIDIA",
+    "Model": "ConnectX8",
+    "Name": "outboardPCIeCard38",
+    "NetworkDeviceFunctions": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard38/NetworkDeviceFunctions"
+    },
+    "NetworkPorts": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard38/NetworkPorts"
+    },
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkAdatper.v1_0_0.PublicNetworkAdatper",
+        "CardModel": "ConnectX8",
+        "DeviceLocator": "CPU1_PE4",
+        "NetworkPorts": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard38/NetworkPorts/1"
+          }
+        ],
+        "NetworkTechnology": "Ethernet"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard38/NetworkPorts/1": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard38/NetworkPorts/1",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "02:c7:66:10:54:9b"
+    ],
+    "Id": "1",
+    "LinkStatus": null,
+    "Name": "1",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/df/00/00"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard42": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard42",
+    "@odata.type": "#NetworkAdapter.v1_4_0.NetworkAdapter",
+    "Id": "outboardPCIeCard42",
+    "Manufacturer": "NVIDIA",
+    "Model": "ConnectX8",
+    "Name": "outboardPCIeCard42",
+    "NetworkDeviceFunctions": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard42/NetworkDeviceFunctions"
+    },
+    "NetworkPorts": {
+      "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard42/NetworkPorts"
+    },
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkAdatper.v1_0_0.PublicNetworkAdatper",
+        "CardModel": "ConnectX8",
+        "DeviceLocator": "CPU1_PE5",
+        "NetworkPorts": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard42/NetworkPorts/1"
+          }
+        ],
+        "NetworkTechnology": "Ethernet"
+      }
+    }
+  },
+  "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard42/NetworkPorts/1": {
+    "@odata.id": "/redfish/v1/Chassis/1/NetworkAdapters/outboardPCIeCard42/NetworkPorts/1",
+    "@odata.type": "#NetworkPort.v1_4_1.NetworkPort",
+    "AssociatedNetworkAddresses": [
+      "02:ec:71:66:ca:af"
+    ],
+    "Id": "1",
+    "LinkStatus": null,
+    "Name": "1",
+    "Oem": {
+      "Public": {
+        "@odata.type": "#PublicNetworkPort.v1_0_0.Public",
+        "BDF": "0000/ef/00/00"
+      }
+    }
+  }
+}

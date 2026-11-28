@@ -24,7 +24,7 @@ from .nvl.inventec import Inventec
 from .hgx.kaytus import KaytusKr9288
 from .hgx.lenovo import Lenovo
 from .hgx.netweb import Netweb
-from .hgx.smc import Smc
+from .hgx.smc import Smc, SmcB300
 from .nvl.smc import SmcGb300, SmcNvl
 from .nvl.aivres import AivresNvl
 from .nvl.kaytus import KaytusNvl
@@ -84,6 +84,20 @@ _POWER_SHELF_PSU_FALLBACKS = dict.fromkeys(
 
 _GENERIC = Oem()
 _KAYTUS_KR9288 = KaytusKr9288()
+_HGX_READ_MODELS = {
+    ("smc", "SYS-822GS-NB3RT"): SmcB300(),
+    ("kaytus", "KR9288-X3-A0-F0-01"): _KAYTUS_KR9288,
+    ("aivres", "KR9288-X3-A0-F0-01"): _KAYTUS_KR9288,
+}
+
+
+def hgx_read_adapter(device):
+    if (device.role != "compute" or model.platform_for(device) != "hgx"
+            or model.generation_for(device) != "b300"):
+        return None
+    product = (model.hardware_identity(device).get("model") or device.vars.get("system_model") or "")
+    return _HGX_READ_MODELS.get((model.odm_for(device), str(product).strip().upper()))
+
 _DISCOVERED_INFRA = RedfishDiscovery()
 
 # ODM tokens as returned by model.classify, including aliases.
@@ -97,7 +111,9 @@ def get(odm):
     return _MODULES.get(key, _GENERIC)
 
 
-def for_device(device, capability=None):
+def for_device(device, capability=None, *, configured_read=False):
+    if configured_read and (verified := hgx_read_adapter(device)) is not None:
+        return verified
     platform = model.platform_for(device)
     odm = model.odm_for(device)
     key = (platform, odm, device.role)

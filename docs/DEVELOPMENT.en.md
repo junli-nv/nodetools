@@ -831,7 +831,7 @@ of each associated NVSwitch and power-shelf model.
 
 | Device | Read-only coverage |
 | --- | --- |
-| HGX / NVL compute | `nodeping`, `nodefan`, `nodepsu`, `nodetemp`, `nodeinlet`, `nodemon`, `nodepower status`, `nodeeventlog status`, `nodeinventory`, `nodebootorder`, `nodenetboot list`, `nodemacs`, `nodebios status` / `pending`, `nodevm status`, `nodefru`, `nodebmc` / `time`, `nodetask`, `nodefw show` / `status` |
+| HGX / NVL compute | `nodeping`, `nodefan`, `nodepsu`, `nodetemp`, `nodeinlet`, `nodemon`, `nodepower status`, `nodeeventlog status`, `nodeinventory`, `nodebootorder`, `nodenetboot list`, `nodemacs` (required), `nodebios status` / `pending`, `nodevm status`, `nodefru`, `nodebmc` / `time`, `nodetask`, `nodefw show` / `status` |
 | NVSwitch | `nvswpsu`, `nvswtemp`, `nvswpower status`, `nvsweventlog status`, `nvswinventory` |
 | Power shelf | `psfan`, `pspsu`, `pstemp`, `pspower status`, `pseventlog status`, `psinventory` |
 
@@ -862,6 +862,35 @@ through all 4,096 entries. `nodefw show` and the compatibility command
 pages. `nodefw show` also includes BIOS and BMC summaries. `nodefw status`
 returned four tasks.
 
+#### Compute tray MAC acceptance
+
+Run `nodemacs` for each compute tray model, generation, and BMC
+firmware combination. Verify port identifiers and MAC addresses. Exclude BMC
+management interfaces and all-zero or broadcast placeholders. Record the NIC
+configuration, row count, and any missing, failed, or unverified resources.
+Only BMC access is required, so run this check before OS deployment.
+
+```bash
+./nodemacs 'HGX[390,654]'
+```
+
+| B300 model | Verified BMC firmware | Compute MAC rows / GETs | `nodemon` GETs |
+| --- | --- | ---: | ---: |
+| Supermicro SYS-822GS-NB3RT | 01.07.04.00, 01.12.02.03, 01.12.05.00 | 6 / 1 | 9 |
+| Aivres/KAYTUS KR9288-X3-A0-F0-01 | 2.03.ee, 2.03.ef | 12 / 30 | 3 |
+
+Supermicro reads system EthernetInterfaces. Aivres/KAYTUS reads ports and
+device functions from chassis NetworkAdapters. See `certified-reads.json` for
+per-firmware request sequences, row counts and sanitized fixtures. Set the
+BMC-verified `system_model` in inventory for direct reads on these two
+models. See `inventory.hgx.example.ini`. Compute tray MAC collection via
+Redfish on other models is pending hardware validation.
+
+The BCM inventory contains 254 confirmed nodes. Fan and PSU completeness
+checks each passed on 253 nodes. HGX169 reported Absent for all six fan
+readings and the HGX613 BMC reported only five PSUs. Both repeated on isolated
+retests and remain incomplete for their respective capability.
+
 #### HGX direct-read coverage
 
 The two verified B300 models were checked with automatic discovery and with
@@ -873,8 +902,8 @@ when that endpoint returns no readings.
 
 | Model or adapter | Adapter-defined direct reads | Hardware fan | Hardware PSU | Hardware temperature |
 | --- | --- | --- | --- | --- |
-| Supermicro SYS-822GS-NB3RT | fan, PSU | 6 (6 → 1) | 6 (13 → 8) | 35 (91 ‡ → 1) |
-| Aivres/KAYTUS KR9288-X3-A0-F0-01 | fan, PSU | 40 (6 → 1) | 8 (6 → 1) | 71 (12 → 1) |
+| Supermicro SYS-822GS-NB3RT | fan, PSU, temp, inlet, monitor, compute MAC | 6 (6 → 1) | 6 (13 → 8) | 35 (91 ‡ → 1) |
+| Aivres/KAYTUS KR9288-X3-A0-F0-01 | fan, PSU, temp, inlet, monitor, compute MAC | 40 (6 → 1) | 8 (6 → 1) | 71 (12 → 1) |
 | AMI HGX | fan, PSU | Pending | Pending | Pending |
 | BYD HGX | fan | Pending | Pending | Pending |
 | Compal HGX | fan, PSU | Pending | Pending | Pending |
@@ -889,6 +918,50 @@ Cells show sensor counts and Redfish calls from discovery → direct read.
 within the node deadline. One of its 35 temperature sensors lacked a numeric
 reading in both modes. The remaining models and command families require
 model-specific hardware validation.
+
+
+### Archive Redfish evidence during direct-read acceptance
+
+Run this on the acceptance host for each new or revalidated fixed-read contract. Keep OEM,
+role, platform, generation, actual BMC-reported model and BMC firmware version as separate
+identity fields. Add a layout ID when variants differ. Reuse collectors where layouts match
+and retain device evidence for each combination. Capture again when identity, firmware,
+generation, or layout changes.
+
+Use `<oem>-<platform>-<generation>-<model>-bmc-<version>-<yyyymmdd>.redfish.json.gz`.
+Add a role for non-compute devices and a layout suffix where needed. A private manifest
+records the exact identity, source node, timestamp, nodetools revision, coverage, and SHA-256.
+Keep snapshots, site inventories and credentials outside Git.
+
+Prioritize exact normal GET paths (including query parameters) with `redfish dump --path`.
+Verify HTTP status, body and pagination. Supplement incomplete crawls with targeted reads,
+and record unvisited, non-2xx, timed-out and intentionally excluded resources separately.
+The dump excludes account/session resources, TaskService, and event entries. Keep separate
+restricted evidence if needed. Preserve zero values, empty collections, missing fields and
+alarms. Compress with gzip, verify the checksum, decompress and smoke-test replay. Use small
+reviewable redacted fixtures for precise requests, missing-page and fallback tests through the
+production runner. For sensor acceptance use `redfish replay --expect-rows` and repeat
+`--expect-path` in observed order. This runs production routing with offline transports.
+Count, ordered GET or HTTP failures return nonzero. Replay can read `.json.gz` directly.
+Take expectations from live evidence for the same model, generation and firmware.
+
+Trigger capture from the acceptance workflow for verified combinations, and reuse matching
+valid archives. Check missing paths before hardware leaves the lab. Mark incomplete evidence.
+
+
+Example for a verified compute node. Supply the actual contract paths with `--path`, check coverage, and save the manifest.
+
+```bash
+umask 077
+archive=$(mktemp -d "$HOME/nodetools-redfish.XXXXXXXXXX")
+file="$archive/aivres-kaytus-hgx-b300-kr9288-x3-a0-f0-01-bmc-2.03.ef-$(date +%Y%m%d).redfish.json"
+./nodetools redfish dump HGX390 -i inventory.ini --workers 2 --seconds 34 \
+  --path /redfish/v1/Chassis/1/Thermal --path /redfish/v1/Chassis/1/Power -o "$file"
+./nodetools redfish replay "$file" nodepsu --details --expect-rows 8 --expect-path /redfish/v1/Chassis/1/Power
+gzip -n -- "$file"
+(cd "$archive" && sha256sum -- *.gz > SHA256SUMS && sha256sum -c SHA256SUMS)
+```
+
 
 ## 8. Code style and commit conventions
 

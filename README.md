@@ -289,7 +289,7 @@ NVSwitch 的 `nvswpsu` 和 `nvswtemp` 通过 SSH 从 NVOS 读取。在 inventory
 * **bootorder** — `nodebootorder`：读 `BootOptions` 与 `Systems/<id>` 的
   `Boot/BootOrder`，逐项打印 `Id`/`DisplayName`/`UefiDevicePath`。
 * **netboot** — `nodenetboot`：默认和 `status` 只读列出 PXE 项。`prefer` 按网卡特征设置持久优先级。KAYTUS KR9288 的 `status` 同时显示当前和待生效的 PXE 顺序。
-* **macs** — `nodemacs`：打印 `OS <boot> <mac> <bus>` 与 BMC 网口 MAC。
+* **macs** — `nodemacs HGX390` 通过 BMC 查询计算托盘的 MAC，适合部署操作系统前使用。
 * **bios** — `nodebios [status|base|pending]`：`status` 读当前 BIOS 设置（过滤掉
   厂商噪声键）；`pending` 读待应用设置，`base` 写入受支持的 BIOS 预设。
 * **vm** — `nodevm [status|enable|mount|umount|insert|eject|stop|media|lic] [image]`：

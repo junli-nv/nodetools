@@ -75,7 +75,7 @@ def update_service(device):
 def read_collection(device, name):
     """Honor explicit instances or verified read-only defaults."""
     from .. import oem
-    adapter = getattr(device, "odm", None) or (oem.for_device(device)
+    adapter = getattr(device, "odm", None) or (oem.for_device(device, configured_read=True)
             if isinstance(device, model.Device) else None)
     field = {"Systems": "system_id", "Managers": "manager_id",
              "Chassis": "chassis_id"}[name]
@@ -86,14 +86,16 @@ def read_collection(device, name):
         ident = getattr(adapter, defaults[name], None)
     if ident:
         path = "/redfish/v1/" + name + "/" + ident
-        yield path, common.resource(device, path, required=True)
-        return
+        item = common.resource(device, path, required=bool(device.vars.get(field)))
+        if item:
+            yield path, item
+            return
     yield from collection(device, "/redfish/v1/" + name)
 
 
 def inventory(device):
     from .. import oem
-    adapter = getattr(device, "odm", None) or (oem.for_device(device)
+    adapter = getattr(device, "odm", None) or (oem.for_device(device, configured_read=True)
             if isinstance(device, model.Device) else None)
     if not getattr(adapter, "read_management_fixed", False):
         yield from _legacy_inventory(device)
@@ -117,7 +119,7 @@ def inventory(device):
         if not service.get("FirmwareInventory"):
             return
         path = link(service["FirmwareInventory"])
-    for member_path, item in collection(device, path, required=True, expand=True):
+    for member_path, item in components(device, path):
         label = item.get("Name")
         if not label or label == "Software Inventory":
             label = item.get("Id") or member_path.rsplit("/", 1)[-1]

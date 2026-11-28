@@ -438,7 +438,7 @@ Delta 的固件清单回退有公开文档依据，Delta、Megmeet、Flex 仍待
 | BIOS | `nodebios` 当前值，`pending` 待读取的设置 | 已有 OEM 动作保留。逐项写入、应用时机和重启条件按机型补齐 |
 | 启动 | `nodebootorder` 持久顺序，`nodenetboot` 启动与 PXE 信息 | `nodeboot` 一次性覆盖。持久重排、网口绑定按 OEM 补齐 |
 | 资产和固件 | `*inventory` 版本，`--details` 厂商/型号/序列号，计算节点 `--gpu`、`nodefru`、`nodefw show` | 完整 FRU 和部件号按机型补齐 |
-| MAC 和网络 | `nodemacs` 主机 MAC，部分旧 OEM 适配可读 BMC/PXE MAC | BMC/PXE 通用查询、网络配置和连线诊断按接口补齐 |
+| MAC 和网络 | `nodemacs` 通过 BMC 查询计算托盘 MAC，部分机型从 PXE 启动项取得 | 按机型补齐计算托盘 MAC 覆盖 |
 | 温度、风扇、PSU | `*temp`、`*fan`、`*psu`，含健康状态 | 风扇调速走 OEM。PSU 和温度只读 |
 | 虚拟介质 | `nodevm` 查询 | 已有 OEM 支持挂载、推出等动作。新机型按介质协议、启用和插入流程补齐 |
 | 日志与任务 | `*eventlog`、`nodetask`、`*inventory --tasks` | 部分适配支持清日志。任务取消与诊断包待补 |
@@ -711,7 +711,7 @@ NVSwitch 和 Power Shelf 选至少一台代表设备，各跑一遍适用的只�
 
 | 对象 | 只读覆盖范围 |
 | --- | --- |
-| HGX / NVL 计算节点 | `nodeping`、`nodefan`、`nodepsu`、`nodetemp`、`nodeinlet`、`nodemon`、`nodepower status`、`nodeeventlog status`、`nodeinventory`、`nodebootorder`、`nodenetboot list`、`nodemacs`、`nodebios status` / `pending`、`nodevm status`、`nodefru`、`nodebmc` / `time`、`nodetask`、`nodefw show` / `status` |
+| HGX / NVL 计算节点 | `nodeping`、`nodefan`、`nodepsu`、`nodetemp`、`nodeinlet`、`nodemon`、`nodepower status`、`nodeeventlog status`、`nodeinventory`、`nodebootorder`、`nodenetboot list`、`nodemacs`（必验）、`nodebios status` / `pending`、`nodevm status`、`nodefru`、`nodebmc` / `time`、`nodetask`、`nodefw show` / `status` |
 | NVSwitch | `nvswpsu`、`nvswtemp`、`nvswpower status`、`nvsweventlog status`、`nvswinventory` |
 | Power Shelf | `psfan`、`pspsu`、`pstemp`、`pspower status`、`pseventlog status`、`psinventory` |
 
@@ -736,6 +736,30 @@ HGX654 复测通过。`nodeeventlog status` 用分页读取全部 4096 条记录
 `nodefw show` 和兼容入口 `nodeinventory` 共用固件读取，分页展开全部 80 个成员。
 `nodefw show` 还包含 BIOS 和 BMC 资源摘要。`nodefw status` 返回 4 个任务。
 
+#### 计算托盘 MAC 验收
+
+每种计算托盘的机型、代际及 BMC 固件组合都必须验证 `nodemacs`。核对端口标识和 MAC，
+排除 BMC 管理口及全零和广播占位地址。记录网卡配置及实测数量，区分缺失、读取失败和暂未验证。
+验收只需访问 BMC，可在安装操作系统前进行。
+
+```bash
+./nodemacs 'HGX[390,654]'
+```
+
+| B300 机型 | 已验收 BMC 固件 | 计算托盘 MAC 行数 / GET | `nodemon` GET |
+| --- | --- | ---: | ---: |
+| Supermicro SYS-822GS-NB3RT | 01.07.04.00、01.12.02.03、01.12.05.00 | 6 / 1 | 9 |
+| Aivres/KAYTUS KR9288-X3-A0-F0-01 | 2.03.ee、2.03.ef | 12 / 30 | 3 |
+
+Supermicro 使用系统 EthernetInterfaces，Aivres/KAYTUS 使用机箱 NetworkAdapters 的端口及设备功能。
+每个固件组合的 GET 顺序、读数和脱敏 fixture 见 `certified-reads.json`。这两款 B300 可以用
+inventory 中经 BMC 核对的 `system_model` 启用机型直读，参见 `inventory.hgx.example.ini`。
+其余机型的计算托盘 Redfish MAC 仍待验收。
+
+BCM 实际库存覆盖 254 台已识别节点。批量风扇与 PSU 各有 253 台通过完整性检查。
+HGX169 的 6 个风扇读数都标为 Absent，HGX613 的 BMC 只报告 5 个 PSU；单独复测结果一致。
+这两台分别列为风扇及 PSU 验收未完成。
+
 #### HGX 直读覆盖表
 
 两款 B300 实机分别用自动发现和显式 inventory 配置验收
@@ -745,8 +769,8 @@ HGX654 复测通过。`nodeeventlog status` 用分页读取全部 4096 条记录
 
 | 机型或适配器 | 适配器内置直读 | 实机风扇 | 实机 PSU | 实机温度 |
 | --- | --- | --- | --- | --- |
-| Supermicro SYS-822GS-NB3RT | fan, PSU | 6 (6 → 1) | 6 (13 → 8) | 35 (91 ‡ → 1) |
-| Aivres/KAYTUS KR9288-X3-A0-F0-01 | fan, PSU | 40 (6 → 1) | 8 (6 → 1) | 71 (12 → 1) |
+| Supermicro SYS-822GS-NB3RT | fan, PSU, temp, inlet, monitor, compute MAC | 6 (6 → 1) | 6 (13 → 8) | 35 (91 ‡ → 1) |
+| Aivres/KAYTUS KR9288-X3-A0-F0-01 | fan, PSU, temp, inlet, monitor, compute MAC | 40 (6 → 1) | 8 (6 → 1) | 71 (12 → 1) |
 | AMI HGX | fan, PSU | 待验收 | 待验收 | 待验收 |
 | BYD HGX | fan | 待验收 | 待验收 | 待验收 |
 | Compal HGX | fan, PSU | 待验收 | 待验收 | 待验收 |
@@ -760,6 +784,46 @@ HGX654 复测通过。`nodeeventlog status` 用分页读取全部 4096 条记录
 ‡ Supermicro 自动发现的 91 次调用中，节点时限内收到 33 次 HTTP 响应。
 它的 35 个温度传感器中有 1 个在两种路径下都无数值。
 其他机型和命令仍需逐项实机验收。
+
+
+### 直读验收后的 Redfish 归档
+
+验收机负责采集。每次新增或重新验收固定端点时，在同一次流程里做只读 GET 快照并核对覆盖。
+以厂商、设备角色、平台、代际、BMC 实报型号、BMC 固件版本作为独立维度。确认不同布局时再加
+布局标识。型号字符串相同、同一厂商或同一代际都不足以共用认证。布局相同可复用采集逻辑，
+仍须分别保留实机证据。型号、代际、固件或布局变更时重新采集。
+
+文件名用 `<oem>-<platform>-<generation>-<model>-bmc-<version>-<yyyymmdd>.redfish.json.gz`。
+计算节点可省略默认角色，其他设备在文件名加角色。有多个布局时加布局后缀。私有清单保存完整
+原始字段、来源节点、时间、nodetools 提交、文件校验值和相关用例。文件名仅用于定位，身份和
+配置以清单为准。不要把快照、现场 inventory 或凭据提交到 Git。
+
+验收流程先以 `redfish dump --path` 优先收集正常路径，再检查关键 URI（含查询和分页）的
+HTTP 状态和响应。宽扫不全时补采，明确哪些资源未采、返回非 2xx、超时或被排除。
+`redfish dump` 不采 Account/Session 类资源、TaskService 或事件 Entries；按需另留受限证据。
+保留零值、空集合、缺字段、告警和分页链。压缩为 gzip 并写 SHA-256，确认可解压并试跑离线回放。
+用可审查的小型脱敏 fixture 断言正常、缺页和回退的生产请求顺序，参见 `certified-reads.json`。
+常规 `redfish replay` 可检查解析结果。传感器验收须加 `--expect-rows` 并按顺序重复
+`--expect-path`。严格模式沿生产 Runner 选路，只替换离线传输；读数数量、GET 顺序或成功响应
+不符合就退出非零。可直接读取 `.json.gz`。预期值来自同机型、同代际、同固件的实机记录。
+
+从验收程序读取已实机确认的组合并逐个触发采集，同一组合的有效快照可复用。
+设备下线前补缺时，按清单的缺失路径定向采集。缺失关键端点时保留部分归档并明确缺口。
+
+
+下面以一台已核验的计算节点为例。实际验收按用例补全 `--path`、核对覆盖并保存清单。
+
+```bash
+umask 077
+archive=$(mktemp -d "$HOME/nodetools-redfish.XXXXXXXXXX")
+file="$archive/aivres-kaytus-hgx-b300-kr9288-x3-a0-f0-01-bmc-2.03.ef-$(date +%Y%m%d).redfish.json"
+./nodetools redfish dump HGX390 -i inventory.ini --workers 2 --seconds 34 \
+  --path /redfish/v1/Chassis/1/Thermal --path /redfish/v1/Chassis/1/Power -o "$file"
+./nodetools redfish replay "$file" nodepsu --details --expect-rows 8 --expect-path /redfish/v1/Chassis/1/Power
+gzip -n -- "$file"
+(cd "$archive" && sha256sum -- *.gz > SHA256SUMS && sha256sum -c SHA256SUMS)
+```
+
 
 ## 8. 代码风格与提交约定
 

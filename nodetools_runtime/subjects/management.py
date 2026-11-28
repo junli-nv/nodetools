@@ -48,7 +48,7 @@ def bmc(device, action, value=None):
     from .. import model, oem
     selected = getattr(device, "vars", {}).get("manager_id")
     if not selected and action in ("info", "time") and value is None:
-        adapter = getattr(device, "odm", None) or (oem.for_device(device)
+        adapter = getattr(device, "odm", None) or (oem.for_device(device, configured_read=True)
                   if isinstance(device, model.Device) else None)
         selected = getattr(adapter, "read_manager_id", None)
     path, data = None, {}
