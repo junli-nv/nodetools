@@ -966,8 +966,12 @@ in restricted storage.
 For each model, generation, firmware, and layout combination that passes hardware
 acceptance, commit and push the reviewed, redacted `*.redfish.json.gz` archive to GitHub
 with the acceptance changes. Store it in `docs/redfish-archives/<platform>/<generation>/`.
-Update the adjacent `MANIFEST.json` and `SHA256SUMS` with the model, firmware, capture
-coverage, gaps, and passing replay cases. Before pushing, review the archive for site
+The schema-2 `MANIFEST.json` indexes OEM, role, model, firmware and model-manifest
+paths. Store detailed evidence in `manifests/<oem>/<role>/<model>.json`, grouping
+firmware revisions of the same model. `samples[].file` is relative to the
+platform/generation directory. `SHA256SUMS` covers the index, all model manifests
+and archives. Update all three when adding evidence; see the
+[archive layout](redfish-archives/README.md). Before pushing, review the archive for site
 identifiers and credentials, verify the checksum, and run the associated offline replays.
 See the [HGX B300 archive manifest](redfish-archives/hgx/b300/MANIFEST.json) for an example.
 
@@ -987,8 +991,9 @@ Take expectations from live evidence for the same model, generation and firmware
 to select its direct-read adapter.
 
 Automated replay covers fans, PSUs, temperatures, inlet temperatures and monitoring
-for the three HGX B300 archives. The manifest lists unavailable compute MAC responses
+for the three HGX B300 archives. Each model manifest lists unavailable compute MAC responses
 in `replay_gaps` and firmware combinations awaiting capture in `missing_archives`.
+The top-level index summarizes missing revisions in `missing_firmware`.
 KAYTUS `2.03.ee` and Supermicro `01.12.05.00` still need a live capture.
 
 Trigger capture from the acceptance workflow for verified combinations, and reuse matching

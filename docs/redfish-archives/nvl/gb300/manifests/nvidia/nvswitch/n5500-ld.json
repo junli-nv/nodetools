@@ -1,0 +1,60 @@
+{
+  "schema": 2,
+  "capture_date": "2026-11-28",
+  "platform": "nvl",
+  "generation": "gb300",
+  "oem": "nvidia",
+  "role": "nvswitch",
+  "model": "N5500_LD",
+  "samples": [
+    {
+      "file": "nvidia-nvl-gb300-nvswitch-n5500-ld-bmc-88.0002.1961-20261128.redfish.json.gz",
+      "oem": "nvidia",
+      "role": "nvswitch",
+      "model": "N5500_LD",
+      "bmc_version": "88.0002.1961",
+      "capture": {
+        "complete": false,
+        "pending": 100,
+        "seconds": 32.0,
+        "stop_reason": "time budget",
+        "transport_errors": 4
+      },
+      "resource_count": 215,
+      "verified_replays": [],
+      "nv_os_certificates": [
+        "nvidia_n5500_1961_psu",
+        "nvidia_n5500_1961_temp"
+      ]
+    },
+    {
+      "file": "nvidia-nvl-gb300-nvswitch-n5500-ld-bmc-88.0002.1962-20261128.redfish.json.gz",
+      "oem": "nvidia",
+      "role": "nvswitch",
+      "model": "N5500_LD",
+      "bmc_version": "88.0002.1962",
+      "capture": {
+        "complete": false,
+        "pending": 125,
+        "transport_errors": 4,
+        "seconds": 24.0,
+        "stop_reason": "time budget"
+      },
+      "resource_count": 153,
+      "verified_replays": [
+        {
+          "capability": "temp",
+          "readings": 3,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/MGX_BMC_0/Sensors?$expand=.",
+            "/redfish/v1/Chassis/MGX_NVSwitch_0/Sensors?$expand=.",
+            "/redfish/v1/Chassis/MGX_NVSwitch_1/Sensors?$expand=."
+          ]
+        }
+      ],
+      "nv_os_certificates": [
+        "nvidia_n5500_hsc"
+      ]
+    }
+  ]
+}

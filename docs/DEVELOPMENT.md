@@ -831,8 +831,12 @@ HGX169 的 6 个风扇读数都标为 Absent，HGX613 的 BMC 只报告 5 个 PS
 
 每个通过实机验收的机型、代际、固件及布局组合，都要把审查过的脱敏主归档
 `*.redfish.json.gz` 随验收改动提交并推送到 GitHub。统一存放在
-`docs/redfish-archives/<platform>/<generation>/`。同目录更新 `MANIFEST.json`
-和 `SHA256SUMS`，记录型号、固件、采集范围、覆盖缺口及已通过的回放。
+`docs/redfish-archives/<platform>/<generation>/`。`MANIFEST.json` 使用 schema 2，
+只索引厂商、角色、型号、固件及子清单路径。详细记录按型号拆到
+`manifests/<oem>/<role>/<model>.json`，同型号的固件、采集范围、缺口和回放放在一起。
+子清单的 `samples[].file` 相对平台/代际目录。同目录的 `SHA256SUMS` 覆盖总索引、
+全部子清单和压缩归档。新增证据时同步更新这三部分，见
+[归档目录说明](redfish-archives/README.md)。
 推送前复查归档内的现场标识和凭据，验证校验和并运行对应的离线回放。
 现有示例见 [HGX B300 归档清单](redfish-archives/hgx/b300/MANIFEST.json)。
 
@@ -847,7 +851,7 @@ HTTP 状态和响应。宽扫不全时补采，明确哪些资源未采、返回
 `nodemon` 回放一次温度与功率采样。归档未配置 `system_model` 时，可用 `--system-model` 指定同固件验收记录中的主机型号，按该机型走直读。
 
 HGX B300 三份主归档的风扇、PSU、温度、进风口和监控均纳入自动回放。
-`MANIFEST.json` 的 `replay_gaps` 列出 MAC 回放缺少的响应，`missing_archives` 列出待补采的固件组合。KAYTUS `2.03.ee` 和 Supermicro `01.12.05.00` 仍需实机采集。
+型号子清单的 `replay_gaps` 列出 MAC 回放缺少的响应，`missing_archives` 列出待补采的固件组合；总索引用 `missing_firmware` 汇总。KAYTUS `2.03.ee` 和 Supermicro `01.12.05.00` 仍需实机采集。
 
 从验收程序读取已实机确认的组合并逐个触发采集，同一组合的有效快照可复用。
 设备下线前补缺时，按清单的缺失路径定向采集。缺失关键端点时保留部分归档并明确缺口。

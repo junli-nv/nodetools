@@ -1,6 +1,6 @@
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 
@@ -8,21 +8,62 @@ from nodetools_runtime import cli, redfish_snapshot, runtime
 
 DOCS = Path(__file__).resolve().parents[1] / "docs"
 ARCHIVE_ROOT = DOCS / "redfish-archives"
-MANIFESTS = {
-    directory: json.loads((directory / "MANIFEST.json").read_text())
-    for directory in (ARCHIVE_ROOT / "hgx" / "b300", ARCHIVE_ROOT / "nvl" / "gb300")
-}
+def load_archive_index(directory):
+    index = json.loads((directory / "MANIFEST.json").read_text())
+    assert index["schema"] == 2 and "samples" not in index
+    assert (index["platform"], index["generation"]) == (directory.parent.name, directory.name)
+    samples, missing, paths, models = [], [], set(), set()
+    for entry in index["models"]:
+        assert set(entry) <= {"oem", "role", "model", "firmware", "missing_firmware", "manifest"}
+        relative = PurePosixPath(entry["manifest"])
+        assert not relative.is_absolute() and ".." not in relative.parts
+        assert relative.parts[0] == "manifests" and relative.suffix == ".json"
+        assert relative.as_posix() == entry["manifest"] and "\\" not in entry["manifest"]
+        assert entry["manifest"] not in paths
+        paths.add(entry["manifest"])
+        key = (entry["oem"], entry["role"], entry["model"])
+        assert key not in models
+        models.add(key)
+        detail = json.loads((directory / relative).read_text())
+        assert detail["schema"] == 2
+        for field in ("platform", "generation"):
+            assert detail[field] == index[field]
+        for field in ("oem", "role", "model"):
+            assert detail[field] == entry[field]
+        rows = detail["samples"]
+        gaps = detail.get("missing_archives", [])
+        assert rows or gaps
+        assert entry["firmware"] == sorted({row["bmc_version"] for row in rows})
+        assert entry.get("missing_firmware", []) == sorted({gap["bmc_version"] for gap in gaps})
+        assert not set(entry["firmware"]).intersection(entry.get("missing_firmware", []))
+        for row in rows:
+            assert row["model"] == detail["model"] and row["oem"] == detail["oem"]
+            assert row.get("role", detail["role"]) == detail["role"]
+            assert Path(row["file"]).name == row["file"]
+        assert all(gap["model"] == detail["model"] for gap in gaps)
+        samples.extend(rows)
+        missing.extend(gaps)
+    assert len({row["file"] for row in samples}) == len(samples)
+    actual = {p.relative_to(directory).as_posix() for p in (directory / "manifests").rglob("*.json")}
+    assert paths == actual, "Unindexed or missing model manifest"
+    return dict(index, samples=samples, missing_archives=missing)
+
+
+MANIFESTS = {path.parent: load_archive_index(path.parent)
+             for path in sorted(ARCHIVE_ROOT.glob("*/*/MANIFEST.json"))}
 CERTIFICATES = json.loads((DOCS / "certified-reads.json").read_text())["records"]
 
 
 @pytest.mark.parametrize("directory", MANIFESTS, ids=lambda directory: directory.name)
 def test_archive_checksums_and_firmware_coverage(directory):
     manifest = MANIFESTS[directory]
-    checksums = dict(reversed(line.split(maxsplit=1))
-                     for line in (directory / "SHA256SUMS").read_text().splitlines())
+    lines = (directory / "SHA256SUMS").read_text().splitlines()
+    checksums = dict(reversed(line.split(maxsplit=1)) for line in lines)
+    assert len(checksums) == len(lines)
     files = {sample["file"] for sample in manifest["samples"]}
     assert files == {path.name for path in directory.glob("*.redfish.json.gz")}
-    assert set(checksums) == files | {"MANIFEST.json"}
+    json_files = {p.relative_to(directory).as_posix() for p in directory.rglob("*.json")}
+    assert set(checksums) == files | json_files
     for name, expected in checksums.items():
         assert hashlib.sha256((directory / name).read_bytes()).hexdigest() == expected
 

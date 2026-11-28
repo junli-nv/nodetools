@@ -1,0 +1,143 @@
+{
+  "schema": 2,
+  "capture_date": "2026-11-28",
+  "platform": "nvl",
+  "generation": "gb300",
+  "oem": "wistron",
+  "role": "compute",
+  "model": "GB300 Bianca PDB",
+  "samples": [
+    {
+      "file": "wistron-nvl-gb300-gb300-bianca-pdb-bmc-01.05.26.0305-20261128.redfish.json.gz",
+      "oem": "wistron",
+      "role": "compute",
+      "model": "GB300 Bianca PDB",
+      "bmc_version": "01.05.26.0305",
+      "capture": {
+        "complete": false,
+        "pending": 175,
+        "seconds": 32.0,
+        "stop_reason": "time budget",
+        "transport_errors": 4
+      },
+      "resource_count": 144,
+      "verified_replays": [
+        {
+          "capability": "fan",
+          "readings": 16,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/Fans?$expand=."
+          ]
+        },
+        {
+          "capability": "psu",
+          "readings": 2,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_0_Pwr_0",
+            "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_1_Pwr_0"
+          ]
+        },
+        {
+          "capability": "inlet",
+          "readings": 1,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_Front_IO_Temp_0"
+          ]
+        },
+        {
+          "capability": "monitor",
+          "readings": 4,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_TotalHSC_Power_0",
+            "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_Front_IO_Temp_0",
+            "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_0_Pwr_0",
+            "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_1_Pwr_0"
+          ]
+        },
+        {
+          "capability": "macs",
+          "readings": 7,
+          "exact_get_paths": [
+            "/redfish/v1/Systems/system/BootOptions?$expand=."
+          ]
+        },
+        {
+          "capability": "temp",
+          "readings": 57,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/ThermalMetrics",
+            "/redfish/v1/Chassis/PDB_0/ThermalSubsystem/ThermalMetrics",
+            "/redfish/v1/Chassis/HGX_BMC_0/ThermalSubsystem/ThermalMetrics",
+            "/redfish/v1/Chassis/HGX_CPU_0/ThermalSubsystem/ThermalMetrics",
+            "/redfish/v1/Chassis/HGX_CPU_1/ThermalSubsystem/ThermalMetrics",
+            "/redfish/v1/Chassis/HGX_Chassis_0/ThermalSubsystem/ThermalMetrics",
+            "/redfish/v1/Chassis/HGX_GPU_0/ThermalSubsystem/ThermalMetrics",
+            "/redfish/v1/Chassis/HGX_GPU_1/ThermalSubsystem/ThermalMetrics",
+            "/redfish/v1/Chassis/HGX_GPU_2/ThermalSubsystem/ThermalMetrics",
+            "/redfish/v1/Chassis/HGX_GPU_3/ThermalSubsystem/ThermalMetrics"
+          ]
+        },
+        {
+          "capability": "inventory",
+          "readings": 45,
+          "exact_get_paths": [
+            "/redfish/v1/Systems?$expand=.",
+            "/redfish/v1/Chassis",
+            "/redfish/v1/Chassis/BMC_0",
+            "/redfish/v1/Chassis/CBC_0",
+            "/redfish/v1/Chassis/CBC_1",
+            "/redfish/v1/Chassis/CBC_2",
+            "/redfish/v1/Chassis/CBC_3",
+            "/redfish/v1/Chassis/CPLD_0",
+            "/redfish/v1/Chassis/CPLD_1",
+            "/redfish/v1/Chassis/Chassis_0",
+            "/redfish/v1/Chassis/FIO_Board_0",
+            "/redfish/v1/Chassis/IO_Board_0",
+            "/redfish/v1/Chassis/IO_Board_1",
+            "/redfish/v1/Chassis/IRoT_BF3_0",
+            "/redfish/v1/Chassis/IRoT_CX8_0",
+            "/redfish/v1/Chassis/IRoT_CX8_1",
+            "/redfish/v1/Chassis/IRoT_CX8_2",
+            "/redfish/v1/Chassis/IRoT_CX8_3",
+            "/redfish/v1/Chassis/NVME_M2_0",
+            "/redfish/v1/Chassis/PDB_0",
+            "/redfish/v1/Chassis/Riser_Slot1_BlueField_3_Card",
+            "/redfish/v1/Chassis/StorageBackplane_0",
+            "/redfish/v1/Chassis/StorageBackplane_1",
+            "/redfish/v1/Chassis/HGX_BMC_0",
+            "/redfish/v1/Chassis/HGX_CPLD_0",
+            "/redfish/v1/Chassis/HGX_CPU_0",
+            "/redfish/v1/Chassis/HGX_CPU_1",
+            "/redfish/v1/Chassis/HGX_Chassis_0",
+            "/redfish/v1/Chassis/HGX_ERoT_BMC_0",
+            "/redfish/v1/Chassis/HGX_ERoT_CPU_0",
+            "/redfish/v1/Chassis/HGX_ERoT_CPU_1",
+            "/redfish/v1/Chassis/HGX_ERoT_FPGA_0",
+            "/redfish/v1/Chassis/HGX_ERoT_FPGA_1",
+            "/redfish/v1/Chassis/HGX_FPGA_0",
+            "/redfish/v1/Chassis/HGX_FPGA_1",
+            "/redfish/v1/Chassis/HGX_GPU_0",
+            "/redfish/v1/Chassis/HGX_GPU_1",
+            "/redfish/v1/Chassis/HGX_GPU_2",
+            "/redfish/v1/Chassis/HGX_GPU_3",
+            "/redfish/v1/Chassis/HGX_IRoT_GPU_0",
+            "/redfish/v1/Chassis/HGX_IRoT_GPU_1",
+            "/redfish/v1/Chassis/HGX_IRoT_GPU_2",
+            "/redfish/v1/Chassis/HGX_IRoT_GPU_3",
+            "/redfish/v1/Chassis/HGX_ProcessorModule_0",
+            "/redfish/v1/Chassis/HGX_ProcessorModule_1"
+          ],
+          "options": [
+            "--details"
+          ]
+        }
+      ],
+      "private_evidence": [
+        {
+          "capability": "eventlog",
+          "reason": "Event log entries can identify the site and are excluded from published captures."
+        }
+      ]
+    }
+  ]
+}

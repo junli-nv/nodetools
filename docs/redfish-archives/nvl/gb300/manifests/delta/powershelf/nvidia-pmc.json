@@ -1,0 +1,81 @@
+{
+  "schema": 2,
+  "capture_date": "2026-11-28",
+  "platform": "nvl",
+  "generation": "gb300",
+  "oem": "delta",
+  "role": "powershelf",
+  "model": "NVIDIA_PMC",
+  "samples": [
+    {
+      "file": "delta-nvl-gb300-powershelf-nvidia-pmc-bmc-3.1.6-20261128.redfish.json.gz",
+      "oem": "delta",
+      "role": "powershelf",
+      "model": "NVIDIA_PMC",
+      "bmc_version": "3.1.6",
+      "capture": {
+        "complete": false,
+        "pending": 8,
+        "seconds": 32.0,
+        "stop_reason": "time budget",
+        "transport_errors": 4
+      },
+      "resource_count": 235,
+      "verified_replays": [
+        {
+          "capability": "fan",
+          "readings": 12,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans?$expand=."
+          ]
+        },
+        {
+          "capability": "psu",
+          "readings": 6,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies?$expand=.",
+            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1",
+            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2",
+            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3",
+            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4",
+            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5",
+            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6",
+            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1/Metrics",
+            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2/Metrics",
+            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3/Metrics",
+            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4/Metrics",
+            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5/Metrics",
+            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6/Metrics"
+          ]
+        },
+        {
+          "capability": "temp",
+          "readings": 33,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/ThermalMetrics"
+          ]
+        },
+        {
+          "capability": "power",
+          "readings": 1,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/PowerShelf_0"
+          ]
+        },
+        {
+          "capability": "inventory",
+          "readings": 4,
+          "exact_get_paths": [
+            "/redfish/v1/UpdateService/FirmwareInventory?$expand=."
+          ]
+        }
+      ],
+      "private_evidence": [
+        {
+          "capability": "eventlog",
+          "reason": "Event log entries can identify the site and are excluded from published captures."
+        }
+      ]
+    }
+  ]
+}

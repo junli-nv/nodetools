@@ -56,6 +56,8 @@ The CI job direct-read-contract runs the full suite, including
 tests/test_direct_read_contract.py, tests/test_psu_aliases.py and
 tests/test_published_redfish_archives.py. The archive check covers every certified
 model/firmware, including previously validated hardware when it is revalidated.
+Keep MANIFEST.json as a compact schema-2 index; put detailed evidence in
+manifests/<oem>/<role>/<model>.json. Update the index and recursive SHA256SUMS together.
 Report actual normal request counts, real-device readback and unverified scope.
 Do not call a GitHub check merge-blocking unless branch protection requires it.
 

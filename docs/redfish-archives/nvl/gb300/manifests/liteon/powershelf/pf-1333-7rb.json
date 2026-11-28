@@ -1,0 +1,66 @@
+{
+  "schema": 2,
+  "capture_date": "2026-11-28",
+  "platform": "nvl",
+  "generation": "gb300",
+  "oem": "liteon",
+  "role": "powershelf",
+  "model": "PF-1333-7RB",
+  "samples": [
+    {
+      "file": "liteon-nvl-gb300-powershelf-pf-1333-7rb-bmc-r1.3.9-20261128.redfish.json.gz",
+      "oem": "liteon",
+      "role": "powershelf",
+      "model": "PF-1333-7RB",
+      "bmc_version": "r1.3.9",
+      "capture": {
+        "complete": false,
+        "pending": 18,
+        "transport_errors": 0,
+        "seconds": 23.72,
+        "stop_reason": "request limit"
+      },
+      "resource_count": 180,
+      "verified_replays": [
+        {
+          "capability": "psu",
+          "readings": 6,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/powershelf/Power"
+          ]
+        },
+        {
+          "capability": "fan",
+          "readings": 6,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/powershelf/Thermal"
+          ]
+        },
+        {
+          "capability": "temp",
+          "readings": 21,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/powershelf/Thermal"
+          ]
+        },
+        {
+          "capability": "psu",
+          "readings": 6,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies?$expand=.",
+            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/0",
+            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/1",
+            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/2",
+            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/3",
+            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/4",
+            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/5",
+            "/redfish/v1/Chassis/powershelf/Power"
+          ],
+          "options": [
+            "--details"
+          ]
+        }
+      ]
+    }
+  ]
+}

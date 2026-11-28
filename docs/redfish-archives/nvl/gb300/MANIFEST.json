@@ -1,433 +1,63 @@
 {
-  "schema": 1,
+  "schema": 2,
   "capture_date": "2026-11-28",
   "platform": "nvl",
   "generation": "gb300",
-  "samples": [
+  "models": [
     {
-      "file": "wistron-nvl-gb300-gb300-bianca-pdb-bmc-01.05.26.0305-20261128.redfish.json.gz",
-      "oem": "wistron",
-      "role": "compute",
-      "model": "GB300 Bianca PDB",
-      "bmc_version": "01.05.26.0305",
-      "capture": {
-        "complete": false,
-        "pending": 175,
-        "seconds": 32.0,
-        "stop_reason": "time budget",
-        "transport_errors": 4
-      },
-      "resource_count": 144,
-      "verified_replays": [
-        {
-          "capability": "fan",
-          "readings": 16,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/Fans?$expand=."
-          ]
-        },
-        {
-          "capability": "psu",
-          "readings": 2,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_0_Pwr_0",
-            "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_1_Pwr_0"
-          ]
-        },
-        {
-          "capability": "inlet",
-          "readings": 1,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_Front_IO_Temp_0"
-          ]
-        },
-        {
-          "capability": "monitor",
-          "readings": 4,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_TotalHSC_Power_0",
-            "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_Front_IO_Temp_0",
-            "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_0_Pwr_0",
-            "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_1_Pwr_0"
-          ]
-        },
-        {
-          "capability": "macs",
-          "readings": 7,
-          "exact_get_paths": [
-            "/redfish/v1/Systems/system/BootOptions?$expand=."
-          ]
-        },
-        {
-          "capability": "temp",
-          "readings": 57,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/PDB_0/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_BMC_0/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_CPU_0/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_CPU_1/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_Chassis_0/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_GPU_0/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_GPU_1/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_GPU_2/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_GPU_3/ThermalSubsystem/ThermalMetrics"
-          ]
-        },
-        {
-          "capability": "inventory",
-          "readings": 45,
-          "exact_get_paths": [
-            "/redfish/v1/Systems?$expand=.",
-            "/redfish/v1/Chassis",
-            "/redfish/v1/Chassis/BMC_0",
-            "/redfish/v1/Chassis/CBC_0",
-            "/redfish/v1/Chassis/CBC_1",
-            "/redfish/v1/Chassis/CBC_2",
-            "/redfish/v1/Chassis/CBC_3",
-            "/redfish/v1/Chassis/CPLD_0",
-            "/redfish/v1/Chassis/CPLD_1",
-            "/redfish/v1/Chassis/Chassis_0",
-            "/redfish/v1/Chassis/FIO_Board_0",
-            "/redfish/v1/Chassis/IO_Board_0",
-            "/redfish/v1/Chassis/IO_Board_1",
-            "/redfish/v1/Chassis/IRoT_BF3_0",
-            "/redfish/v1/Chassis/IRoT_CX8_0",
-            "/redfish/v1/Chassis/IRoT_CX8_1",
-            "/redfish/v1/Chassis/IRoT_CX8_2",
-            "/redfish/v1/Chassis/IRoT_CX8_3",
-            "/redfish/v1/Chassis/NVME_M2_0",
-            "/redfish/v1/Chassis/PDB_0",
-            "/redfish/v1/Chassis/Riser_Slot1_BlueField_3_Card",
-            "/redfish/v1/Chassis/StorageBackplane_0",
-            "/redfish/v1/Chassis/StorageBackplane_1",
-            "/redfish/v1/Chassis/HGX_BMC_0",
-            "/redfish/v1/Chassis/HGX_CPLD_0",
-            "/redfish/v1/Chassis/HGX_CPU_0",
-            "/redfish/v1/Chassis/HGX_CPU_1",
-            "/redfish/v1/Chassis/HGX_Chassis_0",
-            "/redfish/v1/Chassis/HGX_ERoT_BMC_0",
-            "/redfish/v1/Chassis/HGX_ERoT_CPU_0",
-            "/redfish/v1/Chassis/HGX_ERoT_CPU_1",
-            "/redfish/v1/Chassis/HGX_ERoT_FPGA_0",
-            "/redfish/v1/Chassis/HGX_ERoT_FPGA_1",
-            "/redfish/v1/Chassis/HGX_FPGA_0",
-            "/redfish/v1/Chassis/HGX_FPGA_1",
-            "/redfish/v1/Chassis/HGX_GPU_0",
-            "/redfish/v1/Chassis/HGX_GPU_1",
-            "/redfish/v1/Chassis/HGX_GPU_2",
-            "/redfish/v1/Chassis/HGX_GPU_3",
-            "/redfish/v1/Chassis/HGX_IRoT_GPU_0",
-            "/redfish/v1/Chassis/HGX_IRoT_GPU_1",
-            "/redfish/v1/Chassis/HGX_IRoT_GPU_2",
-            "/redfish/v1/Chassis/HGX_IRoT_GPU_3",
-            "/redfish/v1/Chassis/HGX_ProcessorModule_0",
-            "/redfish/v1/Chassis/HGX_ProcessorModule_1"
-          ],
-          "options": [
-            "--details"
-          ]
-        }
-      ],
-      "private_evidence": [
-        {
-          "capability": "eventlog",
-          "reason": "Event log entries can identify the site and are excluded from published captures."
-        }
-      ]
-    },
-    {
-      "file": "delta-nvl-gb300-powershelf-nvidia-pmc-bmc-3.1.6-20261128.redfish.json.gz",
       "oem": "delta",
       "role": "powershelf",
       "model": "NVIDIA_PMC",
-      "bmc_version": "3.1.6",
-      "capture": {
-        "complete": false,
-        "pending": 8,
-        "seconds": 32.0,
-        "stop_reason": "time budget",
-        "transport_errors": 4
-      },
-      "resource_count": 235,
-      "verified_replays": [
-        {
-          "capability": "fan",
-          "readings": 12,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans?$expand=."
-          ]
-        },
-        {
-          "capability": "psu",
-          "readings": 6,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies?$expand=.",
-            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1",
-            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2",
-            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3",
-            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4",
-            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5",
-            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6",
-            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1/Metrics",
-            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2/Metrics",
-            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3/Metrics",
-            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4/Metrics",
-            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5/Metrics",
-            "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6/Metrics"
-          ]
-        },
-        {
-          "capability": "temp",
-          "readings": 33,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/ThermalMetrics"
-          ]
-        },
-        {
-          "capability": "power",
-          "readings": 1,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/PowerShelf_0"
-          ]
-        },
-        {
-          "capability": "inventory",
-          "readings": 4,
-          "exact_get_paths": [
-            "/redfish/v1/UpdateService/FirmwareInventory?$expand=."
-          ]
-        }
+      "firmware": [
+        "3.1.6"
       ],
-      "private_evidence": [
-        {
-          "capability": "eventlog",
-          "reason": "Event log entries can identify the site and are excluded from published captures."
-        }
-      ]
+      "manifest": "manifests/delta/powershelf/nvidia-pmc.json"
     },
     {
-      "file": "nvidia-nvl-gb300-nvswitch-n5500-ld-bmc-88.0002.1961-20261128.redfish.json.gz",
-      "oem": "nvidia",
-      "role": "nvswitch",
-      "model": "N5500_LD",
-      "bmc_version": "88.0002.1961",
-      "capture": {
-        "complete": false,
-        "pending": 100,
-        "seconds": 32.0,
-        "stop_reason": "time budget",
-        "transport_errors": 4
-      },
-      "resource_count": 215,
-      "verified_replays": [],
-      "nv_os_certificates": [
-        "nvidia_n5500_1961_psu",
-        "nvidia_n5500_1961_temp"
-      ]
-    },
-    {
-      "file": "liteon-nvl-gb300-powershelf-pf-1333-9rb-bmc-r1.3.9-20261128.redfish.json.gz",
-      "oem": "liteon",
-      "role": "powershelf",
-      "model": "PF-1333-9RB",
-      "bmc_version": "r1.3.9",
-      "capture": {
-        "complete": false,
-        "pending": 18,
-        "transport_errors": 0,
-        "seconds": 23.84,
-        "stop_reason": "request limit"
-      },
-      "resource_count": 180,
-      "verified_replays": [
-        {
-          "capability": "psu",
-          "readings": 6,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/powershelf/Power"
-          ]
-        },
-        {
-          "capability": "fan",
-          "readings": 6,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/powershelf/Thermal"
-          ]
-        },
-        {
-          "capability": "temp",
-          "readings": 21,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/powershelf/Thermal"
-          ]
-        },
-        {
-          "capability": "psu",
-          "readings": 6,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies?$expand=.",
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/0",
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/1",
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/2",
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/3",
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/4",
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/5",
-            "/redfish/v1/Chassis/powershelf/Power"
-          ],
-          "options": [
-            "--details"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "liteon-nvl-gb300-powershelf-pf-1333-7rb-bmc-r1.3.9-20261128.redfish.json.gz",
       "oem": "liteon",
       "role": "powershelf",
       "model": "PF-1333-7RB",
-      "bmc_version": "r1.3.9",
-      "capture": {
-        "complete": false,
-        "pending": 18,
-        "transport_errors": 0,
-        "seconds": 23.72,
-        "stop_reason": "request limit"
-      },
-      "resource_count": 180,
-      "verified_replays": [
-        {
-          "capability": "psu",
-          "readings": 6,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/powershelf/Power"
-          ]
-        },
-        {
-          "capability": "fan",
-          "readings": 6,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/powershelf/Thermal"
-          ]
-        },
-        {
-          "capability": "temp",
-          "readings": 21,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/powershelf/Thermal"
-          ]
-        },
-        {
-          "capability": "psu",
-          "readings": 6,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies?$expand=.",
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/0",
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/1",
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/2",
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/3",
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/4",
-            "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies/5",
-            "/redfish/v1/Chassis/powershelf/Power"
-          ],
-          "options": [
-            "--details"
-          ]
-        }
-      ]
+      "firmware": [
+        "r1.3.9"
+      ],
+      "manifest": "manifests/liteon/powershelf/pf-1333-7rb.json"
     },
     {
-      "file": "smc-nvl-gb300-gb-nvl-bmc-70.02.02.01-20261128.redfish.json.gz",
-      "oem": "smc",
-      "role": "compute",
-      "model": "GB NVL",
-      "bmc_version": "70.02.02.01",
-      "capture": {
-        "complete": false,
-        "pending": 298,
-        "transport_errors": 4,
-        "seconds": 24.0,
-        "stop_reason": "time budget"
-      },
-      "resource_count": 108,
-      "verified_replays": [
-        {
-          "capability": "psu",
-          "readings": 2,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_0_Pwr_0",
-            "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_1_Pwr_0"
-          ]
-        },
-        {
-          "capability": "fan",
-          "readings": 24,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/Chassis_0/Sensors?$expand=."
-          ]
-        },
-        {
-          "capability": "temp",
-          "readings": 50,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/PDB_0/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_CPU_1/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_Chassis_0/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_GPU_0/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_GPU_1/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_GPU_2/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_GPU_3/ThermalSubsystem/ThermalMetrics",
-            "/redfish/v1/Chassis/HGX_ProcessorModule_0/ThermalSubsystem/ThermalMetrics"
-          ]
-        },
-        {
-          "capability": "inlet",
-          "readings": 1,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_Front_IO_Temp_0"
-          ]
-        },
-        {
-          "capability": "monitor",
-          "readings": 4,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_TotalHSC_Power_0",
-            "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_Front_IO_Temp_0",
-            "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_0_Pwr_0",
-            "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_1_Pwr_0"
-          ]
-        }
-      ]
+      "oem": "liteon",
+      "role": "powershelf",
+      "model": "PF-1333-9RB",
+      "firmware": [
+        "r1.3.9"
+      ],
+      "manifest": "manifests/liteon/powershelf/pf-1333-9rb.json"
     },
     {
-      "file": "nvidia-nvl-gb300-nvswitch-n5500-ld-bmc-88.0002.1962-20261128.redfish.json.gz",
       "oem": "nvidia",
       "role": "nvswitch",
       "model": "N5500_LD",
-      "bmc_version": "88.0002.1962",
-      "capture": {
-        "complete": false,
-        "pending": 125,
-        "transport_errors": 4,
-        "seconds": 24.0,
-        "stop_reason": "time budget"
-      },
-      "resource_count": 153,
-      "verified_replays": [
-        {
-          "capability": "temp",
-          "readings": 3,
-          "exact_get_paths": [
-            "/redfish/v1/Chassis/MGX_BMC_0/Sensors?$expand=.",
-            "/redfish/v1/Chassis/MGX_NVSwitch_0/Sensors?$expand=.",
-            "/redfish/v1/Chassis/MGX_NVSwitch_1/Sensors?$expand=."
-          ]
-        }
+      "firmware": [
+        "88.0002.1961",
+        "88.0002.1962"
       ],
-      "nv_os_certificates": [
-        "nvidia_n5500_hsc"
-      ]
+      "manifest": "manifests/nvidia/nvswitch/n5500-ld.json"
+    },
+    {
+      "oem": "smc",
+      "role": "compute",
+      "model": "GB NVL",
+      "firmware": [
+        "70.02.02.01"
+      ],
+      "manifest": "manifests/smc/compute/gb-nvl.json"
+    },
+    {
+      "oem": "wistron",
+      "role": "compute",
+      "model": "GB300 Bianca PDB",
+      "firmware": [
+        "01.05.26.0305"
+      ],
+      "manifest": "manifests/wistron/compute/gb300-bianca-pdb.json"
     }
   ]
 }

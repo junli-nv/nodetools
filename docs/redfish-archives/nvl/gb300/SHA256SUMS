@@ -1,8 +1,14 @@
+2e0ac202142d33cdb2ba097429969f0c6ebb9b50d3a9cb09d9438d1a3b9500c1  MANIFEST.json
 04e6a2b046f1a27ff79c19f1c4da7fbfc8fb79a53436ef18d9f860ab1b768dcb  delta-nvl-gb300-powershelf-nvidia-pmc-bmc-3.1.6-20261128.redfish.json.gz
 a6e0214f1a754dde2cb68c97832d9f57329ba787c2db0f464c8d9773319e543a  liteon-nvl-gb300-powershelf-pf-1333-7rb-bmc-r1.3.9-20261128.redfish.json.gz
 b15ecc257a0de6eba14a5635d24ee0f7588ab79b225dda35d9c0d2cf8b94cfc1  liteon-nvl-gb300-powershelf-pf-1333-9rb-bmc-r1.3.9-20261128.redfish.json.gz
+6124497d8acd78e3be5cdb63eededdab6d9619d8ed0184ee262a219ef2d92748  manifests/delta/powershelf/nvidia-pmc.json
+144f77d3dfecf24260bfef6834865a3c127cacb41d6eaab0b8d0e0fe427e7fd8  manifests/liteon/powershelf/pf-1333-7rb.json
+13243237229b77b71f26af49ad0844690029820fbcb5bfeba3fba40d2e89beb3  manifests/liteon/powershelf/pf-1333-9rb.json
+84a620e6ce31cfe46c0b50401fd80a06cbf839220130c6352dd8a37e954fa365  manifests/nvidia/nvswitch/n5500-ld.json
+a9b8dea1c6a3549a62101e04ec4dd74d4d80877aad001a8f3c6f02a1455ec2a2  manifests/smc/compute/gb-nvl.json
+32129feae9964b764aaf9f5c99c1fa95c6bbaa22ca443510857a1fb3cc81ee46  manifests/wistron/compute/gb300-bianca-pdb.json
 752106e6baf9161414b1667d3754bc4c473d1051ea61e041783cdc0466240202  nvidia-nvl-gb300-nvswitch-n5500-ld-bmc-88.0002.1961-20261128.redfish.json.gz
 d245431e8acc9968eacceb106247c6fb3f38c3e95a0e94f747c2efb55662c6d6  nvidia-nvl-gb300-nvswitch-n5500-ld-bmc-88.0002.1962-20261128.redfish.json.gz
 489c18c9d1f791479027d2f89407010c0f1cc4b484aff4e27749957b24d1fd0f  smc-nvl-gb300-gb-nvl-bmc-70.02.02.01-20261128.redfish.json.gz
 ca8a64dc840ca38cf612af5680a962f5e26d549515a0db01cc3fb7e4635fa016  wistron-nvl-gb300-gb300-bianca-pdb-bmc-01.05.26.0305-20261128.redfish.json.gz
-395132bed935fdd52ab2139af8d76f99494f05e0204c3972187826905b890a14  MANIFEST.json
