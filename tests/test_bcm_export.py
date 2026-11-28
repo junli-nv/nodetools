@@ -40,9 +40,9 @@ else:
     fake.chmod(0o700)
     target = tmp_path / "hosts.list"
     env = dict(os.environ, PATH=str(bindir))
-    def run(mode="ok"):
+    def run(mode="ok", debug=False):
         return subprocess.run(
-            ["/bin/bash", str(SCRIPT), "-o", str(target)],
+            ["/bin/bash", str(SCRIPT), "-o", str(target), *(["-x"] if debug else [])],
             env=dict(env, BCM_TEST_MODE=mode), capture_output=True, text=True, timeout=10,
         )
     return run, target, fake
@@ -79,3 +79,14 @@ def test_missing_bcm_is_only_an_exporter_error(exporter):
     assert result.returncode == 2
     assert "cmsh not found" in result.stderr
     assert target.read_text() == "existing data"
+
+
+def test_export_debug_reports_each_query_without_changing_data(exporter):
+    run, target, _ = exporter
+    result = run(debug=True)
+    assert result.returncode == 0, result.stderr
+    assert result.stderr.count("cmsh exit=0") == 3
+    assert "query type=PhysicalNode interface=bmc" in result.stderr
+    assert "validated devices=3" in result.stderr
+    assert "wrote" in result.stdout
+    assert len(Inventory.from_text(generate_from_hostslist(target)).hosts) == 3

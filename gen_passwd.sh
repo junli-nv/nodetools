@@ -3,6 +3,7 @@
 # Generic editable credentials template; no BCM command is executed.
 exec python3 - "$@" <<'PY'
 import argparse
+import sys
 import os
 from pathlib import Path
 
@@ -10,7 +11,13 @@ parser = argparse.ArgumentParser(prog='gen_passwd.sh', description="Create an ed
 parser.formatter_class = argparse.RawDescriptionHelpFormatter
 parser.epilog = 'Examples\n  ./gen_passwd.sh\n  ./gen_passwd.sh -o /tmp/new-passwd.sh'
 parser.add_argument("-o", "--output", default="passwd.sh")
+parser.add_argument("-x", "--debug", action="store_true", help="show diagnostics on stderr")
+parser.epilog += '\n  ./gen_passwd.sh -x -o /tmp/passwd-debug.sh'
 args = parser.parse_args()
+def trace(message):
+    if args.debug:
+        print("[gen_passwd] " + message, file=sys.stderr, flush=True)
+
 template = """#!/bin/bash
 # Fill from your own records, or use the optional BCM lookup paths below.
 # This file can be written manually. nodetools imports assignments without running it.
@@ -41,6 +48,7 @@ export ibswitch_os_pass='CHANGE_ME_IB'
 export spx_switch_os_user=cumulus
 export spx_switch_os_pass='CHANGE_ME_SPX'
 """
+trace("creating credentials template; output=" + args.output + " mode=0600")
 try:
     fd = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w") as handle:

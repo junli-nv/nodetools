@@ -3,6 +3,7 @@
 # Optional BCM adapter. Manual hosts.list files work without this script.
 exec python3 - "$@" <<'PY'
 import argparse
+import sys
 import ipaddress
 import math
 import os
@@ -17,7 +18,13 @@ parser.formatter_class = argparse.RawDescriptionHelpFormatter
 parser.epilog = 'Examples\n  ./gen_hosts.sh\n  ./gen_hosts.sh -o /tmp/hosts.list --timeout 30'
 parser.add_argument("-o", "--output", default="hosts.list")
 parser.add_argument("--timeout", type=float, default=30, help="seconds per cmsh query")
+parser.add_argument("-x", "--debug", action="store_true", help="show diagnostics on stderr")
+parser.epilog += '\n  ./gen_hosts.sh -x -o /tmp/hosts-debug.list'
 args = parser.parse_args()
+def trace(message):
+    if args.debug:
+        print("[gen_hosts] " + message, file=sys.stderr, flush=True)
+
 if not math.isfinite(args.timeout) or args.timeout <= 0:
     parser.error("--timeout must be positive")
 if not shutil.which("cmsh"):
@@ -59,9 +66,11 @@ try:
     records, names = [], set()
     for label, kind, interface in queries:
         query = "device; foreach -t {} ( get hostname; interfaces; list {})".format(kind, interface)
+        trace("query type=" + kind + " interface=" + interface)
         result = subprocess.run(["cmsh", "-c", query], capture_output=True, text=True, timeout=args.timeout)
         if result.returncode:
             raise ValueError("cmsh {} query failed (exit {}); output unchanged".format(kind, result.returncode))
+        trace("cmsh exit=" + str(result.returncode))
         for row in sorted(parse(result.stdout, label, interface)):
             if row[1].casefold() in names:
                 raise ValueError("duplicate BCM hostname: " + row[1])
@@ -69,6 +78,7 @@ try:
             records.append(row)
     if not records:
         raise ValueError("BCM returned no devices; output unchanged")
+    trace("validated devices=" + str(len(records)) + " output=" + args.output)
     target = Path(args.output)
     with tempfile.NamedTemporaryFile(mode="w", dir=target.parent, prefix="."+target.name+".", delete=False) as handle:
         temporary = handle.name

@@ -1032,6 +1032,16 @@ propagate it to execution and retain it across nested parsers. Redfish debug inc
 reproducible curl requests, exact URIs and HTTP status. Test parser scopes,
 help examples and actual stderr; standalone entrypoints are not exempt.
 
+Debug acceptance must enumerate the complete public parser catalog, including
+standalone audit modules, switch wrappers and gen_* scripts. A fixed list of
+main roots is insufficient. New entries must be discovered and checked.
+Exercise actual execution diagnostics, not only flag presence. Debug belongs
+on stderr and must preserve JSON/JSONL/CSV output. Audit tools must reuse
+cli._apply_defaults, inherit inventory request/node budgets and allow explicit
+overrides instead of hardcoding short timeouts. BMC credential overrides apply
+only to BMC access; resolve NVOS SSH credentials separately. Never print OS
+passwords or credential-template contents in diagnostics.
+
 The optional adapter field firmware_page_size controls firmware pagination.
 Absent fields retain existing behavior. SMC GB300 NVL reads the full expanded
 collection; HGX retains 16-item numeric pages. Expanded reads reject count

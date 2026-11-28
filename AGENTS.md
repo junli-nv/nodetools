@@ -120,7 +120,14 @@ Every public command and independently parsed subcommand must support -x/--debug
 Propagate debug to actual execution and retain it across nested parsers.
 Redfish debug includes reproducible curl requests and HTTP status.
 Test parser placement and actual stderr. Standalone CLIs are not exempt.
-Core command-tree debug coverage is enforced by tests/test_help_examples.py.
+Debug coverage in tests/test_help_examples.py must enumerate the complete public
+parser catalog, including standalone modules, switch wrappers and gen_* scripts.
+Do not replace this with a fixed list of main command roots.
+Audit tools must use cli._apply_defaults and inventory budgets, with explicit
+timeout overrides supported. BMC overrides must never become NVOS SSH credentials.
+Use separate OS overrides. Debug goes to stderr, preserving JSON/JSONL/CSV data;
+never log OS passwords or credential-template contents. Test actual execution
+and credential routing, not only parser flag presence.
 
 ## Help examples are required completion checks
 

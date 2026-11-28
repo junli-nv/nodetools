@@ -2,12 +2,14 @@
 
 import argparse
 from contextlib import ExitStack
+from copy import copy
 import json
-from pathlib import Path
+import math
 from unittest.mock import patch
 
 from . import cli, oem, runtime
 from .arguments import INFO_COMMANDS, SENSOR_COMMANDS, add_examples, parse_args
+from .diagnostics import debug as trace
 from .errors import NodetoolsError
 from .inventory import Inventory
 from .subjects import firmware, management
@@ -55,8 +57,9 @@ def _invoke(host, case, options):
         return runtime.Runner(case["cap"], options)._one(host)
     if case["kind"] == "info":
         return runtime.InfoRunner(case["cap"], options)._one(host)
-    device = runtime.build_device(host, options, load_profile=False)
+    device = None
     try:
+        device = runtime.build_device(host, options, load_profile=False)
         device.odm = oem.for_device(device, configured_read=True)
         cap = case["cap"]
         if cap.startswith("bmc_"):
@@ -73,10 +76,13 @@ def _invoke(host, case, options):
     except Exception as exc:
         return dict(lines=[], error=type(exc).__name__ + ": " + str(exc))
     finally:
-        device.close()
+        if device is not None:
+            device.close()
 
 
-def run_case(host, case, user=None, password=None, capture=None):
+def run_case(host, case, user=None, password=None, capture=None, *,
+             inventory=None, timeout=None, node_timeout=None, debug=False,
+             os_user=None, os_password=None):
     allowed = {c["id"]: c for c in cases_for(host.role)}
     if case != allowed.get(case.get("id")):
         raise ValueError("audit accepts only its built-in read-only cases")
@@ -84,7 +90,9 @@ def run_case(host, case, user=None, password=None, capture=None):
     if case["kind"] == "management":
         argv = ["nodepsu", host.name]
     args = parse_args(argv)
+    args.timeout, args.node_timeout, args.debug = timeout, node_timeout, debug
     options = cli.Options(args)
+    cli._apply_defaults(options, inventory or Inventory(), args)
     action = (getattr(args, "action", None) or getattr(args, "action_opt", None) or "").lower()
     options.action = None if action in cli._READ_WORDS else action
     if case["cap"] == "netboot":
@@ -92,9 +100,6 @@ def run_case(host, case, user=None, password=None, capture=None):
         options.netboot_filters = netboot.normalize_filters(
             {key:getattr(args, key, None) for key in netboot.FILTERS})
         options.netboot_family = args.family
-    options.timeout = 3
-    options.timeout_explicit = True
-    options.node_timeout = 15
     options.user, options.password = user, password
     requests = []
     original = Redfish.get_raw
@@ -115,7 +120,15 @@ def run_case(host, case, user=None, password=None, capture=None):
         }
         if command not in allowed_queries:
             raise NodetoolsError("read audit rejects an unlisted NVOS query")
-        result = original_ssh(target, opts, command, deadline)
+        ssh_options = copy(opts)
+        ssh_options.user, ssh_options.password = os_user, os_password
+        ssh_options.debug = False
+        address = target.vars.get(target.role + "_os_host") or target.vars.get("os_host") or target.name
+        username = os_user or target.vars.get(target.role + "_os_user") or target.vars.get("os_user")
+        trace(debug, "read_audit:" + target.name,
+              f"SSH address={address!r} user={username!r} command={command!r}")
+        result = original_ssh(target, ssh_options, command, deadline)
+        trace(debug, "read_audit:" + target.name, f"SSH exit={result.returncode}")
         marker = "nvos:lm5066i-vin-iin-pin" if command == runtime.nvos._HSC else "nvos:" + command
         requests.append(dict(path=marker, status=result.returncode, transport="nvos_ssh"))
         if capture is not None:
@@ -131,6 +144,8 @@ def run_case(host, case, user=None, password=None, capture=None):
             stack.enter_context(patch.object(Redfish, name, forbidden))
         stack.enter_context(patch.object(Ipmi, "run", forbidden))
         stack.enter_context(patch.object(runtime.nvos, "_ssh", nvos_read))
+        trace(debug, "read_audit:" + host.name,
+              f"case={case['id']} timeout={options.timeout} node_timeout={options.node_timeout}")
         result = _invoke(host, case, options)
     error = result.get("error")
     rows = result.get("readings", [])
@@ -141,6 +156,7 @@ def run_case(host, case, user=None, password=None, capture=None):
                "/redfish/v1/Systems", "/redfish/v1/Chassis"}
     unexpected = [r["path"] for r in requests if r["path"] in startup]
     state = "failed" if error else "discovery" if unexpected else "read_ok"
+    trace(debug, "read_audit:" + host.name, f"case={case['id']} state={state} requests={len(requests)}")
     return dict(case=case["id"], state=state, requests=requests, request_count=len(requests),
                 rows=len(rows) if rows else len(lines), error=error,
                 readings=[{k:r.get(k) for k in ("id","value","unit","health","kind")}
@@ -153,8 +169,15 @@ def main(argv=None):
     add_examples(parser,
         'python3 -m nodetools_runtime.read_audit gb300-ct01 --list',
         'python3 -m nodetools_runtime.read_audit gb300-ct01',
+        'python3 -m nodetools_runtime.read_audit gb300-ct01 -x',
+        'python3 -m nodetools_runtime.read_audit nvlsw-01 -x --only nvswpsu --os-user admin --os-password-env NVOS_PASSWORD',
         'python3 -m nodetools_runtime.read_audit shelf01 --only pspsu --only psfan',
     )
+    parser.add_argument("-x", "--debug", action="store_true", help="show execution diagnostics on stderr")
+    parser.add_argument("--timeout", type=float, help="request timeout; default from inventory")
+    parser.add_argument("--node-timeout", type=float, help="per-node budget; default from inventory")
+    parser.add_argument("--os-user", help="NVOS SSH user override; separate from BMC --user")
+    parser.add_argument("--os-password-env", help="environment variable containing NVOS SSH password")
     parser.add_argument("host")
     parser.add_argument("-i", "--inventory", default="inventory.ini")
     parser.add_argument("--only", action="append", help="one or more case IDs; default all")
@@ -162,7 +185,12 @@ def main(argv=None):
     parser.add_argument("--user")
     parser.add_argument("--password-env", help="environment variable containing BMC password")
     args = parser.parse_args(argv)
-    host = Inventory.from_file(args.inventory).hosts[args.host]
+    for flag in ("timeout", "node_timeout"):
+        value = getattr(args, flag)
+        if value is not None and (not math.isfinite(value) or value <= 0):
+            parser.error("--" + flag.replace("_", "-") + " must be finite and positive")
+    inv = Inventory.from_file(args.inventory)
+    host = inv.hosts[args.host]
     cases = cases_for(host.role)
     if args.only:
         unknown = set(args.only) - {c["id"] for c in cases}
@@ -179,9 +207,16 @@ def main(argv=None):
         if args.password_env not in os.environ:
             parser.error("password environment variable is not set")
         password = os.environ[args.password_env]
+    os_password = None
+    if args.os_password_env:
+        if args.os_password_env not in os.environ:
+            parser.error("OS password environment variable is not set")
+        os_password = os.environ[args.os_password_env]
     failed = False
     for case in cases:
-        result = run_case(host, case, args.user, password)
+        result = run_case(host, case, args.user, password, inventory=inv,
+                          timeout=args.timeout, node_timeout=args.node_timeout, debug=args.debug,
+                          os_user=args.os_user, os_password=os_password)
         print(json.dumps(result, ensure_ascii=False), flush=True)
         failed |= result["state"] != "read_ok"
     return int(failed)

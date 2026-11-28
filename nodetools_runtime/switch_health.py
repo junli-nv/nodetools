@@ -8,6 +8,7 @@ import math
 import os
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
 import sys
 import time
@@ -15,6 +16,7 @@ import time
 from .help_language import LocalizedArgumentParser
 from .config import DEFAULT_INVENTORY
 from .errors import NodetoolsError
+from .diagnostics import debug
 from .hostlist import expand
 from .inventory import Inventory
 
@@ -51,8 +53,10 @@ def main(command, argv):
         epilog=f"""Examples
   ./{command} '{sample}[01-04]'
   ./{command} {sample}01 -i lab.ini --dry-run
+  ./{command} {sample}01 -x
   ./{command} {sample}01 --checks ./my-checks.sh{repeat_example}""",
     )
+    parser.add_argument("-x", "--debug", action="store_true", help="show SSH diagnostics on stderr")
     parser.add_argument("hosts", help="switch name or host range")
     parser.add_argument("-i", "--inventory", default=os.getenv("NODETOOLS_INVENTORY") or DEFAULT_INVENTORY)
     parser.add_argument("--user", help="override the inventory SSH user")
@@ -86,6 +90,7 @@ def main(command, argv):
             continue
         user = args.user or host.get("ssh_user")
         targets[name] = f"{user}@{address}" if user else address
+    debug(args.debug, command, f"inventory={args.inventory} selected={len(names)} jobs={args.jobs} timeout={args.timeout:g}s dry_run={args.dry_run}")
     if args.dry_run:
         for name in missing:
             print(f"{name}: ERROR: no SSH address in inventory")
@@ -110,10 +115,15 @@ def main(command, argv):
             for name in missing:
                 _report(name, False, "no SSH address in inventory", writer, timestamp)
                 failed = True
+            for name, target in targets.items():
+                debug(args.debug, command + ":" + name,
+                      shlex.join([*ssh, "--", target, "bash", "-s"]) +
+                      f" (script via stdin; sample={round_number + 1})")
             jobs = {pool.submit(query, target, ssh, script, args.timeout): name
                     for name, target in targets.items()}
             for job in as_completed(jobs):
                 success, message = job.result()
+                debug(args.debug, command + ":" + jobs[job], f"SSH success={success}")
                 failed |= not _report(jobs[job], success, message, writer, timestamp)
             if round_number + 1 < count:
                 time.sleep(args.interval)

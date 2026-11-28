@@ -50,3 +50,34 @@ Only one NVSwitch HSC sample was validated; multi-node acceptance is pending.
 Normal Lite-On pspsu uses one legacy Power GET with stable slot IDs.
 --details uses eight GETs to merge modern identity and legacy input power.
 Site inventory, credentials, raw captures and per-node results stay private.
+
+## Audit diagnostics and credentials
+
+Both audit entrypoints support `-x/--debug`. Diagnostics go to stderr;
+read-audit JSON, batch JSONL files and regular stdout retain their formats.
+The audit tools use the normal CLI defaults from inventory, including Redfish
+request/connect timeouts and per-node budgets. Explicit `--timeout` and
+`--node-timeout` override the corresponding defaults; no short audit-only
+request/node limits are imposed. Batch `--jobs` also inherits inventory.
+
+```bash
+python3 -m nodetools_runtime.read_audit DEVICE -x --only nodefan
+python3 -m nodetools_runtime.read_audit NVSWITCH -x --only nvswpsu
+python3 -m nodetools_runtime.batch_audit pspsu 'shelf[01-04]' -x --jobs 200 --expected-readings 6 --output /tmp/psu-debug.jsonl
+```
+
+For mixed Redfish/NVOS audits, `--user` and `--password-env` override only
+BMC credentials. NVOS uses the configured OS credentials; `--os-user` and
+`--os-password-env` provide separate optional overrides. Password-env options
+take environment variable names, not expanded password values. OS passwords
+are omitted from audit diagnostics. Redfish curl diagnostics include BMC
+credentials for reproduction, so keep debug logs private.
+
+Switch health/monitor wrappers and both gen_* helpers also support debug.
+The credential-template generator logs only its destination and permissions,
+never template contents. The BCM exporter remains optional.
+
+Offline acceptance covers the full public help/parser catalog, actual
+auxiliary execution diagnostics, separate BMC/OS credentials, inherited and
+explicit timeout budgets, and unchanged structured output. These checks do
+not replace hardware batch acceptance or certify additional device reads.

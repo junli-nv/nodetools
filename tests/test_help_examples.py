@@ -205,13 +205,14 @@ def test_all_supported_help_variants_preserve_examples():
     print(f"Audited {count} supported help variants")
 
 
-@pytest.mark.parametrize("program", ["nodetools", "nodefw", "nodebmc", "nodetask", "nodefru"])
-def test_every_main_device_command_scope_supports_debug(program):
-    for parser in walk(catalog()[program]):
+def test_every_public_command_scope_supports_debug():
+    parsers = {id(p): p for root in catalog().values() for p in walk(root)}
+    for parser in parsers.values():
         options = parser._option_string_actions
         assert {"-x", "--debug"} <= options.keys(), parser.prog
         assert options["-x"] is options["--debug"]
         assert options["-x"].dest == "debug"
+    print(f"Audited debug support in {len(parsers)} public help scopes")
 
 
 def assert_examples_follow_parameters(parser, text, chinese=False):
