@@ -124,6 +124,12 @@ Core command-tree debug coverage is enforced by tests/test_help_examples.py.
 
 ## Help examples are required completion checks
 
+Help layout is introduction, arguments, then one Examples section at the end.
+Keep examples in epilog, not description. Preserve all workflows and notes.
+Normal, full and Chinese help use the same order; advanced help must not
+duplicate the Examples heading. The help catalog test enforces this layout.
+
+
 Follow docs/DEVELOPMENT.md section 8 and its English counterpart: every
 public command, nested subcommand and new action with dedicated options must
 include runnable typical examples in its own --help. Update help in the same

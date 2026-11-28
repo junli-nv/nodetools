@@ -198,6 +198,7 @@ def test_all_supported_help_variants_preserve_examples():
                 parser.parse_args([flag])
             assert result.value.code == 0, (parser.prog, flag)
             text = output.getvalue()
+            assert_examples_follow_parameters(parser, text, chinese="zh" in flag)
             for example, _ in examples(parser):
                 assert example in text, (parser.prog, flag, example)
             count += 1
@@ -211,3 +212,25 @@ def test_every_main_device_command_scope_supports_debug(program):
         assert {"-x", "--debug"} <= options.keys(), parser.prog
         assert options["-x"] is options["--debug"]
         assert options["-x"].dest == "debug"
+
+
+def assert_examples_follow_parameters(parser, text, chinese=False):
+    from nodetools_runtime.help_language import _translate
+    title = _translate("Examples") if chinese else "Examples"
+    headings = list(re.finditer(r"(?m)^" + re.escape(title) + r"\s*$", text))
+    assert len(headings) == 1, parser.prog
+    for group in parser._action_groups:
+        if not group.title or group.title == argparse.SUPPRESS:
+            continue
+        name = _translate(group.title) if chinese else group.title
+        match = re.search(r"(?m)^" + re.escape(name) + r":\s*$", text)
+        if match:
+            assert match.start() < headings[0].start(), parser.prog
+
+
+def test_all_public_help_uses_intro_parameters_examples_order():
+    parsers = {id(p): p for root in catalog().values() for p in walk(root)}
+    for parser in parsers.values():
+        assert not re.search(r"(?m)^Examples\s*$", parser.description or ""), parser.prog
+        assert re.search(r"(?m)^Examples\s*$", parser.epilog or ""), parser.prog
+        assert_examples_follow_parameters(parser, parser.format_help())

@@ -1016,6 +1016,12 @@ gzip -n -- "$file"
 
 ## 8. Code style and commit conventions
 
+Help follows introduction, arguments, then one Examples section, as in nodebios.
+Put examples in epilog, never description, preserving workflows and notes.
+Normal, full and Chinese help keep this order. Merge advanced examples under
+the same heading. The public help catalog checks layout, visibility and parsing.
+
+
 ### Consistent command order and debug support
 
 Device commands use PROGRAM NODE(S) [RESOURCE] [ACTION] [ARGS].

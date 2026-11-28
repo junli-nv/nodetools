@@ -255,7 +255,8 @@ def simple_help(parser):
 
 User slots, channels and verification paths are automatic.
 Compute SOL is automatic; NVSwitch skips SOL."""
-    parser.full_epilog = basic + "\n\n" + parser.epilog
+    advanced_examples = parser.epilog.removeprefix("Examples\n")
+    parser.full_epilog = basic + "\n\n" + advanced_examples
     parser.epilog = basic
     visible = {"help", "help_zh", "help_full", "debug", "scope", "nodes", "action", "account", "account_password"}
     parser.advanced_help = {}

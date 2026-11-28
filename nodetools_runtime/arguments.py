@@ -92,18 +92,7 @@ _COMMAND_HELP = {
                Defaults to IPv4. Use --family all for both families.
                Use --dry-run to see the complete proposed boot order.
   pxe          Legacy OEM action without a port selector.
-
-Examples
-  nodenetboot 'HGX[600-602]' list
-  nodenetboot HGX600 status
-  nodenetboot 'HGX[600-602]' prefer --type cx7 --dry-run
-  nodenetboot 'HGX[600-602]' prefer --type bf3 --slot 3 --port 1 --dry-run
-  nodenetboot HGX601 prefer --uefi-path 'Acpi(0x168E09,0x133)/Pci(0x2,0x0)' --port 2 --dry-run
-
-Run list first to see available types and positions. An unknown value is shown
-as -. Use a UEFI path from the list when the slot or PCI address is unavailable.
-Prefer moves all matching entries ahead in their current order. Remove
---dry-run to write the persistent priority, then reboot separately.""",
+""",
     "macs": "Read compute tray MAC addresses from the BMC.",
     "bios": """Read or change BIOS settings.
   status   Read active settings (default).
@@ -122,8 +111,23 @@ Prefer moves all matching entries ahead in their current order. Remove
   stop URL          OEM-specific stop. On Lenovo GB300, eject first, then
                     use stop to disable Remote Media.
   enable/media/lic  OEM-specific enablement, media information or license view.
+""",
+}
 
-Examples
+
+_COMMAND_HELP_EPILOG = {
+    "netboot": """Examples
+  nodenetboot 'HGX[600-602]' list
+  nodenetboot HGX600 status
+  nodenetboot 'HGX[600-602]' prefer --type cx7 --dry-run
+  nodenetboot 'HGX[600-602]' prefer --type bf3 --slot 3 --port 1 --dry-run
+  nodenetboot HGX601 prefer --uefi-path 'Acpi(0x168E09,0x133)/Pci(0x2,0x0)' --port 2 --dry-run
+
+Run list first to see available types and positions. An unknown value is shown
+as -. Use a UEFI path from the list when the slot or PCI address is unavailable.
+Prefer moves all matching entries ahead in their current order. Remove
+--dry-run to write the persistent priority, then reboot separately.""",
+    "vm": """Examples
   nodevm HGX390 status
 
 Lenovo GB300 CIFS example
@@ -496,7 +500,8 @@ def build_parser():
             hmc = "  hmc      Read HMC logs, where supported.\n" if role == "compute" else ""
             bmc = "  bmc      Read BMC logs, where supported.\n" if role != "powershelf" else ""
             description = description.format(bmc=bmc, hmc=hmc)
-        info = sub.add_parser(name, help="{} {}".format(role, subject), description=description)
+        info = sub.add_parser(name, help="{} {}".format(role, subject),
+                              description=description, epilog=_COMMAND_HELP_EPILOG.get(subject))
         _add_info_opts(info, subject, role)
         if name == "nodepower":
             _add_output_options(info)
