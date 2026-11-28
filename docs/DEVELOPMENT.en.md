@@ -931,7 +931,16 @@ generation, or layout changes.
 Use `<oem>-<platform>-<generation>-<model>-bmc-<version>-<yyyymmdd>.redfish.json.gz`.
 Add a role for non-compute devices and a layout suffix where needed. A private manifest
 records the exact identity, source node, timestamp, nodetools revision, coverage, and SHA-256.
-Keep snapshots, site inventories and credentials outside Git.
+Keep raw captures, manifests with site identifiers, site inventories, and credentials
+in restricted storage.
+
+For each model, generation, firmware, and layout combination that passes hardware
+acceptance, commit and push the reviewed, redacted `*.redfish.json.gz` archive to GitHub
+with the acceptance changes. Store it in `docs/redfish-archives/<platform>/<generation>/`.
+Update the adjacent `MANIFEST.json` and `SHA256SUMS` with the model, firmware, capture
+coverage, gaps, and passing replay cases. Before pushing, review the archive for site
+identifiers and credentials, verify the checksum, and run the associated offline replays.
+See the [HGX B300 archive manifest](redfish-archives/hgx/b300/MANIFEST.json) for an example.
 
 Prioritize exact normal GET paths (including query parameters) with `redfish dump --path`.
 Verify HTTP status, body and pagination. Supplement incomplete crawls with targeted reads,

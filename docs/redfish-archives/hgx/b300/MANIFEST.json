@@ -1,0 +1,135 @@
+{
+  "schema": 1,
+  "capture_date": "2026-11-28",
+  "revision": "5605167b13aae06b84467ff2d7bc4a979b477c99",
+  "platform": "hgx",
+  "generation": "b300",
+  "role": "compute",
+  "samples": [
+    {
+      "file": "aivres-kaytus-hgx-b300-kr9288-x3-a0-f0-01-bmc-2.03.ef-20261128.redfish.json.gz",
+      "oem": "aivres-kaytus",
+      "model": "KR9288-X3-A0-F0-01",
+      "bmc_version": "2.03.ef",
+      "capture": {
+        "complete": false,
+        "pending": 89,
+        "seconds": 34.0,
+        "stop_reason": "time budget",
+        "transport_errors": 4
+      },
+      "resource_count": 250,
+      "verified_replays": [
+        {
+          "capability": "fan",
+          "readings": 40,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/1/Thermal"
+          ]
+        },
+        {
+          "capability": "psu",
+          "readings": 8,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/1/Power"
+          ]
+        },
+        {
+          "capability": "temp",
+          "readings": 71,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/1/Thermal"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "supermicro-hgx-b300-sys-822gs-nb3rt-bmc-01.12.02.03-20261128.redfish.json.gz",
+      "oem": "supermicro",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_version": "01.12.02.03",
+      "capture": {
+        "complete": false,
+        "pending": 535,
+        "seconds": 34.0,
+        "stop_reason": "time budget",
+        "transport_errors": 9
+      },
+      "resource_count": 121,
+      "verified_replays": [
+        {
+          "capability": "fan",
+          "readings": 6,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/1/ThermalSubsystem/Fans?$expand=."
+          ]
+        },
+        {
+          "capability": "psu",
+          "readings": 6,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies?$expand=.",
+            "/redfish/v1/Chassis/1/Power",
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/1/Metrics",
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/2/Metrics",
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/3/Metrics",
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/4/Metrics",
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/5/Metrics",
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/6/Metrics"
+          ]
+        },
+        {
+          "capability": "temp",
+          "readings": 36,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/1/Thermal"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "supermicro-hgx-b300-sys-822gs-nb3rt-bmc-01.07.04.00-20261128.redfish.json.gz",
+      "oem": "supermicro",
+      "model": "SYS-822GS-NB3RT",
+      "bmc_version": "01.07.04.00",
+      "capture": {
+        "complete": false,
+        "pending": 120,
+        "seconds": 34.0,
+        "stop_reason": "time budget",
+        "transport_errors": 16
+      },
+      "resource_count": 74,
+      "verified_replays": [
+        {
+          "capability": "fan",
+          "readings": 6,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/1/ThermalSubsystem/Fans?$expand=."
+          ]
+        },
+        {
+          "capability": "psu",
+          "readings": 6,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies?$expand=.",
+            "/redfish/v1/Chassis/1/Power",
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/1/Metrics",
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/2/Metrics",
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/3/Metrics",
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/4/Metrics",
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/5/Metrics",
+            "/redfish/v1/Chassis/1/PowerSubsystem/PowerSupplies/6/Metrics"
+          ]
+        },
+        {
+          "capability": "temp",
+          "readings": 35,
+          "exact_get_paths": [
+            "/redfish/v1/Chassis/1/Thermal"
+          ]
+        }
+      ]
+    }
+  ]
+}

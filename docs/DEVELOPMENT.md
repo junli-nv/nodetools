@@ -796,7 +796,14 @@ HGX169 的 6 个风扇读数都标为 Absent，HGX613 的 BMC 只报告 5 个 PS
 文件名用 `<oem>-<platform>-<generation>-<model>-bmc-<version>-<yyyymmdd>.redfish.json.gz`。
 计算节点可省略默认角色，其他设备在文件名加角色。有多个布局时加布局后缀。私有清单保存完整
 原始字段、来源节点、时间、nodetools 提交、文件校验值和相关用例。文件名仅用于定位，身份和
-配置以清单为准。不要把快照、现场 inventory 或凭据提交到 Git。
+配置以清单为准。原始采集、带现场标识的清单、现场 inventory 和凭据保存在受限目录。
+
+每个通过实机验收的机型、代际、固件及布局组合，都要把审查过的脱敏主归档
+`*.redfish.json.gz` 随验收改动提交并推送到 GitHub。统一存放在
+`docs/redfish-archives/<platform>/<generation>/`。同目录更新 `MANIFEST.json`
+和 `SHA256SUMS`，记录型号、固件、采集范围、覆盖缺口及已通过的回放。
+推送前复查归档内的现场标识和凭据，验证校验和并运行对应的离线回放。
+现有示例见 [HGX B300 归档清单](redfish-archives/hgx/b300/MANIFEST.json)。
 
 验收流程先以 `redfish dump --path` 优先收集正常路径，再检查关键 URI（含查询和分页）的
 HTTP 状态和响应。宽扫不全时补采，明确哪些资源未采、返回非 2xx、超时或被排除。
