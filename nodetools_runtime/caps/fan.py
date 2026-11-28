@@ -24,13 +24,14 @@ def _fan_unit(detail):
     return _speed_unit(detail) or "RPM"
 
 
-def _from_thermal_subsystem(device, chassis=None, *, expand_only=False):
+def _from_thermal_subsystem(device, chassis=None, *, expand_only=False, retry_expanded_timeout=False):
     rf = device.redfish
 
     def scan(cid):
         out = []
         for detail in common.enumerate_collection(
-            rf, "/redfish/v1/Chassis/{}/ThermalSubsystem/Fans".format(cid), expand_only=expand_only
+            rf, "/redfish/v1/Chassis/{}/ThermalSubsystem/Fans".format(cid),
+            expand_only=expand_only, retry_expanded_timeout=retry_expanded_timeout
         ):
             out.append(
                 common.reading(
@@ -123,8 +124,9 @@ def _from_ipmi(device):
     return out
 
 
-def _from_known_subsystem(device, chassis, count=None):
-    rows = _from_thermal_subsystem(device, chassis, expand_only=count is not None)
+def _from_known_subsystem(device, chassis, count=None, *, expand_only=True, retry_expanded_timeout=False):
+    rows = _from_thermal_subsystem(device, chassis, expand_only=expand_only and count is not None,
+                                   retry_expanded_timeout=retry_expanded_timeout)
     ids = {row["id"] for row in rows if row["id"]}
     if not rows or len(rows) != len(ids) or any(row["value"] is None for row in rows):
         return []
@@ -156,7 +158,14 @@ def collect(device):
     if subsystem:
         chassis = (device.vars["chassis_id"],) if device.vars.get("chassis_id") else subsystem
         count = getattr(odm, "fan_subsystem_count", None)
-        steps.append(("oem_fans", lambda: _from_known_subsystem(device, chassis, count)))
+        scoped_fallback = getattr(odm, "fan_scoped_fallback", False)
+
+        steps.append(("oem_fans", lambda: _from_known_subsystem(
+            device, chassis, count, retry_expanded_timeout=scoped_fallback)))
+        if scoped_fallback:
+            steps.append(("oem_scoped_fans", lambda: _from_known_subsystem(
+                device, chassis, count, expand_only=False)))
+            return first(steps, default=[])
     preferred = getattr(odm, "fan_read_chassis", ())
     if preferred:
         selected = device.vars.get("chassis_id")

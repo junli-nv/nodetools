@@ -1,8 +1,11 @@
 """Firmware inventory dispatched by device role and OEM."""
 
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
+from types import SimpleNamespace
 
-from ..errors import CapUnsupported
+from ..errors import CapUnsupported, TransportError
 from . import boot_nics, common
 
 FIRMWARE = "/redfish/v1/UpdateService/FirmwareInventory"
@@ -29,20 +32,53 @@ def _hardware(device):
         ident = device.vars.get(field)
         if scoped and not ident:
             continue
-        paths = [base + "/" + ident] if ident else common.member_ids(
-            common.resource(device, base)
-        )
-        for path in paths:
-            data = common.resource(device, path, required=bool(ident))
+        workers = getattr(device.odm, "hardware_inventory_workers", None)
+        if workers and not scoped:
+            resources = _model_hardware(device, base, collection == "Systems", workers)
+        else:
+            paths = [base + "/" + ident] if ident else common.member_ids(common.resource(device, base))
+            resources = [(path, common.resource(device, path, required=bool(ident))) for path in paths]
+        for path, data in resources:
             fields = ("Manufacturer", "Model", "SerialNumber")
             if any(data.get(field) for field in fields):
                 lines.append("{}: {}/{} manufacturer={} model={} serial={}".format(
-                    device.name, collection, data.get("Id") or path.rstrip("/").rsplit("/", 1)[-1],
+                    device.name, collection, data.get("Id") or (path or "-").rstrip("/").rsplit("/", 1)[-1],
                     *(data.get(field) or "-" for field in fields),
                 ))
     if not lines:
         raise CapUnsupported("Redfish did not report hardware identity")
     return lines
+
+
+def _model_hardware(device, base, expand, workers):
+    expanded = common.resource(device, base + "?$expand=.") if expand else {}
+    collection = expanded or common.resource(device, base, required=True)
+    members = collection.get("Members")
+    total = collection.get("Members@odata.count")
+    if (not isinstance(members, list) or collection.get("Members@odata.nextLink")
+            or type(total) is not int or total != len(members)):
+        raise TransportError("incomplete hardware inventory collection at " + base)
+    paths = [boot_nics.local_link(item) for item in members]
+    if (any(not path or path.rsplit("/", 1)[0] != base for path in paths)
+            or len(set(paths)) != len(paths)):
+        raise TransportError("invalid hardware inventory member at " + base)
+    resources = {path: item for path, item in zip(paths, members) if expanded and item.get("Id")}
+    pending = [path for path in paths if path not in resources]
+    fork = getattr(device.redfish, "fork", None)
+
+    def read_chunk(chunk):
+        with closing(fork()) as connection:
+            source = SimpleNamespace(redfish=connection)
+            return [(path, common.resource(source, path, required=True)) for path in chunk]
+
+    if fork and len(pending) > 1:
+        count = min(workers, len(pending))
+        with ThreadPoolExecutor(max_workers=count) as pool:
+            for records in pool.map(read_chunk, (pending[i::count] for i in range(count))):
+                resources.update(records)
+    else:
+        resources.update((path, common.resource(device, path, required=True)) for path in pending)
+    return [(path, resources[path]) for path in paths]
 
 
 def _firmware(device, path=FIRMWARE):

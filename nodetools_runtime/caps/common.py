@@ -229,7 +229,7 @@ def _inlined(member):
     return isinstance(member, dict) and len(member) > 1
 
 
-def enumerate_collection(redfish, path, expand_only=False):
+def enumerate_collection(redfish, path, expand_only=False, *, retry_expanded_timeout=False):
     """Return detail dicts for every member of a Redfish collection.
 
     ``$expand=.`` inlines a whole collection in one request when the BMC
@@ -238,7 +238,11 @@ def enumerate_collection(redfish, path, expand_only=False):
     slow, so when expansion is unavailable they are skipped rather than walked.
     """
     sep = "&" if "?" in path else "?"
-    data = redfish.get(path + sep + "$expand=.")
+    expanded_path = path + sep + "$expand=."
+    data = redfish.get(expanded_path)
+    if (retry_expanded_timeout and data is None and getattr(redfish, "timeout_reason", None)
+            and not getattr(redfish, "read_error", None)):
+        data = redfish.get(expanded_path)
     members = data.get("Members") if isinstance(data, dict) else None
     if not isinstance(members, list):
         data = redfish.get(path)

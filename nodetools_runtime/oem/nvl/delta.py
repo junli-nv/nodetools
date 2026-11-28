@@ -4,7 +4,10 @@ from ...caps import common as sensor_common
 from ...config import DEFAULT_CHASSIS
 from ...errors import AuthError, CapUnsupported, TransportError, TransportTimeout
 from ...subjects import common, inventory
+from ..fixed_reads import FixedManagementReads
 from ..redfish import RedfishDiscovery
+from .reading_layouts import DELTA_GB300_TEMP
+
 
 _PSU_NAME_HINTS = ("psu", "hsc", "pwr", "power supply")
 
@@ -42,6 +45,45 @@ class DeltaPowerShelf(RedfishDiscovery):
         if not rows and discovery_error is not None:
             raise discovery_error
         return inventory._format_firmware(device, rows)
+
+
+class DeltaPowerShelfGb300(FixedManagementReads, DeltaPowerShelf):
+    inventory_fixed_caps = ("fan", "psu", "temp")
+    direct_read_sets = DELTA_GB300_TEMP
+    temp_scoped_fallback = True
+    fan_subsystem_chassis = ("PowerShelf_0",)
+    fan_subsystem_count = 12
+    fan_scoped_fallback = True
+    psu_read_endpoint = ("PowerShelf_0", "modern")
+    psu_read_count = 6
+    read_chassis_id = "PowerShelf_0"
+    read_manager_id = "PMC_0"
+
+    def infrastructure_eventlog(self, device, action):
+        if action != "status":
+            return super().infrastructure_eventlog(device, action)
+        manager = device.vars.get("manager_id") or self.read_manager_id
+        root = f"/redfish/v1/Managers/{manager}/LogServices/"
+        lines = []
+        try:
+            for name in ("EventLog", "Dump", "FaultLog"):
+                lines.extend(common.log_lines(device, root + name + "/Entries", require_members=True))
+        except (AuthError, TransportTimeout):
+            raise
+        except TransportError:
+            return super().infrastructure_eventlog(device, action)
+        return self._label_lines(device, lines or ["No event log entries"])
+
+    def infrastructure_inventory(self, device):
+        try:
+            rows = super().infrastructure_inventory(device)
+        except (AuthError, TransportTimeout):
+            raise
+        except (CapUnsupported, TransportError):
+            rows = []
+        if rows:
+            return rows
+        return DeltaPowerShelf.infrastructure_inventory(self, device)
 
 
 def legacy_psu_readings(device):

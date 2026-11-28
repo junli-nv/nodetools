@@ -1369,6 +1369,564 @@
         "unlisted firmware and topology",
         "host interfaces not exposed by Redfish"
       ]
+    },
+    {
+      "id": "wistron_gb300_fan",
+      "status": "verified",
+      "model": "GB300 Bianca PDB",
+      "bmc_firmware": "01.05.26.0305",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "wistron",
+        "role": "compute",
+        "generation": "gb300"
+      },
+      "command": "nodefan",
+      "capability": "fan",
+      "direct_requests": [
+        "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/Fans?$expand=."
+      ],
+      "request_count": 1,
+      "expected_rows": 16,
+      "interpretation": "16 rotor RPM readings across eight dual-rotor fans",
+      "fallback": "Use the same chassis fan collection and member reads.",
+      "fixture": "nvl_gb300_wistron_0105260305",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured representative hardware readback in rack o09",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.wistron.WistronGb300"
+    },
+    {
+      "id": "wistron_gb300_psu",
+      "status": "verified",
+      "model": "GB300 Bianca PDB",
+      "bmc_firmware": "01.05.26.0305",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "wistron",
+        "role": "compute",
+        "generation": "gb300"
+      },
+      "command": "nodepsu",
+      "capability": "psu",
+      "direct_requests": [
+        "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_0_Pwr_0",
+        "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_1_Pwr_0"
+      ],
+      "request_count": 2,
+      "expected_rows": 2,
+      "interpretation": "Two independently reported HSC DC input power readings in watts",
+      "fallback": "Read the scoped PDB Sensors collection after a failed fixed GET; require both validated readings.",
+      "fixture": "nvl_gb300_wistron_0105260305",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured representative hardware readback in rack o09",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.wistron.WistronGb300"
+    },
+    {
+      "id": "wistron_gb300_inlet",
+      "status": "verified",
+      "model": "GB300 Bianca PDB",
+      "bmc_firmware": "01.05.26.0305",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "wistron",
+        "role": "compute",
+        "generation": "gb300"
+      },
+      "command": "nodeinlet",
+      "capability": "inlet",
+      "direct_requests": [
+        "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_Front_IO_Temp_0"
+      ],
+      "request_count": 1,
+      "expected_rows": 1,
+      "interpretation": "Front IO inlet temperature in Celsius",
+      "fallback": "Use the inlet collector fallback when the fixed sensor is unavailable.",
+      "fixture": "nvl_gb300_wistron_0105260305",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured representative hardware readback in rack o09",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.wistron.WistronGb300"
+    },
+    {
+      "id": "wistron_gb300_monitor",
+      "status": "verified",
+      "model": "GB300 Bianca PDB",
+      "bmc_firmware": "01.05.26.0305",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "wistron",
+        "role": "compute",
+        "generation": "gb300"
+      },
+      "command": "nodemon",
+      "capability": "monitor",
+      "direct_requests": [
+        "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_TotalHSC_Power_0",
+        "/redfish/v1/Chassis/Chassis_0/Sensors/Chassis_0_Front_IO_Temp_0",
+        "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_0_Pwr_0",
+        "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_1_Pwr_0"
+      ],
+      "request_count": 4,
+      "expected_rows": 4,
+      "interpretation": "Tray total, front inlet, and two independent HSC watt readings",
+      "fallback": "Preserve scoped power and inlet fallback and reject an incomplete default sample.",
+      "fixture": "nvl_gb300_wistron_0105260305",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured representative hardware readback in rack o09",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.wistron.WistronGb300"
+    },
+    {
+      "id": "delta_gb300_fan",
+      "status": "verified",
+      "model": "NVIDIA_PMC",
+      "bmc_firmware": "3.1.6",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "delta",
+        "role": "powershelf",
+        "generation": "gb300"
+      },
+      "command": "psfan",
+      "capability": "fan",
+      "direct_requests": [
+        "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans?$expand=."
+      ],
+      "request_count": 1,
+      "expected_rows": 12,
+      "interpretation": "Two rotor RPM readings per PSU module across six modules",
+      "fallback": "Use the same chassis fan collection and member reads.",
+      "fixture": "nvl_gb300_delta_316",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured representative hardware readback in rack o09",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.delta.DeltaPowerShelfGb300"
+    },
+    {
+      "id": "delta_gb300_psu",
+      "status": "verified",
+      "model": "NVIDIA_PMC",
+      "bmc_firmware": "3.1.6",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "delta",
+        "role": "powershelf",
+        "generation": "gb300"
+      },
+      "command": "pspsu",
+      "capability": "psu",
+      "direct_requests": [
+        "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies?$expand=.",
+        "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1",
+        "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2",
+        "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3",
+        "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4",
+        "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5",
+        "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6",
+        "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1/Metrics",
+        "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2/Metrics",
+        "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3/Metrics",
+        "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4/Metrics",
+        "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5/Metrics",
+        "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6/Metrics"
+      ],
+      "request_count": 13,
+      "expected_rows": 6,
+      "interpretation": "Six physical AC PSU module inputs, using expanded links, details and Metrics",
+      "fallback": "Use the existing PSU collector fallback if the modern set is incomplete.",
+      "fixture": "nvl_gb300_delta_316",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured representative hardware readback in rack o09",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.delta.DeltaPowerShelfGb300"
+    },
+    {
+      "id": "wistron_gb300_macs",
+      "status": "verified",
+      "model": "GB300 Bianca PDB",
+      "bmc_firmware": "01.05.26.0305",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "wistron",
+        "role": "compute",
+        "generation": "gb300"
+      },
+      "command": "nodemacs",
+      "capability": "macs",
+      "direct_requests": [
+        "/redfish/v1/Systems/system/BootOptions?$expand=."
+      ],
+      "request_count": 1,
+      "expected_rows": 7,
+      "interpretation": "Seven unique IPv4 PXE MAC records from the host system",
+      "fallback": "On unavailable expansion, read the same system's plain BootOptions collection. Honor explicit system_id.",
+      "fixture": "nvl_gb300_wistron_0105260305",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: seven records from an exact GET using Systems/system; the default path uses the same resource.",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.wistron.WistronGb300"
+    },
+    {
+      "id": "nvidia_n5500_1961_psu",
+      "status": "verified",
+      "model": "N5500_LD",
+      "bmc_firmware": "88.0002.1961",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "nvidia",
+        "role": "nvswitch",
+        "generation": "gb300"
+      },
+      "command": "nvswpsu",
+      "capability": "psu",
+      "direct_requests": [
+        "nvos:lm5066i-vin-iin-pin"
+      ],
+      "request_count": 1,
+      "expected_rows": 1,
+      "interpretation": "One HSC DC input reported by NVOS; output wattage is unavailable.",
+      "fallback": "Use the configured NVOS address and the existing scoped NVOS collector fallback.",
+      "fixture": "nvl_gb300_n5500_8800021961",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured representative hardware readback in rack o09",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.n5500.NvidiaN5500"
+    },
+    {
+      "id": "nvidia_n5500_1961_temp",
+      "status": "verified",
+      "model": "N5500_LD",
+      "bmc_firmware": "88.0002.1961",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "nvidia",
+        "role": "nvswitch",
+        "generation": "gb300"
+      },
+      "command": "nvswtemp",
+      "capability": "temp",
+      "direct_requests": [
+        "nvos:nv show platform environment temperature -o json"
+      ],
+      "request_count": 1,
+      "expected_rows": 8,
+      "interpretation": "Eight NVOS system temperature readings in Celsius.",
+      "fallback": "Use the configured NVOS address and the existing scoped NVOS collector fallback.",
+      "fixture": "nvl_gb300_n5500_8800021961",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured representative hardware readback in rack o09",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.n5500.NvidiaN5500"
+    },
+    {
+      "id": "wistron_gb300_temp",
+      "status": "verified",
+      "model": "GB300 Bianca PDB",
+      "bmc_firmware": "01.05.26.0305",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "wistron",
+        "role": "compute",
+        "generation": "gb300"
+      },
+      "command": "nodetemp",
+      "capability": "temp",
+      "direct_requests": [
+        "/redfish/v1/Chassis/Chassis_0/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/PDB_0/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_BMC_0/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_CPU_0/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_CPU_1/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_Chassis_0/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_GPU_0/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_GPU_1/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_GPU_2/ThermalSubsystem/ThermalMetrics",
+        "/redfish/v1/Chassis/HGX_GPU_3/ThermalSubsystem/ThermalMetrics"
+      ],
+      "request_count": 10,
+      "expected_rows": 57,
+      "interpretation": "57 temperatures, including four explicitly unavailable SSD positions",
+      "fallback": "Retry only the same known endpoint once on timeout.",
+      "fixture": "nvl_gb300_wistron_0105260305",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured default readback on the GB300 NVL rack",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.wistron.WistronGb300",
+      "options": []
+    },
+    {
+      "id": "wistron_gb300_eventlog",
+      "status": "verified",
+      "model": "GB300 Bianca PDB",
+      "bmc_firmware": "01.05.26.0305",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "wistron",
+        "role": "compute",
+        "generation": "gb300"
+      },
+      "command": "nodeeventlog",
+      "capability": "eventlog",
+      "direct_requests": [
+        "/redfish/v1/Managers/BMC_0/LogServices/EventLog/Entries"
+      ],
+      "request_count": 1,
+      "expected_rows": 1,
+      "interpretation": "Successful empty BMC EventLog distinguished from read errors",
+      "fallback": "Keep the selected resource scope and report invalid responses.",
+      "fixture": "nvl_gb300_wistron_0105260305",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured default readback on the GB300 NVL rack",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.wistron.WistronGb300",
+      "options": [
+        "bmc"
+      ]
+    },
+    {
+      "id": "delta_gb300_temp",
+      "status": "verified",
+      "model": "NVIDIA_PMC",
+      "bmc_firmware": "3.1.6",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "delta",
+        "role": "powershelf",
+        "generation": "gb300"
+      },
+      "command": "pstemp",
+      "capability": "temp",
+      "direct_requests": [
+        "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/ThermalMetrics"
+      ],
+      "request_count": 1,
+      "expected_rows": 33,
+      "interpretation": "33 Celsius readings from one thermal metrics resource",
+      "fallback": "Retry only the same known endpoint once on timeout.",
+      "fixture": "nvl_gb300_delta_316",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured default readback on the GB300 NVL rack",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.delta.DeltaPowerShelfGb300",
+      "options": []
+    },
+    {
+      "id": "delta_gb300_power",
+      "status": "verified",
+      "model": "NVIDIA_PMC",
+      "bmc_firmware": "3.1.6",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "delta",
+        "role": "powershelf",
+        "generation": "gb300"
+      },
+      "command": "pspower",
+      "capability": "power",
+      "direct_requests": [
+        "/redfish/v1/Chassis/PowerShelf_0"
+      ],
+      "request_count": 1,
+      "expected_rows": 1,
+      "interpretation": "Power state and shelf serial from the PowerShelf_0 chassis",
+      "fallback": "Keep the selected resource scope and report invalid responses.",
+      "fixture": "nvl_gb300_delta_316",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured default readback on the GB300 NVL rack",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.delta.DeltaPowerShelfGb300",
+      "options": []
+    },
+    {
+      "id": "delta_gb300_eventlog",
+      "status": "verified",
+      "model": "NVIDIA_PMC",
+      "bmc_firmware": "3.1.6",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "delta",
+        "role": "powershelf",
+        "generation": "gb300"
+      },
+      "command": "pseventlog",
+      "capability": "eventlog",
+      "direct_requests": [
+        "/redfish/v1/Managers/PMC_0/LogServices/EventLog/Entries",
+        "/redfish/v1/Managers/PMC_0/LogServices/Dump/Entries",
+        "/redfish/v1/Managers/PMC_0/LogServices/FaultLog/Entries"
+      ],
+      "request_count": 3,
+      "expected_rows": 5,
+      "interpretation": "EventLog, Dump and FaultLog entry collections",
+      "fallback": "Keep the selected resource scope and report invalid responses.",
+      "fixture": "nvl_gb300_delta_316",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured default readback on the GB300 NVL rack",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.delta.DeltaPowerShelfGb300",
+      "options": []
+    },
+    {
+      "id": "delta_gb300_inventory",
+      "status": "verified",
+      "model": "NVIDIA_PMC",
+      "bmc_firmware": "3.1.6",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "delta",
+        "role": "powershelf",
+        "generation": "gb300"
+      },
+      "command": "psinventory",
+      "capability": "inventory",
+      "direct_requests": [
+        "/redfish/v1/UpdateService/FirmwareInventory?$expand=."
+      ],
+      "request_count": 1,
+      "expected_rows": 4,
+      "interpretation": "Four firmware components from the expanded inventory",
+      "fallback": "Keep the selected resource scope and report invalid responses.",
+      "fixture": "nvl_gb300_delta_316",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured default readback on the GB300 NVL rack",
+      "unverified_scope": [
+        "remaining commands",
+        "writes",
+        "other firmware"
+      ],
+      "adapter": "nodetools_runtime.oem.nvl.delta.DeltaPowerShelfGb300",
+      "options": []
+    },
+    {
+      "id": "wistron_gb300_inventory",
+      "status": "verified",
+      "model": "GB300 Bianca PDB",
+      "bmc_firmware": "01.05.26.0305",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "wistron",
+        "role": "compute",
+        "generation": "gb300"
+      },
+      "command": "nodeinventory",
+      "capability": "inventory",
+      "direct_requests": [
+        "/redfish/v1/Systems?$expand=.",
+        "/redfish/v1/Chassis",
+        "/redfish/v1/Chassis/BMC_0",
+        "/redfish/v1/Chassis/CBC_0",
+        "/redfish/v1/Chassis/CBC_1",
+        "/redfish/v1/Chassis/CBC_2",
+        "/redfish/v1/Chassis/CBC_3",
+        "/redfish/v1/Chassis/CPLD_0",
+        "/redfish/v1/Chassis/CPLD_1",
+        "/redfish/v1/Chassis/Chassis_0",
+        "/redfish/v1/Chassis/FIO_Board_0",
+        "/redfish/v1/Chassis/IO_Board_0",
+        "/redfish/v1/Chassis/IO_Board_1",
+        "/redfish/v1/Chassis/IRoT_BF3_0",
+        "/redfish/v1/Chassis/IRoT_CX8_0",
+        "/redfish/v1/Chassis/IRoT_CX8_1",
+        "/redfish/v1/Chassis/IRoT_CX8_2",
+        "/redfish/v1/Chassis/IRoT_CX8_3",
+        "/redfish/v1/Chassis/NVME_M2_0",
+        "/redfish/v1/Chassis/PDB_0",
+        "/redfish/v1/Chassis/Riser_Slot1_BlueField_3_Card",
+        "/redfish/v1/Chassis/StorageBackplane_0",
+        "/redfish/v1/Chassis/StorageBackplane_1",
+        "/redfish/v1/Chassis/HGX_BMC_0",
+        "/redfish/v1/Chassis/HGX_CPLD_0",
+        "/redfish/v1/Chassis/HGX_CPU_0",
+        "/redfish/v1/Chassis/HGX_CPU_1",
+        "/redfish/v1/Chassis/HGX_Chassis_0",
+        "/redfish/v1/Chassis/HGX_ERoT_BMC_0",
+        "/redfish/v1/Chassis/HGX_ERoT_CPU_0",
+        "/redfish/v1/Chassis/HGX_ERoT_CPU_1",
+        "/redfish/v1/Chassis/HGX_ERoT_FPGA_0",
+        "/redfish/v1/Chassis/HGX_ERoT_FPGA_1",
+        "/redfish/v1/Chassis/HGX_FPGA_0",
+        "/redfish/v1/Chassis/HGX_FPGA_1",
+        "/redfish/v1/Chassis/HGX_GPU_0",
+        "/redfish/v1/Chassis/HGX_GPU_1",
+        "/redfish/v1/Chassis/HGX_GPU_2",
+        "/redfish/v1/Chassis/HGX_GPU_3",
+        "/redfish/v1/Chassis/HGX_IRoT_GPU_0",
+        "/redfish/v1/Chassis/HGX_IRoT_GPU_1",
+        "/redfish/v1/Chassis/HGX_IRoT_GPU_2",
+        "/redfish/v1/Chassis/HGX_IRoT_GPU_3",
+        "/redfish/v1/Chassis/HGX_ProcessorModule_0",
+        "/redfish/v1/Chassis/HGX_ProcessorModule_1"
+      ],
+      "request_count": 45,
+      "expected_rows": 45,
+      "interpretation": "Successful empty BMC EventLog distinguished from read errors",
+      "fallback": "Keep the selected resource scope and report invalid responses.",
+      "fixture": "nvl_gb300_wistron_0105260305",
+      "test": "tests/test_direct_read_contract.py",
+      "live_validation": "2026-11-28: configured default readback on the GB300 NVL rack",
+      "unverified_scope": "Other firmware, and chassis inventories with a different advertised topology. Chassis GET order varies in parallel live reads.",
+      "adapter": "nodetools_runtime.oem.nvl.wistron.WistronGb300",
+      "options": [
+        "--details"
+      ]
     }
   ],
   "legacy_baseline_commit": "f6373fe63f6ea7b162b13d82f2699c0aaa9968ec",

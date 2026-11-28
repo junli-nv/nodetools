@@ -72,7 +72,7 @@ def replay(args):
     command = args.snapshot_tool
     if args.action == "pending" and command != "nodebios":
         raise NodetoolsError("offline pending is only available for nodebios")
-    entry = SENSOR_COMMANDS.get(command)
+    entry = ("compute", "monitor") if command == "nodemon" else SENSOR_COMMANDS.get(command)
     runner_kind = runtime.Runner
     if entry is None:
         entry = INFO_COMMANDS.get(command)
@@ -87,6 +87,8 @@ def replay(args):
     if metadata.get("role") not in (None, "unknown", role):
         raise NodetoolsError(f"snapshot role {metadata['role']} does not match {command}")
     metadata["role"] = role
+    if args.system_model:
+        metadata["system_model"] = args.system_model
     host = Host("snapshot", address="snapshot", variables=metadata)
     transport = redfish_snapshot.Replay(snapshot)
     options = Options(args)
@@ -99,8 +101,8 @@ def replay(args):
     if strict:
         if expected_rows is None or expected_rows < 1 or not expected_paths:
             raise NodetoolsError("strict replay requires positive --expect-rows and at least one --expect-path")
-        if runner_kind is not runtime.Runner:
-            raise NodetoolsError("strict replay is only available for Redfish sensor commands")
+        if runner_kind is not runtime.Runner and subject not in {"macs", "inventory", "power"}:
+            raise NodetoolsError("strict replay is only available for Redfish sensor, MAC, inventory and power reads")
         if not all(metadata.get(field) for field in ("platform", "oem", "generation")):
             raise NodetoolsError("strict replay needs snapshot platform, oem and generation")
         expected_paths = [redfish_snapshot.resource_path(path) for path in expected_paths]
@@ -133,7 +135,7 @@ def replay(args):
 
 
 def _verify_replay(result, requests, expected_rows, expected_paths):
-    found_rows = len(result.get("readings", ()))
+    found_rows = len(result.get("readings", result.get("lines", ())))
     found_paths = [path for path, _ in requests]
     errors = []
     if result.get("error"):

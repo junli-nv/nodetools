@@ -139,7 +139,11 @@ def _hsc_supplies(device, sensors):
         path = base + sensor_id
         sensor = device.redfish.get(path) or {}
         watts = None
-        if sensor.get("Name") == name and sensor.get("ReadingType") == "Power":
+        valid = sensor.get("Name") == name and sensor.get("ReadingType") == "Power"
+        if getattr(device.odm, "monitor_reading_ids", ()):
+            valid = (valid and sensor.get("Id") == sensor_id and sensor.get("ReadingUnits") == "W"
+                     and sensor.get("@odata.id", path) == path)
+        if valid:
             watts = _number(sensor.get("Reading"))
         readings.append(dict(kind="psu", id=slot, name=name, value=watts, unit="W",
                              estimated=False, source=path, health=common.health_of(sensor.get("Status"))))
@@ -194,6 +198,12 @@ def collect(device):
             readings.extend(reader(device))
         except NodetoolsError as exc:
             failures.append(str(exc))
+    expected = getattr(device.odm, "monitor_reading_ids", ())
+    if expected and not device.vars.get("chassis_id"):
+        valid = {row["id"] for row in readings if _number(row.get("value")) is not None}
+        missing = sorted(set(expected) - valid)
+        if missing:
+            raise NodetoolsError("incomplete monitor data: unavailable readings=" + ", ".join(missing))
     if failures and not readings:
         raise NodetoolsError("; ".join(failures))
     return readings

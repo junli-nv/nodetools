@@ -118,6 +118,15 @@ class Redfish:
         """Absolute time.monotonic() value past which no new request is made."""
         self._deadline = deadline
 
+    def fork(self):
+        """Create an independent HTTP session with the same node deadline."""
+        _, password = self._session.auth or (None, None)
+        session = type(self)(self.address, self.user, password, timeout=self.timeout,
+                             verify=self.verify, connect_timeout=self.connect_timeout)
+        session.debug_label = self.debug_label
+        session.set_deadline(self._deadline)
+        return session
+
     def _remaining(self):
         if self._deadline is None:
             return None

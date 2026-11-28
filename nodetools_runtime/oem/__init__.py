@@ -10,7 +10,7 @@ from .hgx.cisco import CiscoHgx
 from .hgx.compal import Compal
 from .hgx.dell import Dell
 from .nvl.dell import DellNvl
-from .nvl.delta import DeltaPowerShelf, legacy_psu_readings
+from .nvl.delta import DeltaPowerShelf, DeltaPowerShelfGb300, legacy_psu_readings
 from .hgx.dgx import Dgx, DgxBlackwell
 from .hgx.hpe import HpeHgx
 from .nvl.n5500 import NvidiaN5500
@@ -31,7 +31,7 @@ from .nvl.kaytus import KaytusNvl
 from .nvl.wiwynn import WiwynnNvl
 from .nvl.megmeet import MegmeetPowerShelf
 from .nvl.flex import FlexPowerShelf
-from .nvl.wistron import Wistron
+from .nvl.wistron import Wistron, WistronGb300
 
 _MODULES = {
     "gb200": NvidiaNvl(),
@@ -55,6 +55,8 @@ _DGX_BLACKWELL = DgxBlackwell()
 
 _PLATFORM_MODULES = {
     ("nvl", "nvidia", "nvswitch", "gb300"): NvidiaN5500(),
+    ("nvl", "wistron", "compute", "gb300"): WistronGb300(),
+    ("nvl", "delta", "powershelf", "gb300"): DeltaPowerShelfGb300(),
     ("nvl", "dell", "compute", None): DellNvl(),
     ("nvl", "lenovo", "compute", "gb300"): LenovoNvl(),
     ("nvl", "hpe", "compute", "gb200"): _HPE_NVL,

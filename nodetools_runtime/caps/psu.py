@@ -242,16 +242,27 @@ def _from_known_sensors(device, expected):
     return rows
 
 
-def _from_direct_sensors(device, sensors):
+def _from_direct_sensors(device, sensors, *, use_collection=False):
     """Read a verified set of DC input sensors without collection discovery."""
     selected = device.vars.get("chassis_id")
     if selected and any(chassis != selected for chassis, _, _ in sensors):
         return []
     rows = []
     valid = True
+    collections = {}
+    if use_collection:
+        for chassis in dict.fromkeys(cid for cid, _, _ in sensors):
+            entries = common.enumerate_sensors(device.redfish, chassis)
+            by_id = {}
+            for entry in entries:
+                ident = entry.get("Id")
+                if isinstance(ident, str):
+                    by_id[ident] = None if ident in by_id else entry
+            collections[chassis] = by_id
     for chassis, sensor_id, label in sensors:
         path = "/redfish/v1/Chassis/{}/Sensors/{}".format(chassis, sensor_id)
-        data = device.redfish.get(path)
+        data = (collections[chassis].get(sensor_id) if use_collection
+                else device.redfish.get(path))
         if not isinstance(data, dict):
             valid = False
             continue
@@ -310,10 +321,18 @@ def collect(device):
     legacy_slots = getattr(getattr(device, "odm", None), "psu_legacy_slots", None)
     if legacy_slots and not getattr(getattr(device, "options", None), "details", False):
         steps.append(("oem_legacy_slots", lambda: _from_legacy_slots(device, legacy_slots)))
-    direct = getattr(getattr(device, "odm", None), "psu_read_sensors", ())
-    if direct:
+    adapter = getattr(device, "odm", None)
+    direct = getattr(adapter, "psu_read_sensors", ())
+    expected = getattr(adapter, "psu_sensor_chassis", None)
+    details = getattr(getattr(device, "options", None), "details", False)
+    if direct and not (details and getattr(adapter, "psu_sensor_details", False)):
         steps.append(("oem_direct_sensors", lambda: _from_direct_sensors(device, direct)))
-    expected = getattr(getattr(device, "odm", None), "psu_sensor_chassis", None)
+        if getattr(adapter, "psu_sensor_collection_fallback", False):
+            selected = device.vars.get("chassis_id")
+            if not selected or all(chassis == selected for chassis, _, _ in direct):
+                steps.append(("oem_sensor_collection", lambda: _from_direct_sensors(
+                    device, direct, use_collection=True)))
+                return first(steps, default=[])
     if expected:
         selected = device.vars.get("chassis_id")
         if selected:
@@ -322,7 +341,15 @@ def collect(device):
             steps.append(("oem_psu_sensors", lambda: _from_known_sensors(device, expected)))
     endpoint = getattr(getattr(device, "odm", None), "psu_read_endpoint", None)
     if endpoint:
-        steps.append(("oem_power_supplies", lambda: _from_power_supplies(device, endpoint)))
+        def fixed_supplies():
+            rows = _from_power_supplies(device, endpoint)
+            count = getattr(adapter, "psu_read_count", None)
+            if count is not None and (len(rows) != count or any(
+                    row.get("input_watts") is None for row in rows)):
+                return []
+            return rows
+
+        steps.append(("oem_power_supplies", fixed_supplies))
     steps.append(("power_supplies", lambda: _from_power_supplies(device)))
     if device.role == "powershelf":
         from ..oem import powershelf_psu_fallback

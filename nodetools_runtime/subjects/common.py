@@ -7,6 +7,7 @@ original scripts used.
 """
 
 import json
+from urllib.parse import urlsplit
 
 from ..errors import CapUnsupported, TransportError, TransportTimeout
 
@@ -74,36 +75,70 @@ def paged_members(device, path, size, expand=False):
             raise TransportError(f"empty collection page at {page}")
 
 
-def entries(device, path, page_size=None):
+def entries(device, path, page_size=None, *, require_members=False):
     """Detail dicts for every member of an event-log style collection.
 
     The legacy scripts read ``.Members[]`` directly, which only works when the
     collection inlines its entries. When a vendor returns references instead,
     the member is fetched so output is the same either way.
     """
-    members = paged_members(device, path, page_size) if page_size else None
-    if members is None:
-        members = resource(device, path, required=True).get("Members") or []
+    if require_members:
+        members = _log_members(device, path)
+    else:
+        members = paged_members(device, path, page_size) if page_size else None
+        if members is None:
+            members = resource(device, path, required=True).get("Members") or []
     out = []
     for member in members:
-        if not isinstance(member, dict):
-            continue
-        if len(member) > 1:
+        if isinstance(member, dict) and len(member) > 1:
             out.append(member)
             continue
-        oid = member.get("@odata.id")
-        if not oid:
-            continue
-        detail = device.redfish.get(oid)
-        if isinstance(detail, dict):
-            out.append(detail)
+        oid = member.get("@odata.id") if isinstance(member, dict) else None
+        if require_members:
+            from .boot_nics import local_link
+            if not local_link(oid) or oid.rsplit("/", 1)[0] != path:
+                raise TransportError("invalid event log member at " + path)
+            out.append(resource(device, oid, required=True))
+        elif oid:
+            detail = device.redfish.get(oid)
+            if isinstance(detail, dict):
+                out.append(detail)
     return out
 
 
-def log_lines(device, path, sep=" ", page_size=None):
+def _log_members(device, path):
+    members = []
+    pages = set()
+    page = path
+    total = None
+    while page:
+        if page in pages:
+            raise TransportError("repeated event log page at " + path)
+        pages.add(page)
+        data = resource(device, page, required=True)
+        rows = data.get("Members")
+        if not isinstance(rows, list):
+            raise TransportError("invalid event log collection at " + path)
+        count = data.get("Members@odata.count")
+        if len(pages) == 1 and type(count) is int:
+            total = count
+        members.extend(rows)
+        page = data.get("Members@odata.nextLink")
+        if page:
+            if not isinstance(page, str) or not page.startswith(path + "?") or not rows:
+                raise TransportError("invalid event log page link at " + path)
+            parsed = urlsplit(page)
+            if parsed.path != path or not parsed.query or parsed.fragment:
+                raise TransportError("invalid event log page link at " + path)
+    if total is not None and total != len(members):
+        raise TransportError("incomplete event log collection at " + path)
+    return members
+
+
+def log_lines(device, path, sep=" ", page_size=None, *, require_members=False):
     """``Created<sep>Severity<sep>Message`` lines, sorted like the scripts."""
     rows = []
-    for entry in entries(device, path, page_size):
+    for entry in entries(device, path, page_size, require_members=require_members):
         rows.append(
             "{}{}{}{}{}".format(
                 entry.get("Created", ""),

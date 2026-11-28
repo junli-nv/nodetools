@@ -1,0 +1,1254 @@
+{
+  "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans?$expand=.": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans",
+    "@odata.type": "#FanCollection.FanCollection",
+    "Description": "The collection of Fan resource instances PowerShelf_0",
+    "Members": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans/ps1_fan1",
+        "@odata.type": "#Fan.v1_5_2.Fan",
+        "Id": "ps1_fan1",
+        "Name": "ps1 fan1",
+        "SpeedPercent": {
+          "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_fan1",
+          "SpeedRpm": 12304.0
+        },
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans/ps1_fan2",
+        "@odata.type": "#Fan.v1_5_2.Fan",
+        "Id": "ps1_fan2",
+        "Name": "ps1 fan2",
+        "SpeedPercent": {
+          "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_fan2",
+          "SpeedRpm": 0.0
+        },
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans/ps2_fan1",
+        "@odata.type": "#Fan.v1_5_2.Fan",
+        "Id": "ps2_fan1",
+        "Name": "ps2 fan1",
+        "SpeedPercent": {
+          "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_fan1",
+          "SpeedRpm": 10928.0
+        },
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans/ps2_fan2",
+        "@odata.type": "#Fan.v1_5_2.Fan",
+        "Id": "ps2_fan2",
+        "Name": "ps2 fan2",
+        "SpeedPercent": {
+          "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_fan2",
+          "SpeedRpm": 0.0
+        },
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans/ps3_fan1",
+        "@odata.type": "#Fan.v1_5_2.Fan",
+        "Id": "ps3_fan1",
+        "Name": "ps3 fan1",
+        "SpeedPercent": {
+          "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_fan1",
+          "SpeedRpm": 11888.0
+        },
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans/ps3_fan2",
+        "@odata.type": "#Fan.v1_5_2.Fan",
+        "Id": "ps3_fan2",
+        "Name": "ps3 fan2",
+        "SpeedPercent": {
+          "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_fan2",
+          "SpeedRpm": 0.0
+        },
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans/ps4_fan1",
+        "@odata.type": "#Fan.v1_5_2.Fan",
+        "Id": "ps4_fan1",
+        "Name": "ps4 fan1",
+        "SpeedPercent": {
+          "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_fan1",
+          "SpeedRpm": 11552.0
+        },
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans/ps4_fan2",
+        "@odata.type": "#Fan.v1_5_2.Fan",
+        "Id": "ps4_fan2",
+        "Name": "ps4 fan2",
+        "SpeedPercent": {
+          "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_fan2",
+          "SpeedRpm": 0.0
+        },
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans/ps5_fan1",
+        "@odata.type": "#Fan.v1_5_2.Fan",
+        "Id": "ps5_fan1",
+        "Name": "ps5 fan1",
+        "SpeedPercent": {
+          "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_fan1",
+          "SpeedRpm": 11664.0
+        },
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans/ps5_fan2",
+        "@odata.type": "#Fan.v1_5_2.Fan",
+        "Id": "ps5_fan2",
+        "Name": "ps5 fan2",
+        "SpeedPercent": {
+          "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_fan2",
+          "SpeedRpm": 0.0
+        },
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans/ps6_fan1",
+        "@odata.type": "#Fan.v1_5_2.Fan",
+        "Id": "ps6_fan1",
+        "Name": "ps6 fan1",
+        "SpeedPercent": {
+          "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_fan1",
+          "SpeedRpm": 11312.0
+        },
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/Fans/ps6_fan2",
+        "@odata.type": "#Fan.v1_5_2.Fan",
+        "Id": "ps6_fan2",
+        "Name": "ps6 fan2",
+        "SpeedPercent": {
+          "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_fan2",
+          "SpeedRpm": 0.0
+        },
+        "Status": {
+          "Health": "OK",
+          "State": "Enabled"
+        }
+      }
+    ],
+    "Members@odata.count": 12,
+    "Name": "Fan Collection"
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies?$expand=.": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies",
+    "@odata.type": "#PowerSupplyCollection.PowerSupplyCollection",
+    "Members": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6"
+      }
+    ],
+    "Members@odata.count": 6,
+    "Name": "PowerSupply Collection"
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1",
+    "@odata.type": "#PowerSupply.v1_6_0.PowerSupply",
+    "Actions": {
+      "#PowerSupply.Reset": {
+        "@Redfish.ActionInfo": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1/ResetActionInfo",
+        "target": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1/Actions/PowerSupply.Reset"
+      }
+    },
+    "EfficiencyRatings": [
+      {
+        "EfficiencyPercent": 94.0,
+        "LoadPercent": 30
+      },
+      {
+        "EfficiencyPercent": 96.5,
+        "LoadPercent": 50
+      },
+      {
+        "EfficiencyPercent": 96.5,
+        "LoadPercent": 90
+      }
+    ],
+    "FirmwareVersion": "01060106",
+    "HotPluggable": true,
+    "Id": "1",
+    "InputNominalVoltageType": "AC200To240V",
+    "Location": {
+      "PartLocation": {
+        "LocationOrdinalValue": 1,
+        "LocationType": "Bay",
+        "Orientation": "LeftToRight",
+        "Reference": "Top",
+        "ServiceLabel": "PSU Bay 1"
+      }
+    },
+    "Manufacturer": "Delta",
+    "Metrics": {
+      "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1/Metrics"
+    },
+    "Model": "ECD17020047",
+    "Name": "PowerSupplyUnit 1",
+    "Oem": {
+      "deltaenergysystems": {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1#/Oem/deltaenergysystems",
+        "@odata.type": "#DeltaEnergySystemsPowerSupply.v1_0_0.PowerSupply",
+        "FanSpeedTarget": 0,
+        "Power": true
+      }
+    },
+    "PartNumber": "ECD17020047",
+    "PowerCapacityWatts": 5504,
+    "PowerSupplyType": "DC",
+    "ProductionDate": "2026-05-18T00:00:00+00:00",
+    "SerialNumber": "serial-986899a3e62d2977657dbe85",
+    "Status": {
+      "Health": "OK",
+      "State": "Enabled"
+    },
+    "Version": "S1"
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2",
+    "@odata.type": "#PowerSupply.v1_6_0.PowerSupply",
+    "Actions": {
+      "#PowerSupply.Reset": {
+        "@Redfish.ActionInfo": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2/ResetActionInfo",
+        "target": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2/Actions/PowerSupply.Reset"
+      }
+    },
+    "EfficiencyRatings": [
+      {
+        "EfficiencyPercent": 94.0,
+        "LoadPercent": 30
+      },
+      {
+        "EfficiencyPercent": 96.5,
+        "LoadPercent": 50
+      },
+      {
+        "EfficiencyPercent": 96.5,
+        "LoadPercent": 90
+      }
+    ],
+    "FirmwareVersion": "01060106",
+    "HotPluggable": true,
+    "Id": "2",
+    "InputNominalVoltageType": "AC200To240V",
+    "Location": {
+      "PartLocation": {
+        "LocationOrdinalValue": 2,
+        "LocationType": "Bay",
+        "Orientation": "LeftToRight",
+        "Reference": "Top",
+        "ServiceLabel": "PSU Bay 2"
+      }
+    },
+    "Manufacturer": "Delta",
+    "Metrics": {
+      "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2/Metrics"
+    },
+    "Model": "ECD17020047",
+    "Name": "PowerSupplyUnit 2",
+    "Oem": {
+      "deltaenergysystems": {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2#/Oem/deltaenergysystems",
+        "@odata.type": "#DeltaEnergySystemsPowerSupply.v1_0_0.PowerSupply",
+        "FanSpeedTarget": 0,
+        "Power": true
+      }
+    },
+    "PartNumber": "ECD17020047",
+    "PowerCapacityWatts": 5504,
+    "PowerSupplyType": "DC",
+    "ProductionDate": "2026-05-18T00:00:00+00:00",
+    "SerialNumber": "serial-70a22cd457edd82fc01bb778",
+    "Status": {
+      "Health": "OK",
+      "State": "Enabled"
+    },
+    "Version": "S1"
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3",
+    "@odata.type": "#PowerSupply.v1_6_0.PowerSupply",
+    "Actions": {
+      "#PowerSupply.Reset": {
+        "@Redfish.ActionInfo": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3/ResetActionInfo",
+        "target": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3/Actions/PowerSupply.Reset"
+      }
+    },
+    "EfficiencyRatings": [
+      {
+        "EfficiencyPercent": 94.0,
+        "LoadPercent": 30
+      },
+      {
+        "EfficiencyPercent": 96.5,
+        "LoadPercent": 50
+      },
+      {
+        "EfficiencyPercent": 96.5,
+        "LoadPercent": 90
+      }
+    ],
+    "FirmwareVersion": "01060106",
+    "HotPluggable": true,
+    "Id": "3",
+    "InputNominalVoltageType": "AC200To240V",
+    "Location": {
+      "PartLocation": {
+        "LocationOrdinalValue": 3,
+        "LocationType": "Bay",
+        "Orientation": "LeftToRight",
+        "Reference": "Top",
+        "ServiceLabel": "PSU Bay 3"
+      }
+    },
+    "Manufacturer": "Delta",
+    "Metrics": {
+      "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3/Metrics"
+    },
+    "Model": "ECD17020047",
+    "Name": "PowerSupplyUnit 3",
+    "Oem": {
+      "deltaenergysystems": {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3#/Oem/deltaenergysystems",
+        "@odata.type": "#DeltaEnergySystemsPowerSupply.v1_0_0.PowerSupply",
+        "FanSpeedTarget": 0,
+        "Power": true
+      }
+    },
+    "PartNumber": "ECD17020047",
+    "PowerCapacityWatts": 5504,
+    "PowerSupplyType": "DC",
+    "ProductionDate": "2026-05-18T00:00:00+00:00",
+    "SerialNumber": "serial-dc7e4f47003ffa5ac0abb40e",
+    "Status": {
+      "Health": "OK",
+      "State": "Enabled"
+    },
+    "Version": "S1"
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4",
+    "@odata.type": "#PowerSupply.v1_6_0.PowerSupply",
+    "Actions": {
+      "#PowerSupply.Reset": {
+        "@Redfish.ActionInfo": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4/ResetActionInfo",
+        "target": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4/Actions/PowerSupply.Reset"
+      }
+    },
+    "EfficiencyRatings": [
+      {
+        "EfficiencyPercent": 94.0,
+        "LoadPercent": 30
+      },
+      {
+        "EfficiencyPercent": 96.5,
+        "LoadPercent": 50
+      },
+      {
+        "EfficiencyPercent": 96.5,
+        "LoadPercent": 90
+      }
+    ],
+    "FirmwareVersion": "01060106",
+    "HotPluggable": true,
+    "Id": "4",
+    "InputNominalVoltageType": "AC200To240V",
+    "Location": {
+      "PartLocation": {
+        "LocationOrdinalValue": 4,
+        "LocationType": "Bay",
+        "Orientation": "LeftToRight",
+        "Reference": "Top",
+        "ServiceLabel": "PSU Bay 4"
+      }
+    },
+    "Manufacturer": "Delta",
+    "Metrics": {
+      "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4/Metrics"
+    },
+    "Model": "ECD17020047",
+    "Name": "PowerSupplyUnit 4",
+    "Oem": {
+      "deltaenergysystems": {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4#/Oem/deltaenergysystems",
+        "@odata.type": "#DeltaEnergySystemsPowerSupply.v1_0_0.PowerSupply",
+        "FanSpeedTarget": 0,
+        "Power": true
+      }
+    },
+    "PartNumber": "ECD17020047",
+    "PowerCapacityWatts": 5504,
+    "PowerSupplyType": "DC",
+    "ProductionDate": "2026-05-18T00:00:00+00:00",
+    "SerialNumber": "serial-53661e727a9943483ee6354f",
+    "Status": {
+      "Health": "OK",
+      "State": "Enabled"
+    },
+    "Version": "S1"
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5",
+    "@odata.type": "#PowerSupply.v1_6_0.PowerSupply",
+    "Actions": {
+      "#PowerSupply.Reset": {
+        "@Redfish.ActionInfo": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5/ResetActionInfo",
+        "target": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5/Actions/PowerSupply.Reset"
+      }
+    },
+    "EfficiencyRatings": [
+      {
+        "EfficiencyPercent": 94.0,
+        "LoadPercent": 30
+      },
+      {
+        "EfficiencyPercent": 96.5,
+        "LoadPercent": 50
+      },
+      {
+        "EfficiencyPercent": 96.5,
+        "LoadPercent": 90
+      }
+    ],
+    "FirmwareVersion": "01060106",
+    "HotPluggable": true,
+    "Id": "5",
+    "InputNominalVoltageType": "AC200To240V",
+    "Location": {
+      "PartLocation": {
+        "LocationOrdinalValue": 5,
+        "LocationType": "Bay",
+        "Orientation": "LeftToRight",
+        "Reference": "Top",
+        "ServiceLabel": "PSU Bay 5"
+      }
+    },
+    "Manufacturer": "Delta",
+    "Metrics": {
+      "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5/Metrics"
+    },
+    "Model": "ECD17020047",
+    "Name": "PowerSupplyUnit 5",
+    "Oem": {
+      "deltaenergysystems": {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5#/Oem/deltaenergysystems",
+        "@odata.type": "#DeltaEnergySystemsPowerSupply.v1_0_0.PowerSupply",
+        "FanSpeedTarget": 0,
+        "Power": true
+      }
+    },
+    "PartNumber": "ECD17020047",
+    "PowerCapacityWatts": 5504,
+    "PowerSupplyType": "DC",
+    "ProductionDate": "2026-05-18T00:00:00+00:00",
+    "SerialNumber": "serial-543738283b08e4c7a8a549ac",
+    "Status": {
+      "Health": "OK",
+      "State": "Enabled"
+    },
+    "Version": "S1"
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6",
+    "@odata.type": "#PowerSupply.v1_6_0.PowerSupply",
+    "Actions": {
+      "#PowerSupply.Reset": {
+        "@Redfish.ActionInfo": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6/ResetActionInfo",
+        "target": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6/Actions/PowerSupply.Reset"
+      }
+    },
+    "EfficiencyRatings": [
+      {
+        "EfficiencyPercent": 94.0,
+        "LoadPercent": 30
+      },
+      {
+        "EfficiencyPercent": 96.5,
+        "LoadPercent": 50
+      },
+      {
+        "EfficiencyPercent": 96.5,
+        "LoadPercent": 90
+      }
+    ],
+    "FirmwareVersion": "01060106",
+    "HotPluggable": true,
+    "Id": "6",
+    "InputNominalVoltageType": "AC200To240V",
+    "Location": {
+      "PartLocation": {
+        "LocationOrdinalValue": 6,
+        "LocationType": "Bay",
+        "Orientation": "LeftToRight",
+        "Reference": "Top",
+        "ServiceLabel": "PSU Bay 6"
+      }
+    },
+    "Manufacturer": "Delta",
+    "Metrics": {
+      "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6/Metrics"
+    },
+    "Model": "ECD17020047",
+    "Name": "PowerSupplyUnit 6",
+    "Oem": {
+      "deltaenergysystems": {
+        "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6#/Oem/deltaenergysystems",
+        "@odata.type": "#DeltaEnergySystemsPowerSupply.v1_0_0.PowerSupply",
+        "FanSpeedTarget": 0,
+        "Power": true
+      }
+    },
+    "PartNumber": "ECD17020047",
+    "PowerCapacityWatts": 5504,
+    "PowerSupplyType": "DC",
+    "ProductionDate": "2026-05-18T00:00:00+00:00",
+    "SerialNumber": "serial-0f1c758540a562f047b5e530",
+    "Status": {
+      "Health": "OK",
+      "State": "Enabled"
+    },
+    "Version": "S1"
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1/Metrics": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/1/Metrics",
+    "@odata.type": "#PowerSupplyMetrics.v1_1_2.PowerSupplyMetrics",
+    "EnergykWh": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_energy_in",
+      "LifetimeReading": 446.7328113888889,
+      "Reading": 0.06257138888888888
+    },
+    "FanSpeedPercent": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_fan1",
+      "SpeedRPM": 12304.0
+    },
+    "Id": "Metrics",
+    "InputCurrentAmps": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_input_current",
+      "Reading": 12.64
+    },
+    "InputPowerWatts": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_input_power",
+      "Reading": 2804.0
+    },
+    "InputVoltage": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_input_voltage",
+      "Reading": 219.0
+    },
+    "Name": "Metrics for Power Supply 1",
+    "OutputPowerWatts": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_output_power",
+      "Reading": 2692.0
+    },
+    "RailCurrentAmps": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_output_current",
+        "Reading": 54.37
+      }
+    ],
+    "RailPowerWatts": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_output_power",
+        "Reading": 2692.0
+      }
+    ],
+    "RailVoltage": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_output_voltage",
+        "Reading": 49.51
+      }
+    ],
+    "TemperatureCelsius": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_temp_hotspot",
+      "Reading": 73.0
+    }
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2/Metrics": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/2/Metrics",
+    "@odata.type": "#PowerSupplyMetrics.v1_1_2.PowerSupplyMetrics",
+    "EnergykWh": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_energy_in",
+      "LifetimeReading": 392.0109786111111,
+      "Reading": 0.07801861111111111
+    },
+    "FanSpeedPercent": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_fan1",
+      "SpeedRPM": 10928.0
+    },
+    "Id": "Metrics",
+    "InputCurrentAmps": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_input_current",
+      "Reading": 12.0
+    },
+    "InputPowerWatts": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_input_power",
+      "Reading": 2636.0
+    },
+    "InputVoltage": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_input_voltage",
+      "Reading": 219.5
+    },
+    "Name": "Metrics for Power Supply 2",
+    "OutputPowerWatts": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_output_power",
+      "Reading": 2532.0
+    },
+    "RailCurrentAmps": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_output_current",
+        "Reading": 51.62
+      }
+    ],
+    "RailPowerWatts": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_output_power",
+        "Reading": 2532.0
+      }
+    ],
+    "RailVoltage": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_output_voltage",
+        "Reading": 49.54
+      }
+    ],
+    "TemperatureCelsius": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_temp_hotspot",
+      "Reading": 72.0
+    }
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3/Metrics": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/3/Metrics",
+    "@odata.type": "#PowerSupplyMetrics.v1_1_2.PowerSupplyMetrics",
+    "EnergykWh": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_energy_in",
+      "LifetimeReading": 461.5302897222222,
+      "Reading": 0.006129722222222222
+    },
+    "FanSpeedPercent": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_fan1",
+      "SpeedRPM": 11888.0
+    },
+    "Id": "Metrics",
+    "InputCurrentAmps": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_input_current",
+      "Reading": 12.78
+    },
+    "InputPowerWatts": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_input_power",
+      "Reading": 2800.0
+    },
+    "InputVoltage": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_input_voltage",
+      "Reading": 217.5
+    },
+    "Name": "Metrics for Power Supply 3",
+    "OutputPowerWatts": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_output_power",
+      "Reading": 2688.0
+    },
+    "RailCurrentAmps": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_output_current",
+        "Reading": 55.0
+      }
+    ],
+    "RailPowerWatts": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_output_power",
+        "Reading": 2688.0
+      }
+    ],
+    "RailVoltage": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_output_voltage",
+        "Reading": 49.5
+      }
+    ],
+    "TemperatureCelsius": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_temp_hotspot",
+      "Reading": 72.0
+    }
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4/Metrics": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/4/Metrics",
+    "@odata.type": "#PowerSupplyMetrics.v1_1_2.PowerSupplyMetrics",
+    "EnergykWh": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_energy_in",
+      "LifetimeReading": 412.58444777777777,
+      "Reading": 0.06652777777777778
+    },
+    "FanSpeedPercent": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_fan1",
+      "SpeedRPM": 11552.0
+    },
+    "Id": "Metrics",
+    "InputCurrentAmps": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_input_current",
+      "Reading": 12.42
+    },
+    "InputPowerWatts": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_input_power",
+      "Reading": 2736.0
+    },
+    "InputVoltage": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_input_voltage",
+      "Reading": 217.25
+    },
+    "Name": "Metrics for Power Supply 4",
+    "OutputPowerWatts": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_output_power",
+      "Reading": 2628.0
+    },
+    "RailCurrentAmps": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_output_current",
+        "Reading": 53.06
+      }
+    ],
+    "RailPowerWatts": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_output_power",
+        "Reading": 2628.0
+      }
+    ],
+    "RailVoltage": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_output_voltage",
+        "Reading": 49.51
+      }
+    ],
+    "TemperatureCelsius": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_temp_hotspot",
+      "Reading": 72.0
+    }
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5/Metrics": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/5/Metrics",
+    "@odata.type": "#PowerSupplyMetrics.v1_1_2.PowerSupplyMetrics",
+    "EnergykWh": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_energy_in",
+      "LifetimeReading": 455.46403999999995,
+      "Reading": 0.0218
+    },
+    "FanSpeedPercent": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_fan1",
+      "SpeedRPM": 11664.0
+    },
+    "Id": "Metrics",
+    "InputCurrentAmps": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_input_current",
+      "Reading": 12.54
+    },
+    "InputPowerWatts": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_input_power",
+      "Reading": 2796.0
+    },
+    "InputVoltage": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_input_voltage",
+      "Reading": 219.5
+    },
+    "Name": "Metrics for Power Supply 5",
+    "OutputPowerWatts": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_output_power",
+      "Reading": 2684.0
+    },
+    "RailCurrentAmps": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_output_current",
+        "Reading": 54.25
+      }
+    ],
+    "RailPowerWatts": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_output_power",
+        "Reading": 2684.0
+      }
+    ],
+    "RailVoltage": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_output_voltage",
+        "Reading": 49.51
+      }
+    ],
+    "TemperatureCelsius": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_temp_hotspot",
+      "Reading": 72.0
+    }
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6/Metrics": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem/PowerSupplies/6/Metrics",
+    "@odata.type": "#PowerSupplyMetrics.v1_1_2.PowerSupplyMetrics",
+    "EnergykWh": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_energy_in",
+      "LifetimeReading": 402.82051277777776,
+      "Reading": 0.010272777777777778
+    },
+    "FanSpeedPercent": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_fan1",
+      "SpeedRPM": 11312.0
+    },
+    "Id": "Metrics",
+    "InputCurrentAmps": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_input_current",
+      "Reading": 12.35
+    },
+    "InputPowerWatts": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_input_power",
+      "Reading": 2736.0
+    },
+    "InputVoltage": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_input_voltage",
+      "Reading": 219.0
+    },
+    "Name": "Metrics for Power Supply 6",
+    "OutputPowerWatts": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_output_power",
+      "Reading": 2628.0
+    },
+    "RailCurrentAmps": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_output_current",
+        "Reading": 52.37
+      }
+    ],
+    "RailPowerWatts": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_output_power",
+        "Reading": 2628.0
+      }
+    ],
+    "RailVoltage": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_output_voltage",
+        "Reading": 49.51
+      }
+    ],
+    "TemperatureCelsius": {
+      "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_temp_hotspot",
+      "Reading": 72.0
+    }
+  },
+  "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/ThermalMetrics": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem/ThermalMetrics",
+    "@odata.type": "#ThermalMetrics.v1_3_2.ThermalMetrics",
+    "Id": "ThermalMetrics",
+    "Name": "Chassis Thermal Metrics",
+    "TemperatureReadingsCelsius": [
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/bmc_temp",
+        "DeviceName": "bmc_temp",
+        "Reading": 62.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/hotswap_temp",
+        "DeviceName": "hotswap_temp",
+        "Reading": 54.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_temp_clip_minus",
+        "DeviceName": "ps1_temp_clip_minus",
+        "Reading": 61.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_temp_clip_plus",
+        "DeviceName": "ps1_temp_clip_plus",
+        "Reading": 61.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_temp_hotspot",
+        "DeviceName": "ps1_temp_hotspot",
+        "Reading": 73.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_temp_input",
+        "DeviceName": "ps1_temp_input",
+        "Reading": 25.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps1_temp_output",
+        "DeviceName": "ps1_temp_output",
+        "Reading": 51.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/rtc_temp",
+        "DeviceName": "rtc_temp",
+        "Reading": 39.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_temp_clip_minus",
+        "DeviceName": "ps2_temp_clip_minus",
+        "Reading": 61.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_temp_clip_plus",
+        "DeviceName": "ps2_temp_clip_plus",
+        "Reading": 61.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_temp_hotspot",
+        "DeviceName": "ps2_temp_hotspot",
+        "Reading": 72.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_temp_input",
+        "DeviceName": "ps2_temp_input",
+        "Reading": 25.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_temp_clip_minus",
+        "DeviceName": "ps3_temp_clip_minus",
+        "Reading": 61.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_temp_clip_plus",
+        "DeviceName": "ps3_temp_clip_plus",
+        "Reading": 61.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_temp_hotspot",
+        "DeviceName": "ps3_temp_hotspot",
+        "Reading": 72.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_temp_input",
+        "DeviceName": "ps3_temp_input",
+        "Reading": 25.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_temp_clip_minus",
+        "DeviceName": "ps4_temp_clip_minus",
+        "Reading": 61.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_temp_clip_plus",
+        "DeviceName": "ps4_temp_clip_plus",
+        "Reading": 61.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps3_temp_output",
+        "DeviceName": "ps3_temp_output",
+        "Reading": 52.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_temp_hotspot",
+        "DeviceName": "ps4_temp_hotspot",
+        "Reading": 71.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_temp_input",
+        "DeviceName": "ps4_temp_input",
+        "Reading": 25.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps4_temp_output",
+        "DeviceName": "ps4_temp_output",
+        "Reading": 52.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_temp_clip_minus",
+        "DeviceName": "ps6_temp_clip_minus",
+        "Reading": 61.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_temp_clip_plus",
+        "DeviceName": "ps6_temp_clip_plus",
+        "Reading": 61.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_temp_hotspot",
+        "DeviceName": "ps6_temp_hotspot",
+        "Reading": 72.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_temp_input",
+        "DeviceName": "ps6_temp_input",
+        "Reading": 25.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps6_temp_output",
+        "DeviceName": "ps6_temp_output",
+        "Reading": 52.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps2_temp_output",
+        "DeviceName": "ps2_temp_output",
+        "Reading": 52.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_temp_clip_minus",
+        "DeviceName": "ps5_temp_clip_minus",
+        "Reading": 61.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_temp_clip_plus",
+        "DeviceName": "ps5_temp_clip_plus",
+        "Reading": 61.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_temp_hotspot",
+        "DeviceName": "ps5_temp_hotspot",
+        "Reading": 72.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_temp_input",
+        "DeviceName": "ps5_temp_input",
+        "Reading": 25.0
+      },
+      {
+        "DataSourceUri": "/redfish/v1/Chassis/PowerShelf_0/Sensors/ps5_temp_output",
+        "DeviceName": "ps5_temp_output",
+        "Reading": 53.0
+      }
+    ]
+  },
+  "/redfish/v1/Chassis/PowerShelf_0": {
+    "@odata.id": "/redfish/v1/Chassis/PowerShelf_0",
+    "@odata.type": "#Chassis.v1_26_0.Chassis",
+    "Actions": {
+      "#Chassis.Reset": {
+        "@Redfish.ActionInfo": "/redfish/v1/Chassis/PowerShelf_0/ResetActionInfo",
+        "target": "/redfish/v1/Chassis/PowerShelf_0/Actions/Chassis.Reset"
+      }
+    },
+    "ChassisType": "RackMount",
+    "DepthMm": 810,
+    "HeightMm": 44,
+    "Id": "PowerShelf_0",
+    "Links": {
+      "ManagedBy": [
+        {
+          "@odata.id": "/redfish/v1/Managers/PMC_0"
+        }
+      ]
+    },
+    "Manufacturer": "DELTA",
+    "MaxPowerWatts": 33000,
+    "Model": "AHE50V660A33KWL",
+    "Name": "PowerShelf_0",
+    "Oem": {
+      "deltaenergysystems": {
+        "AllSensors": {
+          "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/Oem/deltaenergysystems/AllSensors"
+        }
+      }
+    },
+    "PartNumber": "ECD68000085",
+    "PowerState": "On",
+    "PowerSubsystem": {
+      "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/PowerSubsystem"
+    },
+    "SKU": "AHE50V660A33KWL",
+    "Sensors": {
+      "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/Sensors"
+    },
+    "SerialNumber": "serial-2062a94b5f6003dc6a1c099c",
+    "Status": {
+      "Health": "OK",
+      "HealthRollup": "OK",
+      "State": "Enabled"
+    },
+    "ThermalSubsystem": {
+      "@odata.id": "/redfish/v1/Chassis/PowerShelf_0/ThermalSubsystem"
+    },
+    "WidthMm": 448
+  },
+  "/redfish/v1/Managers/PMC_0/LogServices/EventLog/Entries": {
+    "Members": [
+      {
+        "Id": "0",
+        "Message": "fixture event"
+      },
+      {
+        "Id": "1",
+        "Message": "fixture event"
+      },
+      {
+        "Id": "2",
+        "Message": "fixture event"
+      },
+      {
+        "Id": "3",
+        "Message": "fixture event"
+      },
+      {
+        "Id": "4",
+        "Message": "fixture event"
+      }
+    ],
+    "Members@odata.count": 5
+  },
+  "/redfish/v1/Managers/PMC_0/LogServices/Dump/Entries": {
+    "Members": [],
+    "Members@odata.count": 0
+  },
+  "/redfish/v1/Managers/PMC_0/LogServices/FaultLog/Entries": {
+    "Members": [],
+    "Members@odata.count": 0
+  },
+  "/redfish/v1/UpdateService/FirmwareInventory?$expand=.": {
+    "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory",
+    "@odata.type": "#SoftwareInventoryCollection.SoftwareInventoryCollection",
+    "Members": [
+      {
+        "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/7c336807",
+        "@odata.type": "#SoftwareInventory.v1_11_0.SoftwareInventory",
+        "AdditionalVersions": {
+          "Bootloader": "2019.04",
+          "Kernel": "Linux 6.12.9-03ff31a-dirty-5bbf432-00134-g5bbf432ba7f1 armv7l"
+        },
+        "Description": "PSU Firmware",
+        "Id": "7c336807",
+        "Members@odata.count": 6,
+        "Name": "PSU Firmware",
+        "RelatedItem": [
+          {
+            "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/PowerSupplies/1"
+          },
+          {
+            "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/PowerSupplies/2"
+          },
+          {
+            "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/PowerSupplies/3"
+          },
+          {
+            "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/PowerSupplies/4"
+          },
+          {
+            "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/PowerSupplies/5"
+          },
+          {
+            "@odata.id": "/redfish/v1/PowerEquipment/PowerShelves/1/PowerSupplies/6"
+          }
+        ],
+        "SoftwareId": "",
+        "Status": {
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        },
+        "Updateable": true,
+        "Version": "01060106"
+      },
+      {
+        "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/FW_ERoT_BMC_0",
+        "@odata.type": "#SoftwareInventory.v1_11_0.SoftwareInventory",
+        "Description": "Other Firmware",
+        "Id": "FW_ERoT_BMC_0",
+        "Name": "Other Firmware",
+        "SoftwareId": "0x1020",
+        "Status": {
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        },
+        "Updateable": true,
+        "Version": "1202"
+      },
+      {
+        "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/FW_PMC_alt",
+        "@odata.type": "#SoftwareInventory.v1_11_0.SoftwareInventory",
+        "Description": "BMC Firmware",
+        "Id": "FW_PMC_alt",
+        "Name": "BMC Firmware",
+        "RelatedItem": [
+          {
+            "@odata.id": "/redfish/v1/Managers/PMC_0"
+          }
+        ],
+        "RelatedItem@odata.count": 1,
+        "SoftwareId": "0b4e248c-8bcf-4137-9b99-d0394c808ba5",
+        "Status": {
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        },
+        "Updateable": true,
+        "Version": "3.1.6"
+      },
+      {
+        "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/FW_PMC_primary",
+        "@odata.type": "#SoftwareInventory.v1_11_0.SoftwareInventory",
+        "AdditionalVersions": {
+          "Bootloader": "2019.04",
+          "Kernel": "Linux 6.12.9-03ff31a-dirty-5bbf432-00134-g5bbf432ba7f1 armv7l"
+        },
+        "Description": "BMC Firmware",
+        "Id": "FW_PMC_primary",
+        "Name": "BMC Firmware",
+        "RelatedItem": [
+          {
+            "@odata.id": "/redfish/v1/Managers/PMC_0"
+          }
+        ],
+        "RelatedItem@odata.count": 1,
+        "SoftwareId": "0b4e248c-8bcf-4137-9b99-d0394c808ba5",
+        "Status": {
+          "Health": "OK",
+          "HealthRollup": "OK",
+          "State": "Enabled"
+        },
+        "Updateable": true,
+        "Version": "3.1.6"
+      }
+    ],
+    "Members@odata.count": 4,
+    "Name": "Software Inventory Collection"
+  }
+}

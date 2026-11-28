@@ -48,7 +48,11 @@ class Ipmi:
 
 def prepare(record, monkeypatch):
     nvos_stdout = None
-    if record["fixture"].startswith("hgx_b300_"):
+    if record["fixture"] == "nvl_gb300_n5500_8800021961":
+        fixture = ROOT / "tests/fixtures/certified" / (record["fixture"] + ".json")
+        nvos_stdout = json.loads(fixture.read_text())[record["direct_requests"][0]]
+        data = {}
+    elif record["fixture"].startswith(("hgx_b300_", "nvl_gb300_")):
         fixture = ROOT / "tests/fixtures/certified" / (record["fixture"] + ".json")
         data = json.loads(fixture.read_text())
     elif record["fixture"] == "smc_gb300_psu":
@@ -99,8 +103,9 @@ def prepare(record, monkeypatch):
     if nvos_stdout is not None:
         from types import SimpleNamespace
         def ssh(host, options, command, deadline):
-            assert command == runtime.nvos._HSC
-            transport.requests.append("nvos:lm5066i-vin-iin-pin")
+            marker = "nvos:lm5066i-vin-iin-pin" if command == runtime.nvos._HSC else "nvos:" + command
+            assert marker == record["direct_requests"][0]
+            transport.requests.append(marker)
             return SimpleNamespace(returncode=0, stdout=nvos_stdout, stderr="")
         monkeypatch.setattr(runtime.nvos, "_ssh", ssh)
     monkeypatch.setattr(runtime, "Redfish", lambda *args, **kwargs: transport)
@@ -115,7 +120,10 @@ def prepare(record, monkeypatch):
     options.timeout = 3
     options.timeout_explicit = True
     options.node_timeout = 10
-    runner = runtime.InfoRunner if record["capability"] == "macs" else runtime.Runner
+    info = record["capability"] in {"macs", "inventory", "eventlog", "power"}
+    if info:
+        options.action = getattr(args, "action", None) or getattr(args, "action_opt", None)
+    runner = runtime.InfoRunner if info else runtime.Runner
     return runner(record["capability"], options), host, transport
 
 
@@ -124,7 +132,7 @@ def test_certified_read_uses_exact_runtime_request_contract(record, monkeypatch)
     runner, host, transport = prepare(record, monkeypatch)
     result = runner._one(host)
     assert result["error"] is None
-    rows = result["lines"] if record["capability"] == "macs" else result["readings"]
+    rows = result.get("lines", result.get("readings"))
     assert len(rows) == record["expected_rows"]
     assert transport.requests == record["direct_requests"]
     assert len(transport.requests) == record["request_count"]
@@ -133,6 +141,13 @@ def test_certified_read_uses_exact_runtime_request_contract(record, monkeypatch)
         "smc_gb300_fan": 1, "smc_gb300_temp": 9,
         "smc_gb300_inlet": 1, "smc_gb300_monitor": 4, "nvidia_n5500_temp": 3, "nvidia_n5500_hsc": 1,
         "liteon_pf1333_fan": 1, "liteon_pf1333_temp": 1,
+        "wistron_gb300_fan": 1, "wistron_gb300_psu": 2,
+        "wistron_gb300_inlet": 1, "wistron_gb300_monitor": 4,
+        "delta_gb300_fan": 1, "delta_gb300_psu": 13, "wistron_gb300_macs": 1,
+        "nvidia_n5500_1961_psu": 1, "nvidia_n5500_1961_temp": 1,
+        "wistron_gb300_inventory": 45, "wistron_gb300_temp": 10, "wistron_gb300_eventlog": 1,
+        "delta_gb300_temp": 1, "delta_gb300_power": 1,
+        "delta_gb300_eventlog": 3, "delta_gb300_inventory": 1,
     }
     if record["fixture"].startswith("hgx_b300_"):
         vendor = record["configuration"]["oem"]
@@ -160,6 +175,9 @@ def test_certified_read_uses_exact_runtime_request_contract(record, monkeypatch)
             "nvidia_n5500_temp": {"Cel": 3},
             "liteon_pf1333_fan": {"RPM": 6},
             "liteon_pf1333_temp": {"Cel": 21},
+            "wistron_gb300_fan": {"RPM": 16}, "delta_gb300_fan": {"RPM": 12},
+            "nvidia_n5500_1961_temp": {"°C": 8},
+            "wistron_gb300_temp": {"Cel": 57}, "delta_gb300_temp": {"Cel": 33},
         }
         assert units == expected[record["id"]]
 
@@ -240,7 +258,7 @@ def test_new_fixed_capabilities_require_executable_certification():
     legacy = {(adapter, cap) for adapter, caps in manifest["legacy_unreviewed"].items()
               for cap in caps}
     certified = {(r["adapter"], r["capability"]) for r in manifest["records"]
-                 if r["status"] == "verified" and r["capability"] != "macs"}
+                 if r["status"] == "verified" and r["capability"] not in {"macs", "power", "eventlog", "inventory"}}
     declared = set()
     for registry in (oem._MODULES, oem._PLATFORM_MODULES, oem._ROLE_MODULES, oem._HGX_READ_MODELS):
         for adapter in registry.values():
@@ -320,3 +338,103 @@ def test_kaytus_empty_pending_bios_is_successful(monkeypatch):
     assert result["error"] is None
     assert result["lines"] == ["fixture-01: No pending BIOS settings"]
     assert transport.requests == [path]
+
+
+@pytest.mark.parametrize("use_fallback", [False, True])
+def test_wistron_hsc_reads_keep_zero_and_alarm(use_fallback, monkeypatch):
+    record = next(r for r in RECORDS if r["id"] == "wistron_gb300_psu")
+    runner, host, transport = prepare(record, monkeypatch)
+    paths = record["direct_requests"]
+    collection = "/redfish/v1/Chassis/PDB_0/Sensors?$expand=."
+    if use_fallback:
+        transport.data[paths[0]]["ReadingUnits"] = "A"
+        details = transport.data[collection]["Members"]
+        sensor = next(entry for entry in details if entry["@odata.id"] == paths[0])
+    else:
+        sensor = transport.data[paths[0]]
+    sensor.update(Reading=0, Status={"State": "Enabled", "Health": "Critical"})
+    result = runner._one(host)
+    assert result["error"] is None
+    assert len(result["readings"]) == 2
+    assert result["readings"][0]["input_watts"] == 0
+    assert result["readings"][0]["health"] == "Critical"
+    assert transport.requests == paths + ([collection] if use_fallback else [])
+
+
+def test_wistron_hsc_does_not_accept_an_incomplete_fallback(monkeypatch):
+    record = next(r for r in RECORDS if r["id"] == "wistron_gb300_psu")
+    runner, host, transport = prepare(record, monkeypatch)
+    paths = record["direct_requests"]
+    collection = "/redfish/v1/Chassis/PDB_0/Sensors?$expand=."
+    transport.data.pop(paths[0])
+    members = transport.data[collection]["Members"]
+    transport.data[collection]["Members"] = [entry for entry in members if entry["@odata.id"] != paths[0]]
+    assert runner._one(host)["error"]
+    assert transport.requests == paths + [collection]
+
+
+@pytest.mark.parametrize("record_id", ["wistron_gb300_fan", "delta_gb300_fan"])
+def test_nvl_fixed_fan_honors_selected_chassis(record_id, monkeypatch):
+    record = next(r for r in RECORDS if r["id"] == record_id)
+    runner, host, transport = prepare(record, monkeypatch)
+    host.vars["chassis_id"] = "Selected"
+    alternate = re.sub(r"/Chassis/[^/]+", "/Chassis/Selected", record["direct_requests"][0])
+    transport.data[alternate] = transport.data[record["direct_requests"][0]]
+    assert runner._one(host)["error"] is None
+    assert transport.requests == [alternate]
+
+
+@pytest.mark.parametrize("selected", [None, "HostSystem"])
+def test_wistron_default_mac_uses_scoped_boot_options_fallback(selected, monkeypatch):
+    record = next(r for r in RECORDS if r["id"] == "wistron_gb300_macs")
+    runner, host, transport = prepare(record, monkeypatch)
+    expanded = record["direct_requests"][0]
+    if selected:
+        host.vars["system_id"] = selected
+    target = expanded.replace("/system/", "/" + (selected or "system") + "/")
+    plain = target.split("?", 1)[0]
+    transport.data[plain] = transport.data.pop(expanded)
+    result = runner._one(host)
+    assert result["error"] is None
+    assert len(result["lines"]) == 7
+    assert transport.requests == [target, plain]
+
+
+def test_wistron_fan_retries_direct_path_before_scoped_fallback(monkeypatch):
+    record = next(record for record in RECORDS if record["id"] == "wistron_gb300_fan")
+    runner, host, transport = prepare(record, monkeypatch)
+    original_get = transport.get
+
+    def transient_timeout(path):
+        if not transport.requests:
+            transport.requests.append(path)
+            transport.timeout_reason = "Redfish read timed out"
+            return None
+        transport.timeout_reason = None
+        return original_get(path)
+
+    monkeypatch.setattr(transport, "get", transient_timeout)
+    result = runner._one(host)
+    assert result["error"] is None
+    assert len(result["readings"]) == 16
+    assert transport.requests == record["direct_requests"] * 2
+
+
+def test_fixed_event_log_reads_next_page_and_resolves_members():
+    from types import SimpleNamespace
+
+    from nodetools_runtime.subjects.common import entries
+
+    path = "/redfish/v1/Managers/BMC_0/LogServices/EventLog/Entries"
+    next_page = path + "?$skip=1"
+    detail = path + "/2"
+    first = {"Id": "1", "Message": "First event"}
+    second = {"Id": "2", "Message": "Second event"}
+    transport = Transport({
+        path: {"Members@odata.count": 2, "Members": [first],
+               "Members@odata.nextLink": next_page},
+        next_page: {"Members@odata.count": 2, "Members": [{"@odata.id": detail}]},
+        detail: second,
+    })
+    assert entries(SimpleNamespace(redfish=transport), path, require_members=True) == [first, second]
+    assert transport.requests == [path, next_page, detail]

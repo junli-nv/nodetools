@@ -1,6 +1,7 @@
 """Temperature capability: chassis/board/PSU temperatures with fallbacks."""
 
 from ..config import DEFAULT_CHASSIS
+from ..errors import TransportError
 from ..ladder import first
 from . import common, fixed
 
@@ -135,6 +136,15 @@ def _from_ipmi(device):
 
 
 def collect(device):
+    adapter = getattr(device, "odm", None)
+    selected = device.vars.get("temp_chassis_id") or device.vars.get("chassis_id")
+    if getattr(adapter, "temp_scoped_fallback", False):
+        specs = adapter.direct_read_sets["temp"]
+        if not selected or all(spec["path"].split("/")[4] == selected for spec in specs):
+            rows = fixed.collect(device, "temp")
+            if not rows:
+                raise TransportError("incomplete temperature data from the configured ThermalMetrics endpoints")
+            return rows
     steps = [("oem_fixed", lambda: fixed.collect(device, "temp"))]
     known_chassis = getattr(getattr(device, "odm", None), "temp_read_chassis", None)
     fixed_chassis = device.vars.get("temp_chassis_id") or (

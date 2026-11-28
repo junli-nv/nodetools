@@ -197,3 +197,136 @@ NVIDIA_N5500 = {'temp': [{'path': '/redfish/v1/Chassis/MGX_BMC_0/Sensors?$expand
           {'path': '/redfish/v1/Chassis/MGX_NVSwitch_1/Sensors?$expand=.',
            'kind': 'Members',
            'readings': {'MGX_NVSwitch_1_TEMP_0': {'unit': 'Cel', 'type': 'Temperature'}}}]}
+
+
+
+def _thermal_metrics(chassis, sources, nullable=()):
+    return {
+        "path": f"/redfish/v1/Chassis/{chassis}/ThermalSubsystem/ThermalMetrics",
+        "kind": "TemperatureReadingsCelsius",
+        "readings": {
+            ident: {"unit": "Cel", "source": f"/redfish/v1/Chassis/{owner}/Sensors/{ident}",
+                    "nullable": ident in nullable}
+            for owner, ident in sources
+        },
+    }
+
+
+WISTRON_GB300_TEMP = {"temp": [
+    _thermal_metrics('Chassis_0', (
+        ('IO_Board_0', 'IO_Board_0_CX8_0_Temp'),
+        ('IO_Board_0', 'IO_Board_0_CX8_0_Port_0_Temp'),
+        ('IO_Board_0', 'IO_Board_0_CX8_1_Temp'),
+        ('IO_Board_0', 'IO_Board_0_CX8_1_Port_0_Temp'),
+        ('IO_Board_1', 'IO_Board_1_CX8_0_Temp'),
+        ('IO_Board_1', 'IO_Board_1_CX8_0_Port_0_Temp'),
+        ('IO_Board_1', 'IO_Board_1_CX8_1_Temp'),
+        ('IO_Board_1', 'IO_Board_1_CX8_1_Port_0_Temp'),
+        ('Riser_Slot1_BlueField_3_Card', 'BF3_Slot_1_Temp'),
+        ('Riser_Slot1_BlueField_3_Card', 'BF3_Slot_1_Port_0_Temp'),
+        ('Riser_Slot1_BlueField_3_Card', 'BF3_Slot_1_Port_1_Temp'),
+        ('NVME_M2_0', 'NVME_M2_0_Temp_0'),
+        ('StorageBackplane_0', 'StorageBackplane_0_SSD_0_Temp_0'),
+        ('StorageBackplane_0', 'StorageBackplane_0_SSD_1_Temp_0'),
+        ('StorageBackplane_0', 'StorageBackplane_0_SSD_2_Temp_0'),
+        ('StorageBackplane_0', 'StorageBackplane_0_SSD_3_Temp_0'),
+        ('StorageBackplane_1', 'StorageBackplane_1_SSD_0_Temp_0'),
+        ('StorageBackplane_1', 'StorageBackplane_1_SSD_1_Temp_0'),
+        ('StorageBackplane_1', 'StorageBackplane_1_SSD_2_Temp_0'),
+        ('StorageBackplane_1', 'StorageBackplane_1_SSD_3_Temp_0'),
+        ('BMC_0', 'BMC_0_DCSCM_Temp_0'),
+        ('IO_Board_0', 'IO_Board_0_CX8_0_Temp_0'),
+        ('IO_Board_0', 'IO_Board_0_CX8_1_Temp_0'),
+        ('IO_Board_1', 'IO_Board_1_CX8_0_Temp_0'),
+        ('IO_Board_1', 'IO_Board_1_CX8_1_Temp_0'),
+        ('Riser_Slot1_BlueField_3_Card', 'BF3_Slot_1_NIC_Temp_0'),
+        ('Chassis_0', 'Chassis_0_Front_IO_Temp_0'),
+    ), ('StorageBackplane_0_SSD_1_Temp_0', 'StorageBackplane_0_SSD_3_Temp_0', 'StorageBackplane_1_SSD_1_Temp_0', 'StorageBackplane_1_SSD_3_Temp_0')),
+    _thermal_metrics('PDB_0', (
+        ('PDB_0', 'PDB_0_Inlet_Temp_0'),
+        ('PDB_0', 'PDB_0_HSC_0_Temp_0'),
+        ('PDB_0', 'PDB_0_Vreg_0_Temp_1'),
+        ('PDB_0', 'PDB_0_Vreg_0_Temp_0'),
+        ('PDB_0', 'PDB_0_Vreg_1_Temp_1'),
+        ('PDB_0', 'PDB_0_Vreg_1_Temp_0'),
+        ('PDB_0', 'PDB_0_HSC_1_Temp_0'),
+    )),
+    _thermal_metrics('HGX_BMC_0', (
+        ('HGX_BMC_0', 'HGX_BMC_0_Temp_0'),
+    )),
+    _thermal_metrics('HGX_CPU_0', (
+        ('HGX_CPU_0', 'ProcessorModule_0_CPU_0_TempAvg_0'),
+        ('HGX_CPU_0', 'ProcessorModule_0_CPU_0_TempLimit_0'),
+    )),
+    _thermal_metrics('HGX_CPU_1', (
+        ('HGX_CPU_1', 'ProcessorModule_1_CPU_0_TempAvg_0'),
+        ('HGX_CPU_1', 'ProcessorModule_1_CPU_0_TempLimit_0'),
+    )),
+    _thermal_metrics('HGX_Chassis_0', (
+        ('HGX_ProcessorModule_0', 'HGX_ProcessorModule_0_Exhaust_Temp_0'),
+        ('HGX_ProcessorModule_0', 'HGX_ProcessorModule_0_Inlet_Temp_0'),
+        ('HGX_ProcessorModule_0', 'HGX_ProcessorModule_0_Inlet_Temp_1'),
+        ('HGX_ProcessorModule_1', 'HGX_ProcessorModule_1_Exhaust_Temp_0'),
+        ('HGX_ProcessorModule_1', 'HGX_ProcessorModule_1_Inlet_Temp_0'),
+        ('HGX_ProcessorModule_1', 'HGX_ProcessorModule_1_Inlet_Temp_1'),
+    )),
+    _thermal_metrics('HGX_GPU_0', (
+        ('HGX_GPU_0', 'HGX_GPU_0_DRAM_0_Temp_0'),
+        ('HGX_GPU_0', 'HGX_GPU_0_TEMP_0'),
+        ('HGX_GPU_0', 'HGX_GPU_0_TEMP_1'),
+    )),
+    _thermal_metrics('HGX_GPU_1', (
+        ('HGX_GPU_1', 'HGX_GPU_1_DRAM_0_Temp_0'),
+        ('HGX_GPU_1', 'HGX_GPU_1_TEMP_0'),
+        ('HGX_GPU_1', 'HGX_GPU_1_TEMP_1'),
+    )),
+    _thermal_metrics('HGX_GPU_2', (
+        ('HGX_GPU_2', 'HGX_GPU_2_DRAM_0_Temp_0'),
+        ('HGX_GPU_2', 'HGX_GPU_2_TEMP_0'),
+        ('HGX_GPU_2', 'HGX_GPU_2_TEMP_1'),
+    )),
+    _thermal_metrics('HGX_GPU_3', (
+        ('HGX_GPU_3', 'HGX_GPU_3_DRAM_0_Temp_0'),
+        ('HGX_GPU_3', 'HGX_GPU_3_TEMP_0'),
+        ('HGX_GPU_3', 'HGX_GPU_3_TEMP_1'),
+    )),
+]}
+
+
+DELTA_GB300_TEMP = {"temp": [
+    _thermal_metrics('PowerShelf_0', (
+        ('PowerShelf_0', 'bmc_temp'),
+        ('PowerShelf_0', 'hotswap_temp'),
+        ('PowerShelf_0', 'ps1_temp_clip_minus'),
+        ('PowerShelf_0', 'ps1_temp_clip_plus'),
+        ('PowerShelf_0', 'ps1_temp_hotspot'),
+        ('PowerShelf_0', 'ps1_temp_input'),
+        ('PowerShelf_0', 'ps1_temp_output'),
+        ('PowerShelf_0', 'rtc_temp'),
+        ('PowerShelf_0', 'ps2_temp_clip_minus'),
+        ('PowerShelf_0', 'ps2_temp_clip_plus'),
+        ('PowerShelf_0', 'ps2_temp_hotspot'),
+        ('PowerShelf_0', 'ps2_temp_input'),
+        ('PowerShelf_0', 'ps3_temp_clip_minus'),
+        ('PowerShelf_0', 'ps3_temp_clip_plus'),
+        ('PowerShelf_0', 'ps3_temp_hotspot'),
+        ('PowerShelf_0', 'ps3_temp_input'),
+        ('PowerShelf_0', 'ps4_temp_clip_minus'),
+        ('PowerShelf_0', 'ps4_temp_clip_plus'),
+        ('PowerShelf_0', 'ps3_temp_output'),
+        ('PowerShelf_0', 'ps4_temp_hotspot'),
+        ('PowerShelf_0', 'ps4_temp_input'),
+        ('PowerShelf_0', 'ps4_temp_output'),
+        ('PowerShelf_0', 'ps6_temp_clip_minus'),
+        ('PowerShelf_0', 'ps6_temp_clip_plus'),
+        ('PowerShelf_0', 'ps6_temp_hotspot'),
+        ('PowerShelf_0', 'ps6_temp_input'),
+        ('PowerShelf_0', 'ps6_temp_output'),
+        ('PowerShelf_0', 'ps2_temp_output'),
+        ('PowerShelf_0', 'ps5_temp_clip_minus'),
+        ('PowerShelf_0', 'ps5_temp_clip_plus'),
+        ('PowerShelf_0', 'ps5_temp_hotspot'),
+        ('PowerShelf_0', 'ps5_temp_input'),
+        ('PowerShelf_0', 'ps5_temp_output'),
+    )),
+]}

@@ -462,6 +462,27 @@ and `bf3` presets. The PXE check used `nodenetboot prefer --mac` to promote one
 port, read back the full `BootOrder`, and restore the original order. The
 existing boot override retained its original value.
 
+#### Wistron GB300 default direct reads
+
+Set platform=nvl, oem=wistron and generation=gb300 for the compute tray. The default host system is Systems/system. An explicit system_id takes precedence. MAC collection uses one GET for seven IPv4 PXE records and falls back to the plain BootOptions collection on the same system if expansion is unavailable.
+
+Verified normal request counts and rows are 1/16 for Wistron fans, 2/2 for HSC input power, 1/1 for inlet, and 4/4 for monitoring. The Delta 3.1.6 shelf uses 1/12 for fans and 13/6 for PSUs. NVIDIA N5500_LD 88.0002.1961 uses one NVOS query each for HSC power and temperature. Wistron nodepsu --details retains the extended HSC telemetry.
+
+| Device | Additional direct read | GETs | Output |
+| --- | --- | ---: | --- |
+| Wistron GB300 | `nodetemp` | 10 | 57 points, including four SSD values reported as null |
+| Wistron GB300 | `nodeinventory --details` | 45 | Two system and 43 chassis identities in 22.7 seconds |
+| Wistron GB300 | `nodeeventlog bmc` | 1 | The BMC returned an empty event collection |
+| Delta NVIDIA_PMC | `pstemp` / `pspower` / `pseventlog` / `psinventory` | 1 / 1 / 3 / 1 | 33 temperatures, one power state, five events and four firmware rows |
+
+Hardware inventory reads the full chassis link list and fetches identities over four connections with a shared deadline. Paged chassis expansion omitted members on hardware. Layout selection uses platform, OEM, role and generation.
+
+An exclusive Slurm allocation verified max and auto fan control on one idle tray. All 16 rotors reported OK. Ranges were 13,845–25,869 RPM initially, 28,912–33,897 RPM at max, and 13,845–23,976 RPM after restoring auto.
+
+The single-rack audit covered 18 compute trays, eight shelves and nine NVSwitch trays. After retries, 846 of 1,008 Wistron trays passed both fan and HSC checks. The same 162 BMCs in racks n03–n10 and p08 timed out during connection.
+
+The [GB300 NVL archive manifest](redfish-archives/nvl/gb300/MANIFEST.json) records partial captures and targeted additions. Event contents stay in private acceptance records.
+
 ### HGX B300 hardware interfaces
 
 Supermicro `SYS-822GS-NB3RT` (BMC `01.12.02.03`) uses `Chassis/1` for host PSUs.
@@ -922,6 +943,11 @@ model-specific hardware validation.
 
 ### Archive Redfish evidence during direct-read acceptance
 
+Reuse the same direct-read layout for the same OEM, model, generation, and role.
+A firmware revision alone does not change runtime routing. Verify the established
+request and reading contract on each tested revision. Add a layout or firmware
+condition only where hardware shows a difference in resources or readings.
+
 Run this on the acceptance host for each new or revalidated fixed-read contract. Keep OEM,
 role, platform, generation, actual BMC-reported model and BMC firmware version as separate
 identity fields. Add a layout ID when variants differ. Reuse collectors where layouts match
@@ -953,6 +979,14 @@ production runner. For sensor acceptance use `redfish replay --expect-rows` and 
 `--expect-path` in observed order. This runs production routing with offline transports.
 Count, ordered GET or HTTP failures return nonzero. Replay can read `.json.gz` directly.
 Take expectations from live evidence for the same model, generation and firmware.
+`nodemon` replays a single temperature and power sample. When the archive lacks
+`system_model`, pass `--system-model` with the model verified for that firmware
+to select its direct-read adapter.
+
+Automated replay covers fans, PSUs, temperatures, inlet temperatures and monitoring
+for the three HGX B300 archives. The manifest lists unavailable compute MAC responses
+in `replay_gaps` and firmware combinations awaiting capture in `missing_archives`.
+KAYTUS `2.03.ee` and Supermicro `01.12.05.00` still need a live capture.
 
 Trigger capture from the acceptance workflow for verified combinations, and reuse matching
 valid archives. Check missing paths before hardware leaves the lab. Mark incomplete evidence.

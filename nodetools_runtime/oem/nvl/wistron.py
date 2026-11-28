@@ -2,10 +2,12 @@
 
 import time
 
-from ...errors import CapUnsupported, TransportError
+from ...errors import AuthError, CapUnsupported, TransportError, TransportTimeout
 from ...subjects import common, netboot, vm
 from ...subjects.boot_nics import local_link, members
 from ..base import Oem
+
+from .reading_layouts import WISTRON_GB300_TEMP
 
 
 class Wistron(Oem):
@@ -117,3 +119,44 @@ class Wistron(Oem):
             if not inserted or self._vm_matches_image(state, image):
                 return
         raise TransportError(f"Wistron VirtualMedia state did not match at {path}")
+
+
+
+class WistronGb300(Wistron):
+    inventory_fixed_caps = (*Wistron.inventory_fixed_caps, "inlet", "monitor", "temp")
+    direct_read_sets = WISTRON_GB300_TEMP
+    temp_scoped_fallback = True
+    hardware_inventory_workers = 4
+    monitor_reading_ids = (Wistron.monitor_power_sensor, Wistron.inlet_sensor[1], *Wistron.monitor_hsc_sensors)
+    monitor_power_unit = "W"
+    fan_scoped_fallback = True
+    psu_sensor_details = True
+    psu_sensor_collection_fallback = True
+    psu_read_sensors = tuple(
+        (Wistron.monitor_hsc_chassis, sensor_id, name)
+        for sensor_id, name in Wistron.monitor_hsc_sensors.values()
+    )
+
+    def eventlog(self, device, action):
+        if action != "bmc":
+            return super().eventlog(device, action)
+        manager = device.vars.get("manager_id") or "BMC_0"
+        parent = local_link({"@odata.id": "/redfish/v1/Managers/" + manager})
+        if not parent or "/" in manager:
+            raise CapUnsupported("invalid Redfish manager_id")
+        path = parent + "/LogServices/EventLog/Entries"
+        lines = common.log_lines(device, path, sep="\t", require_members=True)
+        return [f"{device.name}[BMC]: {line}" for line in lines or ["No event log entries"]]
+
+    def _boot_system_path(self, device):
+        return netboot.system_path(device)
+
+    def _boot_members(self, device, expand=True):
+        try:
+            return super()._boot_members(device, expand)
+        except (AuthError, TransportTimeout):
+            raise
+        except TransportError:
+            if not expand:
+                raise
+            return super()._boot_members(device, expand=False)

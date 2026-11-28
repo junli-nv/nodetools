@@ -16,6 +16,10 @@ def collect(device, capability):
     for spec in specs:
         path, kind, expected = spec["path"], spec["kind"], spec["readings"]
         data = device.redfish.get(path)
+        if (data is None and capability == "temp"
+                and getattr(device.odm, "temp_scoped_fallback", False)
+                and getattr(device.redfish, "timeout_reason", None)):
+            data = device.redfish.get(path)
         if not isinstance(data, dict) or "error" in data:
             valid = False
             continue
@@ -78,6 +82,8 @@ def completeness_error(device, capability, rows):
             return None
         expected = {ident for spec in specs for ident in spec["readings"]}
     elif capability == "psu":
+        if getattr(device.options, "details", False) and getattr(adapter, "psu_sensor_details", False):
+            return None
         sensors = getattr(adapter, "psu_read_sensors", ())
         legacy = getattr(adapter, "psu_legacy_slots", None)
         if sensors:
@@ -93,7 +99,9 @@ def completeness_error(device, capability, rows):
         power = getattr(adapter, "monitor_power_sensor", None)
         inlet = getattr(adapter, "inlet_sensor", None)
         supplies = getattr(adapter, "psu_read_sensors", ())
-        if power and inlet and supplies:
+        if monitor_ids := getattr(adapter, "monitor_reading_ids", ()):
+            expected = set(monitor_ids)
+        elif power and inlet and supplies:
             expected = {power, inlet[1], *(label for _, _, label in supplies)}
     if expected is None:
         return None

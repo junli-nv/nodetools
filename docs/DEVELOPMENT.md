@@ -392,6 +392,33 @@ Wistron `GB300 Bianca PDB`（BMC `01.05.26.0305`）的主系统是 `Systems/syst
 预设需要的字段。PXE 验证用 `nodenetboot prefer --mac` 提升一个端口并回读完整
 `BootOrder`，然后恢复原顺序，并确认已有的启动覆盖保持原值。
 
+#### Wistron GB300 默认直读验收
+
+计算托盘 inventory 配置 platform=nvl、oem=wistron、generation=gb300 后，默认主系统使用 Systems/system。显式 system_id 仍优先。MAC 正常路径只需 1 次 GET、7 条 PXE IPv4 记录。展开不可用时只回退到同一系统的 BootOptions 集合。
+
+| 设备与 BMC 固件 | 命令 | GET / NVOS 查询 | 读数 |
+| --- | --- | ---: | ---: |
+| Wistron GB300 Bianca PDB 01.05.26.0305 | nodefan / nodepsu / nodeinlet / nodemon | 1 / 2 / 1 / 4 | 16 / 2 / 1 / 4 |
+| Delta NVIDIA_PMC 3.1.6 | psfan / pspsu | 1 / 13 | 12 / 6 |
+| NVIDIA N5500_LD 88.0002.1961 | nvswpsu / nvswtemp | 1 / 1（NVOS） | 1 / 8 |
+
+nodepsu 默认输出两路 HSC 输入功率；--details 保留完整的功率、电流、电压和温度遥测。Delta 的 13 次请求包含集合、六个 PSU 详情和六个 Metrics。
+
+| 设备 | 新增直读验收项 | GET | 输出 |
+| --- | --- | ---: | --- |
+| Wistron GB300 | `nodetemp` | 10 | 57 个温度位置，含 BMC 返回的 4 个 SSD 空值 |
+| Wistron GB300 | `nodeinventory --details` | 45 | 2 条系统和 43 条机箱身份，用时 22.7 秒 |
+| Wistron GB300 | `nodeeventlog bmc` | 1 | BMC 返回空事件集合 |
+| Delta NVIDIA_PMC | `pstemp` / `pspower` / `pseventlog` / `psinventory` | 1 / 1 / 3 / 1 | 33 条温度、1 条电源状态、5 条事件、4 条固件记录 |
+
+硬件清单先获取完整的机箱成员，再用四路并行请求读取身份，所有请求共用节点超时。实机的机箱展开分页会漏成员。直读按平台、厂商、角色和代际选择。
+
+在单台空闲托盘的 Slurm 独占分配上实测风扇 `max` 和 `auto`，16 个转子均为 OK。初始 13,845–25,869 RPM，最大模式 28,912–33,897 RPM，恢复自动后 13,845–23,976 RPM。
+
+单机架批量验收覆盖 18 台计算托盘、8 台电源架和 9 台 NVSwitch。1,008 台 Wistron 计算托盘经复测后，风扇和 HSC 均通过 846 台。`n03–n10` 和 `p08` 的 162 台 BMC 连接超时。
+
+[GB300 NVL 归档清单](redfish-archives/nvl/gb300/MANIFEST.json) 记录部分快照和定向补采数据。事件正文留在私有验收记录中。
+
 ### HGX B300 实机接口
 
 Supermicro `SYS-822GS-NB3RT`（BMC `01.12.02.03`）使用主机机箱 `Chassis/1`，
@@ -493,6 +520,8 @@ Lenovo GB300 的 `nodefan` 是已落地的只读示例。inventory 指定 `platf
 默认机箱为 `Chassis_0`，同一次响应提供 8 路 PWM 和 16 路 RPM。
 
 ### 直读认证的完成条件
+
+同一厂商、型号、代际和角色默认复用同一套直读布局。仅固件版本变化，继续先走已有的固定端点。新版本按相同请求和读数契约核验。观察到资源路径、字段、单位或完整性规则变化后，才新增布局或固件条件。认证记录仍保留实测固件版本。
 
 仓库入口规则见 `AGENTS.md`。`docs/certified-reads.json` 按“机型、固件、能力”
 记录实机证据和正常路径的精确 GET 列表。一个能力通过不能代表整机、其他命令或写操作通过。
@@ -813,6 +842,10 @@ HTTP 状态和响应。宽扫不全时补采，明确哪些资源未采、返回
 常规 `redfish replay` 可检查解析结果。传感器验收须加 `--expect-rows` 并按顺序重复
 `--expect-path`。严格模式沿生产 Runner 选路，只替换离线传输；读数数量、GET 顺序或成功响应
 不符合就退出非零。可直接读取 `.json.gz`。预期值来自同机型、同代际、同固件的实机记录。
+`nodemon` 回放一次温度与功率采样。归档未配置 `system_model` 时，可用 `--system-model` 指定同固件验收记录中的主机型号，按该机型走直读。
+
+HGX B300 三份主归档的风扇、PSU、温度、进风口和监控均纳入自动回放。
+`MANIFEST.json` 的 `replay_gaps` 列出 MAC 回放缺少的响应，`missing_archives` 列出待补采的固件组合。KAYTUS `2.03.ee` 和 Supermicro `01.12.05.00` 仍需实机采集。
 
 从验收程序读取已实机确认的组合并逐个触发采集，同一组合的有效快照可复用。
 设备下线前补缺时，按清单的缺失路径定向采集。缺失关键端点时保留部分归档并明确缺口。

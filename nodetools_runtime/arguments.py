@@ -362,8 +362,9 @@ def build_parser():
     replay.add_argument("file", help="snapshot JSON file")
     replay.add_argument("snapshot_tool", metavar="COMMAND", help="a Redfish read command such as nodefan")
     replay.add_argument("action", nargs="?", choices=("status", "check", "pending"))
-    replay.add_argument("--details", action="store_true", help="show detailed PSU fields")
-    replay.add_argument("--expect-rows", type=int, help="verify the exact number of sensor readings")
+    replay.add_argument("--details", action="store_true", help="show detailed PSU fields or hardware inventory")
+    replay.add_argument("--system-model", help="use a verified system model when selecting the offline adapter")
+    replay.add_argument("--expect-rows", type=int, help="verify the exact number of output rows")
     replay.add_argument("--expect-path", action="append", metavar="URI",
                         help="verify an exact successful GET path in order (repeatable)")
 
@@ -395,6 +396,9 @@ def build_parser():
                  "nodetools redfish replay hgx390.json nodepsu --details")
     add_examples(dump, "nodetools redfish dump HGX390 -o hgx390.json")
     add_examples(replay, "nodetools redfish replay hgx390.json nodepsu --details",
+                 "nodetools redfish replay hgx390.json.gz nodemon --system-model KR9288-X3-A0-F0-01",
+                 "nodetools redfish replay gb300.json.gz nodemacs --expect-rows 7 "
+                 "--expect-path '/redfish/v1/Systems/system/BootOptions?$expand=.'",
                  "nodetools redfish replay hgx390.json.gz nodepsu --expect-rows 8 "
                  "--expect-path /redfish/v1/Chassis/1/Power")
     add_examples(inv, "nodetools inventory show", "nodetools inventory import hosts.list")

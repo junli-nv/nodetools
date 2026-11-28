@@ -527,9 +527,12 @@ class Oem:
             rows.append(self.bootorder_sep.join(cells))
         return rows
 
+    def _boot_system_path(self, device):
+        return "/redfish/v1/Systems/" + self._sys(self.bootorder_system)
+
     def _boot_members(self, device, expand=True):
         suffix = "/BootOptions?$expand=." if expand else "/BootOptions"
-        path = "/redfish/v1/Systems/{}{}".format(self._sys(self.bootorder_system), suffix)
+        path = self._boot_system_path(device) + suffix
         coll = common.resource(device, path, required=True)
         out = []
         for member in coll.get("Members") or []:
@@ -547,9 +550,7 @@ class Oem:
         return out
 
     def _boot_order(self, device, quoted=False):
-        path = "/redfish/v1/Systems/{}?$select=Boot/BootOrder".format(
-            self._sys(self.bootorder_system)
-        )
+        path = self._boot_system_path(device) + "?$select=Boot/BootOrder"
         data = common.resource(device, path, required=True)
         order = (data.get("Boot") or {}).get("BootOrder") or []
         return [json.dumps(item) if quoted else _jq_r(item) for item in order]

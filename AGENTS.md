@@ -35,6 +35,16 @@ For a known platform/OEM/role/generation and verified capability:
    Add executable contracts for new fixed-read declarations. List remaining capabilities
    and writes as unverified until independently implemented and validated.
 
+Exercise the normal CLI defaults with a representative inventory. An OEM default
+that already identifies a verified resource must work without an extra per-command
+override. Treat extra startup discovery or a changed normal request order as a
+regression. Verify the known endpoint and the scoped fallback independently.
+
+Reuse an established direct-read layout for the same OEM, model and generation
+across firmware revisions. A firmware version change alone does not select another
+adapter or require discovery at runtime. Verify the existing contract on the new
+firmware and add a layout only when observed resources or output semantics differ.
+
 Do not inflate expected request counts, delete path assertions, or label an
 untested capability certified to make a change pass. A changed contract needs
 fresh hardware evidence and an explicit explanation in the change description.
