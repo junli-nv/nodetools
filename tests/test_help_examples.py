@@ -202,3 +202,12 @@ def test_all_supported_help_variants_preserve_examples():
                 assert example in text, (parser.prog, flag, example)
             count += 1
     print(f"Audited {count} supported help variants")
+
+
+@pytest.mark.parametrize("program", ["nodetools", "nodefw", "nodebmc", "nodetask", "nodefru"])
+def test_every_main_device_command_scope_supports_debug(program):
+    for parser in walk(catalog()[program]):
+        options = parser._option_string_actions
+        assert {"-x", "--debug"} <= options.keys(), parser.prog
+        assert options["-x"] is options["--debug"]
+        assert options["-x"].dest == "debug"

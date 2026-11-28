@@ -13,6 +13,9 @@ class SmcGb300(FixedManagementReads, SmcNvl):
     """GB NVL / GB300, BMC 70.02.02.01: two tray DC inputs, not shelf AC PSUs."""
 
     inventory_fixed_caps = ("psu", "fan", "temp", "inlet", "monitor")
+    # Numeric $top/$skip returns inconsistent counts on this layout.
+    firmware_page_size = None
+    read_system_id = "System_0"
     read_manager_id = "BMC_0"
     read_chassis_id = "Chassis_0"
     bootorder_system = "System_0"

@@ -2053,6 +2053,36 @@
       "options": [
         "--details"
       ]
+    },
+    {
+      "id": "smc_gb300_firmware",
+      "status": "verified",
+      "model": "GB NVL",
+      "bmc_firmware": "70.02.02.01",
+      "configuration": {
+        "platform": "nvl",
+        "oem": "smc",
+        "role": "compute",
+        "generation": "gb300"
+      },
+      "command": "nodefw",
+      "capability": "firmware",
+      "options": [
+        "show"
+      ],
+      "direct_requests": [
+        "/redfish/v1/Systems/System_0",
+        "/redfish/v1/Managers/BMC_0",
+        "/redfish/v1/UpdateService/FirmwareInventory?$expand=."
+      ],
+      "request_count": 3,
+      "expected_rows": 33,
+      "interpretation": "31 firmware components plus BIOS and BMC context",
+      "fixture": "docs/redfish-archives/nvl/gb300/smc-nvl-gb300-gb-nvl-bmc-70.02.02.01-20261128.redfish.json.gz",
+      "test": "tests/test_smc_nvl_firmware.py",
+      "live_validation": "2026-11-28: real CLI default, node-first, legacy and debug reads; 31 complete components, three GETs.",
+      "unverified_scope": "Other firmware and writes; this single-node result does not certify bulk reads.",
+      "adapter": "nodetools_runtime.oem.nvl.smc.SmcGb300"
     }
   ],
   "legacy_baseline_commit": "f6373fe63f6ea7b162b13d82f2699c0aaa9968ec",

@@ -1016,6 +1016,26 @@ gzip -n -- "$file"
 
 ## 8. Code style and commit conventions
 
+### Consistent command order and debug support
+
+Device commands use PROGRAM NODE(S) [RESOURCE] [ACTION] [ARGS].
+Defaults are read-only. Use `nodefw NODE`, `nodefw -x NODE show`,
+or `nodeos NODE bmc listuser`. Prefer node-first help/examples and preserve legacy syntax.
+Every public command and independently parsed subcommand must support -x/--debug,
+propagate it to execution and retain it across nested parsers. Redfish debug includes
+reproducible curl requests, exact URIs and HTTP status. Test parser scopes,
+help examples and actual stderr; standalone entrypoints are not exempt.
+
+The optional adapter field firmware_page_size controls firmware pagination.
+Absent fields retain existing behavior. SMC GB300 NVL reads the full expanded
+collection; HGX retains 16-item numeric pages. Expanded reads reject count
+mismatches and duplicate members. Firmware contracts exercise firmware_cli.main
+with only transport replaced, including published archive replay.
+GB NVL / 70.02.02.01 live validation: three GETs, 31 components plus BIOS/BMC,
+33 output lines. Reuse the matching archive containing all contract URIs.
+Writes and bulk certification remain separate acceptance work.
+
+
 - Include runnable examples in `--help` for every public command and each subcommand
   with its own arguments. Lead with common reads using defaults and host ranges where
   applicable. Show a preview or precheck for writes that support one. Verify examples

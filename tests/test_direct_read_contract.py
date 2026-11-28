@@ -11,7 +11,9 @@ from nodetools_runtime.caps import common, psu
 from nodetools_runtime.inventory import Host
 
 ROOT = Path(__file__).resolve().parents[1]
-RECORDS = json.loads((ROOT / "docs/certified-reads.json").read_text())["records"]
+# Standalone management CLIs have their own production-entrypoint contracts.
+RECORDS = [r for r in json.loads((ROOT / "docs/certified-reads.json").read_text())["records"]
+           if r["test"] == "tests/test_direct_read_contract.py"]
 SMC = next(r for r in RECORDS if r["id"] == "smc_gb300_psu")
 PDB = "/redfish/v1/Chassis/PDB_0/Sensors/"
 SHELF = "/redfish/v1/Chassis/powershelf/PowerSubsystem/PowerSupplies"
@@ -260,7 +262,7 @@ def test_new_fixed_capabilities_require_executable_certification():
     legacy = {(adapter, cap) for adapter, caps in manifest["legacy_unreviewed"].items()
               for cap in caps}
     certified = {(r["adapter"], r["capability"]) for r in manifest["records"]
-                 if r["status"] == "verified" and r["capability"] not in {"macs", "power", "eventlog", "inventory"}}
+                 if r["status"] == "verified" and r["capability"] not in {"macs", "power", "eventlog", "inventory", "firmware"}}
     declared = set()
     for registry in (oem._MODULES, oem._PLATFORM_MODULES, oem._ROLE_MODULES, oem._HGX_READ_MODELS):
         for adapter in registry.values():
@@ -269,6 +271,16 @@ def test_new_fixed_capabilities_require_executable_certification():
                                                      *getattr(adapter, "nvos_fixed_caps", ())))
     assert not legacy & certified
     assert declared == legacy | certified
+    # Standalone firmware CLI contracts are separate from sensor Runner caps.
+    firmware_declared = set()
+    for registry in (oem._MODULES, oem._PLATFORM_MODULES, oem._ROLE_MODULES, oem._HGX_READ_MODELS):
+        for adapter in registry.values():
+            if hasattr(adapter, "firmware_page_size"):
+                name = type(adapter).__module__ + "." + type(adapter).__name__
+                firmware_declared.add((name, "firmware"))
+    firmware_certified = {(r["adapter"], r["capability"]) for r in manifest["records"]
+                          if r["status"] == "verified" and r["capability"] == "firmware"}
+    assert firmware_declared == firmware_certified
     for record in manifest["records"]:
         host = Host("fixture-01", "192.0.2.1", record["configuration"])
         adapter = oem.for_device(model.Device(host), configured_read=True)

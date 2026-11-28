@@ -82,7 +82,7 @@ def test_archive_checksums_and_firmware_coverage(directory):
     pytest.param(directory, sample, id=directory.name + "-" + sample["bmc_version"])
     for directory, manifest in MANIFESTS.items() for sample in manifest["samples"]
 ])
-def test_archive_replays_match_certification(directory, sample, monkeypatch, capsys):
+def test_archive_replays_match_certification(directory, sample, monkeypatch, capsys, tmp_path):
     def no_network(*args, **kwargs):
         pytest.fail("offline archive replay attempted to open a live transport")
 
@@ -119,6 +119,9 @@ def test_archive_replays_match_certification(directory, sample, monkeypatch, cap
         assert replay["readings"] == record["expected_rows"]
         assert replay["exact_get_paths"] == record["direct_requests"]
         assert len(replay["exact_get_paths"]) == record["request_count"]
+        if record["capability"] == "firmware":
+            verify_firmware_redfish(snapshot, record, tmp_path, monkeypatch, capsys)
+            continue
         if sample.get("role") == "nvswitch" and record["capability"] == "temp":
             verify_switch_redfish(snapshot, record)
             continue
@@ -169,3 +172,29 @@ def verify_switch_redfish(snapshot, record):
     assert result["error"] is None
     assert len(result["readings"]) == record["expected_rows"]
     assert transport.requests == [(path, 200) for path in record["direct_requests"]]
+
+
+def verify_firmware_redfish(snapshot, record, tmp_path, monkeypatch, capsys):
+    from types import SimpleNamespace
+    from nodetools_runtime import firmware_cli
+    transport = redfish_snapshot.Replay(snapshot)
+    transport.set_deadline = lambda deadline: None
+    inventory = tmp_path / "firmware.ini"
+    inventory.write_text("[compute]\nsnapshot host=192.0.2.1\n[compute:vars]\n" +
+                         "".join(f"{k}={v}\n" for k, v in record["configuration"].items()))
+    with monkeypatch.context() as scoped:
+        scoped.setattr(runtime, "Redfish", lambda *a, **k: transport)
+        scoped.setattr(runtime, "Ipmi",
+                       lambda *a, **k: SimpleNamespace(set_deadline=lambda d: None))
+        result = firmware_cli.main(["snapshot", *record["options"], "-i", str(inventory)], "nodefw")
+    output = capsys.readouterr()
+    assert result == 0, output.err
+    assert len(output.out.splitlines()) == record["expected_rows"]
+    assert transport.requests == [(path, 200) for path in record["direct_requests"]]
+
+
+def test_all_certification_records_name_existing_contract_tests():
+    supported = {"tests/test_direct_read_contract.py", "tests/test_smc_nvl_firmware.py"}
+    for record in CERTIFICATES:
+        assert record["test"] in supported
+        assert (DOCS.parent / record["test"]).is_file()

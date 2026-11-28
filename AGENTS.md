@@ -112,6 +112,16 @@ and NVOS rejects the fan query. This is not a successful fan read.
 Keep compute-tray fans and actual power-supply module fans on power shelves.
 Reconsider another switch model only with independently verified evidence.
 
+## CLI consistency and debugging
+
+Device commands use PROGRAM NODE(S) [RESOURCE] [ACTION] [ARGS].
+Defaults are read-only. Prefer node-first help/examples and preserve legacy syntax.
+Every public command and independently parsed subcommand must support -x/--debug.
+Propagate debug to actual execution and retain it across nested parsers.
+Redfish debug includes reproducible curl requests and HTTP status.
+Test parser placement and actual stderr. Standalone CLIs are not exempt.
+Core command-tree debug coverage is enforced by tests/test_help_examples.py.
+
 ## Help examples are required completion checks
 
 Follow docs/DEVELOPMENT.md section 8 and its English counterpart: every

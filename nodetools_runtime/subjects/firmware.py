@@ -30,6 +30,8 @@ def collection(device, path, required=False, expand=False, page_size=None):
             return
     page = path
     seen = set()
+    seen_members = set()
+    expected_count = None
     while page:
         if page in seen:
             raise TransportError("Redfish collection repeats a page")
@@ -45,10 +47,23 @@ def collection(device, path, required=False, expand=False, page_size=None):
         members = data.get("Members")
         if not isinstance(members, list):
             raise TransportError("invalid Redfish collection at {}".format(path))
-        yield from _member_details(device, path, members, expand)
+        count = data.get("Members@odata.count")
+        if count is not None:
+            if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+                raise TransportError("invalid collection count at " + path)
+            if expected_count is not None and count != expected_count:
+                raise TransportError("collection count changed at " + path)
+            expected_count = count
+        for member_path, item in _member_details(device, path, members, expand):
+            if member_path in seen_members:
+                raise TransportError("repeated collection member at " + path)
+            seen_members.add(member_path)
+            yield member_path, item
         page = data.get("Members@odata.nextLink")
         if page and (not isinstance(page, str) or not page.startswith(path + "?")):
             raise TransportError("unexpected Redfish collection page")
+    if expected_count is not None and len(seen_members) != expected_count:
+        raise TransportError("incomplete collection at " + path)
 
 
 def _member_details(device, path, members, expand):
@@ -62,9 +77,14 @@ def _member_details(device, path, members, expand):
 
 def components(device, path, supermicro=False):
     """Read firmware components for both nodefw and the legacy inventory view."""
-    supermicro = supermicro or getattr(getattr(device, "odm", None), "name", None) == "smc"
+    from .. import oem
+    adapter = getattr(device, "odm", None)
+    if adapter is None and isinstance(device, model.Device):
+        adapter = oem.for_device(device, configured_read=True)
+    supermicro = supermicro or getattr(adapter, "name", None) == "smc"
     supermicro = supermicro or model.odm_for(device) == "smc"
-    return collection(device, path, required=True, expand=True, page_size=16 if supermicro else None)
+    size = getattr(adapter, "firmware_page_size", 16 if supermicro else None)
+    return collection(device, path, required=True, expand=True, page_size=size)
 
 
 def update_service(device):

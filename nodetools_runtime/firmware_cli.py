@@ -19,12 +19,39 @@ from .subjects import firmware
 ADAPTERS = {smc_firmware.MODEL: smc_firmware}
 
 
-def parser(prog):
-    cli = LocalizedArgumentParser(
+class _FirmwareParser(LocalizedArgumentParser):
+    def parse_args(self, args=None, namespace=None):
+        values = list(sys.argv[1:] if args is None else args)
+        if not getattr(self, "_legacy_syntax", False):
+            position = 0
+            while position < len(values):
+                token = values[position]
+                if not token.startswith("-"):
+                    if token in ("show", "status", "check", "update"):
+                        return parser(self.prog, legacy=True).parse_args(values, namespace)
+                    break
+                option = self._option_string_actions.get(token.split("=", 1)[0])
+                if option is None or token == "--":
+                    break
+                position += 1 if "=" in token or option.nargs == 0 else 2
+        return super().parse_args(values, namespace)
+
+
+def parser(prog, legacy=False):
+    cli = _FirmwareParser(
         prog=prog, description="Query and manage BMC-managed firmware.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    add_examples(cli, "nodefw show HGX654", "nodefw status HGX654")
+    cli._legacy_syntax = legacy
+    if not legacy:
+        cli.add_argument("nodes", metavar="NODE(S)")
+    cli.add_argument("-i", "--inventory", help="inventory file")
+    cli.add_argument("--jobs", type=int, help="parallel node queries")
+    cli.add_argument("--timeout", type=float, help="limit for each Redfish read")
+    cli.add_argument("--node-timeout", type=float, help="total reading budget per node")
+    cli.add_argument("-x", "--debug", action="store_true", default=argparse.SUPPRESS,
+                     help="show transport diagnostics")
+    add_examples(cli, "nodefw HGX654", "nodefw -x HGX654 show", "nodefw HGX654 status")
     actions = cli.add_subparsers(dest="action")
     for action, help_text in (
         ("show", "list installed firmware"),
@@ -36,20 +63,23 @@ def parser(prog):
             action, help=help_text, description=help_text.capitalize() + ".",
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )
+        command.add_argument("-x", "--debug", action="store_true", default=argparse.SUPPRESS,
+                             help="show transport diagnostics")
         examples = {
-            "show": ("nodefw show HGX654", "nodefw show 'HGX[650-654]' --jobs 2"),
-            "status": ("nodefw status HGX654", "nodefw status HGX654 --task 1"),
-            "check": ("nodefw check HGX654 bmc bmc-package.zip",),
-            "update": ("nodefw check HGX654 bmc bmc-package.zip", "nodefw update HGX654 bmc bmc-package.zip"),
+            "show": ("nodefw HGX654 show", "nodefw 'HGX[650-654]' show --jobs 2"),
+            "status": ("nodefw HGX654 status", "nodefw HGX654 status --task 1"),
+            "check": ("nodefw HGX654 check bmc bmc-package.zip",),
+            "update": ("nodefw HGX654 check bmc bmc-package.zip", "nodefw HGX654 update bmc bmc-package.zip"),
         }
         add_examples(command, *examples[action])
         if action in ("show", "status"):
-            command.add_argument("--timeout", type=float, help="limit for each Redfish read")
-            command.add_argument("--node-timeout", type=float, help="total reading budget per node")
-        command.add_argument("nodes", metavar="NODE(S)")
-        command.add_argument("-i", "--inventory", help="inventory file")
+            command.add_argument("--timeout", type=float, default=argparse.SUPPRESS, help="limit for each Redfish read")
+            command.add_argument("--node-timeout", type=float, default=argparse.SUPPRESS, help="total reading budget per node")
+        if legacy:
+            command.add_argument("nodes", metavar="NODE(S)")
+        command.add_argument("-i", "--inventory", default=argparse.SUPPRESS, help="inventory file")
         jobs_help = "concurrent uploads; required for multiple nodes" if action == "update" else "parallel node queries"
-        command.add_argument("--jobs", type=int, help=jobs_help)
+        command.add_argument("--jobs", type=int, default=argparse.SUPPRESS, help=jobs_help)
         if action == "status":
             command.add_argument("--task", help="task ID returned by update")
         if action in ("check", "update"):
@@ -57,6 +87,7 @@ def parser(prog):
             command.add_argument("package", type=Path, help="verified vendor package")
         if action == "update":
             command.add_argument("--reflash", action="store_true", help="allow writing the installed version again")
+    cli.set_defaults(action="show", task=None)
     return cli
 
 
@@ -91,6 +122,9 @@ def run(device, args):
 
 def main(argv, prog):
     cli = parser(prog)
+    if argv is not None and not argv:
+        cli.print_help()
+        return 0
     args = cli.parse_args(argv)
     if not args.action:
         cli.print_help()

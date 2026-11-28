@@ -68,6 +68,18 @@
             "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_0_Pwr_0",
             "/redfish/v1/Chassis/PDB_0/Sensors/PDB_0_HSC_1_Pwr_0"
           ]
+        },
+        {
+          "capability": "firmware",
+          "readings": 33,
+          "exact_get_paths": [
+            "/redfish/v1/Systems/System_0",
+            "/redfish/v1/Managers/BMC_0",
+            "/redfish/v1/UpdateService/FirmwareInventory?$expand=."
+          ],
+          "options": [
+            "show"
+          ]
         }
       ]
     }
